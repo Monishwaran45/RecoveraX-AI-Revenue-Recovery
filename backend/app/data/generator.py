@@ -203,16 +203,25 @@ def generate_synthetic_dataset(seed: int = 42):
         for c in non_demo_cases[:-1]:
             c.amount_at_risk = round(c.amount_at_risk + adj, 2)
         
-        # Sync transactions & recommendations
+        # Sync transactions, recommendations, and approval requests
         tx_map = {t.id: t for t in transactions}
+        rec_map = {r.case_id: r for r in recommendations}
+        app_map = {a.case_id: a for a in approval_requests}
         for c in recovery_cases:
             if c.source_id in tx_map:
                 tx_map[c.source_id].amount = c.amount_at_risk
+            if c.id in rec_map:
+                rec_map[c.id].expected_recovery_value = round(c.amount_at_risk * (c.recovery_score / 100.0) - 20, 2)
+            if c.id in app_map:
+                app_map[c.id].ai_recommendation = f"Recommend {c.recommended_action.value} delay 30m. Amount ₹{c.amount_at_risk:,.2f} exceeds threshold."
 
         new_sum = sum(c.amount_at_risk for c in recovery_cases)
         remainder = round(TARGET_TOTAL - new_sum, 2)
         non_demo_cases[-1].amount_at_risk = round(non_demo_cases[-1].amount_at_risk + remainder, 2)
+        last_id = non_demo_cases[-1].id
         if non_demo_cases[-1].source_id in tx_map:
             tx_map[non_demo_cases[-1].source_id].amount = non_demo_cases[-1].amount_at_risk
+        if last_id in rec_map:
+            rec_map[last_id].expected_recovery_value = round(non_demo_cases[-1].amount_at_risk * (non_demo_cases[-1].recovery_score / 100.0) - 20, 2)
 
     return customers, transactions, subscriptions, invoices, recovery_cases, recommendations, approval_requests, audit_logs
