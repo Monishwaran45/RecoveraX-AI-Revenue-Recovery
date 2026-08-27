@@ -11,7 +11,7 @@ from app.policy.enums import CaseStatus, PolicyDecision
 
 class ExperimentService:
     @staticmethod
-    async def run_experiment(db: AsyncSession, name: str = "A/B Recovery Experiment") -> Experiment:
+    async def run_experiment(db: AsyncSession, name: str = "Recovery Outcome Evaluation & Baseline Comparison") -> Experiment:
         query = select(RecoveryCase)
         res = await db.execute(query)
         cases = list(res.scalars().all())
