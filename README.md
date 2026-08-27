@@ -148,6 +148,4 @@ venv\Scripts\python -m pytest tests
 
 ---
 
-## 📄 License
 
-Built for **Razorpay AI Buildathon — Track 3: AI Revenue Recovery**.
