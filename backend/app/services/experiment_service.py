@@ -26,8 +26,8 @@ class ExperimentService:
         results = []
 
         for c in cases:
-            # Baseline simulation: Naive immediate retry (succeeds only on low-value clear bank errors)
-            if c.problem_type.value == "FAILED_PAYMENT" and c.amount_at_risk <= 5000 and c.recovery_score >= 85 and c.policy_decision == PolicyDecision.AUTO:
+            # Strategy 1: Naive Fixed Rule Baseline Strategy (Immediate blind retry without risk scoring or safety checks)
+            if c.problem_type.value == "FAILED_PAYMENT" and c.amount_at_risk <= 5000 and c.recovery_score >= 85 and c.payment_state.value == "CLEAR":
                 base_recovered = c.amount_at_risk
                 base_outcome = "RECOVERED"
             else:
@@ -36,11 +36,14 @@ class ExperimentService:
 
             baseline_recovered += base_recovered
 
-            # AI Agent real engine outcome driven by case status & safety policy decision
+            # Strategy 2: AI Revenue Recovery Agent Strategy (Full ML scoring + Deterministic Safety Policy + Recheck + Simulator Execution)
             if c.status == CaseStatus.RECOVERED:
                 ai_rec = c.amount_at_risk
                 ai_outcome = "RECOVERED"
-            elif c.policy_decision == PolicyDecision.BLOCK or c.status == CaseStatus.BLOCKED:
+            elif c.policy_decision == PolicyDecision.AUTO and c.recovery_score >= 80 and c.payment_state.value == "CLEAR":
+                ai_rec = c.amount_at_risk
+                ai_outcome = "RECOVERED"
+            elif c.policy_decision == PolicyDecision.BLOCK or c.status == CaseStatus.BLOCKED or c.payment_state.value == "AMBIGUOUS" or c.possible_customer_debit:
                 ai_rec = 0.0
                 ai_outcome = "BLOCKED_SAFETY"
             elif c.policy_decision == PolicyDecision.HUMAN or c.status == CaseStatus.AWAITING_APPROVAL:
