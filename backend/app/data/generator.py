@@ -81,11 +81,9 @@ def generate_synthetic_dataset(seed: int = 42):
             sub = Subscription(
                 id=f"SUB-{uuid.uuid4().hex[:8]}",
                 customer_id=cust.id,
-                plan_name=random.choice(["Pro Monthly", "Enterprise Annual", "Growth Tier"]),
                 amount=amount,
-                billing_cycle="MONTHLY",
                 status="PAST_DUE",
-                next_retry_at=datetime.utcnow() + timedelta(hours=24)
+                next_payment_date=datetime.utcnow() + timedelta(hours=24)
             )
             subscriptions.append(sub)
         elif prob_type == ProblemType.OVERDUE_INVOICE:
@@ -186,12 +184,35 @@ def generate_synthetic_dataset(seed: int = 42):
         policy = PolicyDecision.AUTO if risk == RiskLevel.LOW else PolicyDecision.HUMAN
         create_case(None, amt, ProblemType.SUBSCRIPTION_FAILURE, "CARD_DECLINED", PaymentState.CLEAR, False, False, score, risk, ActionType.RETRY, policy, CaseStatus.SCHEDULED)
 
-    # 6. Generate 151 Overdue Invoices (Total ~₹7.2L) -> Total sum EXACTLY ~₹50,00,000 (1,000 total cases)
+    # 6. Generate 151 Overdue Invoices (Total ~₹7.2L) -> Total sum EXACTLY ₹50,00,000.00 (1,000 total cases)
     for _ in range(151):
         amt = round(random.choice([3500.0, 4800.0, 6500.0, 12000.0]), 2)
         score = random.randint(30, 75)
         risk = RiskLevel.HIGH if amt >= 25000 else RiskLevel.MEDIUM
         policy = PolicyDecision.HUMAN
         create_case(None, amt, ProblemType.OVERDUE_INVOICE, "OVERDUE_PAYMENT_PROMISE", PaymentState.CLEAR, False, False, score, risk, ActionType.ESCALATE, policy, CaseStatus.AWAITING_APPROVAL)
+
+    # Exact target sum normalization to ₹50,00,000.00
+    TARGET_TOTAL = 5000000.00
+    current_total = sum(c.amount_at_risk for c in recovery_cases)
+    diff = TARGET_TOTAL - current_total
+    
+    non_demo_cases = [c for c in recovery_cases if c.id not in {"CASE-1021", "CASE-1032", "CASE-1048", "CASE-1088", "CASE-1102"}]
+    if non_demo_cases:
+        adj = round(diff / len(non_demo_cases), 2)
+        for c in non_demo_cases[:-1]:
+            c.amount_at_risk = round(c.amount_at_risk + adj, 2)
+        
+        # Sync transactions & recommendations
+        tx_map = {t.id: t for t in transactions}
+        for c in recovery_cases:
+            if c.source_id in tx_map:
+                tx_map[c.source_id].amount = c.amount_at_risk
+
+        new_sum = sum(c.amount_at_risk for c in recovery_cases)
+        remainder = round(TARGET_TOTAL - new_sum, 2)
+        non_demo_cases[-1].amount_at_risk = round(non_demo_cases[-1].amount_at_risk + remainder, 2)
+        if non_demo_cases[-1].source_id in tx_map:
+            tx_map[non_demo_cases[-1].source_id].amount = non_demo_cases[-1].amount_at_risk
 
     return customers, transactions, subscriptions, invoices, recovery_cases, recommendations, approval_requests, audit_logs

@@ -19,7 +19,6 @@ class ExperimentService:
         case_count = len(cases)
         revenue_at_risk = sum(c.amount_at_risk for c in cases)
 
-        # Baseline strategy: Simple fixed retry rule (recovers ~32% of simple failed payments, 0% subscriptions/invoices)
         baseline_recovered = 0.0
         ai_recovered = 0.0
 
@@ -27,9 +26,9 @@ class ExperimentService:
         results = []
 
         for c in cases:
-            # Baseline simulation
-            if c.problem_type.value == "FAILED_PAYMENT" and c.amount_at_risk < 5000:
-                base_recovered = c.amount_at_risk * 0.45
+            # Baseline simulation: Naive immediate retry (succeeds only on low-value clear bank errors)
+            if c.problem_type.value == "FAILED_PAYMENT" and c.amount_at_risk <= 5000 and c.recovery_score >= 85 and c.policy_decision == PolicyDecision.AUTO:
+                base_recovered = c.amount_at_risk
                 base_outcome = "RECOVERED"
             else:
                 base_recovered = 0.0
@@ -37,19 +36,19 @@ class ExperimentService:
 
             baseline_recovered += base_recovered
 
-            # AI Agent simulation (utilizes score, diagnosis, policy & HITL)
+            # AI Agent real engine outcome driven by case status & safety policy decision
             if c.status == CaseStatus.RECOVERED:
                 ai_rec = c.amount_at_risk
                 ai_outcome = "RECOVERED"
-            elif c.policy_decision == PolicyDecision.BLOCK:
+            elif c.policy_decision == PolicyDecision.BLOCK or c.status == CaseStatus.BLOCKED:
                 ai_rec = 0.0
                 ai_outcome = "BLOCKED_SAFETY"
-            elif c.recovery_score >= 60 and c.policy_decision != PolicyDecision.STOP:
-                ai_rec = c.amount_at_risk * 0.78
-                ai_outcome = "RECOVERED"
+            elif c.policy_decision == PolicyDecision.HUMAN or c.status == CaseStatus.AWAITING_APPROVAL:
+                ai_rec = 0.0
+                ai_outcome = "AWAITING_HUMAN_APPROVAL"
             else:
                 ai_rec = 0.0
-                ai_outcome = "FAILED"
+                ai_outcome = "STOPPED"
 
             ai_recovered += ai_rec
             inc_rec = round(max(0.0, ai_rec - base_recovered), 2)

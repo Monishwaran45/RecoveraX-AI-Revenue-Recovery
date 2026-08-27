@@ -43,8 +43,12 @@ def policy_check_node(state: RecoveryState) -> RecoveryState:
         diagnosis=state.get("diagnosis", "TEMPORARY_FAILURE"),
     )
     
-    state["policy_decision"] = eval_result.decision.value
-    state["policy_reason"] = eval_result.reason
+    if state.get("forced_human") or state.get("diagnosis_confidence", 1.0) == 0.0:
+        state["policy_decision"] = PolicyDecision.HUMAN.value
+        state["policy_reason"] = "LLM failure or forced human safety rule triggered"
+    else:
+        state["policy_decision"] = eval_result.decision.value
+        state["policy_reason"] = eval_result.reason
     state["rules_evaluated"] = eval_result.rules_evaluated
     
     audit_events = list(state.get("audit_events", []))
