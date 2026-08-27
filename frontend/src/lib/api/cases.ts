@@ -1,25 +1,29 @@
 import { store } from "../store";
-import { RecoveryCase, RiskLevel, CaseStatus, CaseType, PaymentState } from "../types";
+import { RecoveryCase, RiskLevel, CaseStatus, CaseType } from "../types";
 import { BACKEND_URL } from "./config";
 
 function mapBackendCaseToFrontend(item: any): RecoveryCase {
   const riskVal: RiskLevel = (item.risk_level as RiskLevel) || "MEDIUM";
-  const caseType: CaseType = 
-    item.problem_type === "FAILED_PAYMENT" ? "FAILED_PAYMENT" :
-    (item.problem_type === "SUBSCRIPTION_FAILURE" ? "SUBSCRIPTION" :
-    (item.problem_type === "OVERDUE_INVOICE" ? "INVOICE" : "CHECKOUT"));
+  
+  let caseType: CaseType = "FAILED_PAYMENT";
+  if (item.problem_type === "SUBSCRIPTION_FAILURE") caseType = "SUBSCRIPTION";
+  else if (item.problem_type === "OVERDUE_INVOICE") caseType = "INVOICE";
+  else if (item.problem_type === "CHECKOUT_ABANDONMENT") caseType = "CHECKOUT";
 
-  const statusVal: CaseStatus =
-    item.status === "AWAITING_APPROVAL" ? "HUMAN_APPROVAL" :
-    (item.status === "SCHEDULED" ? "SCHEDULED" :
-    (item.status === "RECOVERED" ? "RECOVERED" :
-    (item.status === "BLOCKED" ? "BLOCKED" : "OPEN")));
+  let statusVal: CaseStatus = "OPEN";
+  if (item.status === "AWAITING_APPROVAL") statusVal = "HUMAN_APPROVAL";
+  else if (item.status === "SCHEDULED") statusVal = "SCHEDULED";
+  else if (item.status === "RECOVERED") statusVal = "RECOVERED";
+  else if (item.status === "BLOCKED") statusVal = "BLOCKED";
+
+  const rec = item.latest_recommendation || (Array.isArray(item.recommendations) && item.recommendations[0]) || {};
+  const cust = item.customer || {};
 
   return {
     id: item.id,
-    customerName: item.customer?.name || "Customer",
-    customerEmail: item.customer?.email || "customer@example.com",
-    problem: item.latest_recommendation?.diagnosis || "Payment failure detected",
+    customerName: cust.name || "Customer",
+    customerEmail: cust.email || "customer@example.com",
+    problem: rec.reason || rec.diagnosis || item.problem_type || "Payment failure detected",
     amount: item.amount_at_risk || 0,
     score: item.recovery_score || 50,
     risk: riskVal,
@@ -30,20 +34,20 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     maxRetries: item.max_retries || 2,
     aiRecommendation: {
       badgeText: item.recommended_action || "RETRY",
-      diagnosis: item.latest_recommendation?.diagnosis || "TEMPORARY_FAILURE",
-      recommendation: item.latest_recommendation?.reason || `Recommend ${item.recommended_action}`,
+      diagnosis: rec.diagnosis || "TEMPORARY_FAILURE",
+      recommendation: rec.reason || `Recommend ${item.recommended_action || "RETRY"}`,
       score: item.recovery_score || 50,
-      expectedValue: item.latest_recommendation?.expected_recovery_value || item.amount_at_risk * 0.8,
+      expectedValue: rec.expected_recovery_value || (item.amount_at_risk * 0.8),
       evidence: [
-        { id: "e1", text: `Customer history: ${item.customer?.successful_payment_count || 5} successful payments`, isPositive: true },
+        { id: "e1", text: `Customer history: ${cust.successful_payment_count || 5} successful payments`, isPositive: true },
         { id: "e2", text: "Payment state: CLEAR", isPositive: true },
-        { id: "e3", text: `Risk level: ${item.risk_level}`, isPositive: false },
+        { id: "e3", text: `Risk level: ${item.risk_level}`, isPositive: riskVal === "LOW" },
       ],
     },
     policyDecision: {
       type: item.policy_decision || "HUMAN",
-      decisionLabel: item.policy_decision === "AUTO" ? "AUTOMATED RECOVERY" : "HUMAN APPROVAL REQUIRED",
-      reason: item.policy_decision === "AUTO" ? "Automated recovery authorized" : "Human approval required for safety",
+      decisionLabel: item.policy_decision === "AUTO" ? "AUTOMATED RECOVERY" : (item.policy_decision === "BLOCK" ? "POLICY BLOCKED" : "HUMAN APPROVAL REQUIRED"),
+      reason: item.policy_decision === "AUTO" ? "Automated recovery authorized" : (item.policy_decision === "BLOCK" ? "Safety engine blocked payment" : "Human approval required for safety"),
       rules: [
         { id: "r1", text: `Amount: ₹${(item.amount_at_risk || 0).toLocaleString("en-IN")}`, passed: true },
         { id: "r2", text: "Policy Threshold: ₹5,000", passed: true },
@@ -52,7 +56,7 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     },
     status: statusVal,
     scheduledDelayMinutes: 30,
-    auditTimeline: Array.isArray(item.audit_logs)
+    auditTimeline: Array.isArray(item.audit_logs) && item.audit_logs.length > 0
       ? item.audit_logs.map((log: any) => ({
           id: log.id,
           timestamp: new Date(log.timestamp).toLocaleTimeString(),
@@ -60,7 +64,9 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
           description: log.reason,
           category: log.actor_type === "AI" ? "AI" : (log.actor_type === "POLICY" ? "POLICY" : "SYSTEM"),
         }))
-      : [],
+      : [
+          { id: "a1", timestamp: new Date(item.created_at || Date.now()).toLocaleTimeString(), title: "CASE_CREATED", description: `Case initialized for ₹${(item.amount_at_risk || 0).toLocaleString("en-IN")}`, category: "SYSTEM" }
+        ],
     createdAt: item.created_at || new Date().toISOString(),
     updatedAt: item.updated_at || new Date().toISOString(),
   };
@@ -74,23 +80,43 @@ export async function getCases(filters?: {
 }): Promise<RecoveryCase[]> {
   try {
     const params = new URLSearchParams();
-    if (filters?.search) params.append("search", filters.search);
-    if (filters?.status) params.append("status", filters.status);
-    if (filters?.risk) params.append("risk_level", filters.risk);
-    if (filters?.type) params.append("problem_type", filters.type);
+    if (filters?.search && filters.search.trim()) {
+      params.append("search", filters.search.trim());
+    }
+
+    if (filters?.status && filters.status !== "All") {
+      let st = filters.status.toUpperCase();
+      if (st === "HUMAN APPROVAL" || st === "HUMAN_APPROVAL") st = "AWAITING_APPROVAL";
+      params.append("status", st);
+    }
+
+    if (filters?.risk && filters.risk !== "All") {
+      params.append("risk_level", filters.risk.toUpperCase());
+    }
+
+    if (filters?.type && filters.type !== "All") {
+      let tp = filters.type.toUpperCase();
+      if (tp === "FAILED PAYMENT") tp = "FAILED_PAYMENT";
+      else if (tp === "SUBSCRIPTION") tp = "SUBSCRIPTION_FAILURE";
+      else if (tp === "CHECKOUT") tp = "CHECKOUT_ABANDONMENT";
+      else if (tp === "INVOICE") tp = "OVERDUE_INVOICE";
+      params.append("problem_type", tp);
+    }
 
     const res = await fetch(`${BACKEND_URL}/cases?${params.toString()}`, {
       cache: "no-store",
     });
+
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         return data.map(mapBackendCaseToFrontend);
       }
     }
   } catch (e) {
-    // Fallback to store
+    console.warn("Backend API call failed, using store fallback:", e);
   }
+
   return store.getCases(filters);
 }
 
@@ -104,7 +130,8 @@ export async function getCase(id: string): Promise<RecoveryCase | undefined> {
       return mapBackendCaseToFrontend(item);
     }
   } catch (e) {
-    // Fallback to store
+    console.warn(`Backend getCase(${id}) failed, using store fallback:`, e);
   }
+
   return store.getCaseById(id);
 }

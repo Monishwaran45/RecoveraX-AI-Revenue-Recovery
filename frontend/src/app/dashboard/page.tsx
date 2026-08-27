@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/navigation";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import MetricCard from "@/components/ui/MetricCard";
 import RecoveryFunnel from "@/components/dashboard/RecoveryFunnel";

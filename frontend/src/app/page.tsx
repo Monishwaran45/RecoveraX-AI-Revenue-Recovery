@@ -1,3 +1,5 @@
 import DashboardPage from "./dashboard/page";
 
-export default DashboardPage;
+export default function HomePage() {
+  return <DashboardPage />;
+}

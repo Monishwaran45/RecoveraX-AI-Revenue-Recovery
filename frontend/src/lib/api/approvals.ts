@@ -10,14 +10,15 @@ export async function getApprovalCases(): Promise<RecoveryCase[]> {
     });
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
+        if (data.length === 0) return [];
         const caseIds = data.map((item: any) => item.case_id);
         const cases = await Promise.all(caseIds.map((id: string) => getCase(id)));
         return cases.filter((c): c is RecoveryCase => c !== undefined);
       }
     }
   } catch (e) {
-    // Fallback to store
+    console.warn("Backend /approvals unreachable, using store fallback:", e);
   }
   return store.getApprovalQueue();
 }
@@ -34,7 +35,7 @@ export async function approveCase(id: string): Promise<RecoveryCase | undefined>
       return await getCase(id);
     }
   } catch (e) {
-    // Fallback to store
+    console.warn(`Backend approveCase(${id}) failed:`, e);
   }
   return store.approveCase(id);
 }
@@ -51,7 +52,7 @@ export async function rejectCase(id: string): Promise<RecoveryCase | undefined> 
       return await getCase(id);
     }
   } catch (e) {
-    // Fallback to store
+    console.warn(`Backend rejectCase(${id}) failed:`, e);
   }
   return store.rejectCase(id);
 }
@@ -72,7 +73,7 @@ export async function modifyCase(id: string, data: ModifyActionInput): Promise<R
       return await getCase(id);
     }
   } catch (e) {
-    // Fallback to store
+    console.warn(`Backend modifyCase(${id}) failed:`, e);
   }
   return store.modifyCase(id, data);
 }
@@ -87,7 +88,7 @@ export async function recheckPayment(id: string): Promise<RecoveryCase | undefin
       return await getCase(id);
     }
   } catch (e) {
-    // Fallback to store
+    console.warn(`Backend recheckPayment(${id}) failed:`, e);
   }
   return store.recheckPayment(id);
 }
@@ -102,7 +103,7 @@ export async function executeRetry(id: string): Promise<RecoveryCase | undefined
       return await getCase(id);
     }
   } catch (e) {
-    // Fallback to store
+    console.warn(`Backend executeRetry(${id}) failed:`, e);
   }
   return store.markRecovered(id);
 }
