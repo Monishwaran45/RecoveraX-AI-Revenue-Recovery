@@ -30,8 +30,8 @@ class DashboardService:
 
         revenue_at_risk = sum(c.amount_at_risk for c in cases)
         recoverable_revenue = sum(c.amount_at_risk for c in cases if c.recovery_score >= 70)
-        gross_recovered = sum(c.amount_at_risk for c in cases if c.status == CaseStatus.RECOVERED)
-        incremental_recovered = gross_recovered * 0.29 # Incremental revenue calculation formula
+        baseline_recovered = sum(c.amount_at_risk * 0.45 for c in cases if c.status == CaseStatus.RECOVERED)
+        incremental_recovered = max(0.0, gross_recovered - baseline_recovered)
 
         recovery_rate = (gross_recovered / revenue_at_risk * 100.0) if revenue_at_risk > 0 else 0.0
 

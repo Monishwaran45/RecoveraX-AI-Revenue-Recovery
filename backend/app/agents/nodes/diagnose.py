@@ -11,7 +11,7 @@ def diagnose_node(state: RecoveryState) -> RecoveryState:
     """
     Node 2: Diagnose
     Uses Groq LLM to classify root cause. Parses JSON response.
-    If Groq fails/invalid -> audit LLM_OUTPUT_INVALID, route to HUMAN.
+    If Groq fails/invalid -> audit LLM_OUTPUT_INVALID, force confidence=0.0 and route to HUMAN.
     """
     llm = get_groq_llm()
     audit_events = list(state.get("audit_events", []))
@@ -20,16 +20,17 @@ def diagnose_node(state: RecoveryState) -> RecoveryState:
     cust = state.get("customer", {})
     
     if not llm:
-        logger.warning("No LLM available. Defaulting diagnosis to TEMPORARY_FAILURE and routing to HUMAN safety fallback.")
+        logger.warning("No LLM available. Setting confidence to 0.0 to force fail-closed HUMAN routing.")
         state["diagnosis"] = DiagnosisType.TEMPORARY_FAILURE.value
-        state["diagnosis_confidence"] = 0.5
-        state["diagnosis_reason"] = "LLM unavailable; using deterministic safety fallback"
+        state["diagnosis_confidence"] = 0.0
+        state["diagnosis_reason"] = "LLM unavailable; fail-closed safety routing to HUMAN"
+        state["forced_human"] = True
         
         audit_events.append({
             "event_type": AuditEventType.LLM_OUTPUT_INVALID.value,
             "actor_type": ActorType.AI.value,
             "actor_id": "GROQ_LLM",
-            "reason": "GROQ_API_KEY missing or ChatGroq unavailable. Routing to HUMAN review.",
+            "reason": "GROQ_API_KEY missing or ChatGroq unavailable. Fail-closed safety forced HUMAN review.",
             "metadata": {"fallback": True}
         })
         state["audit_events"] = audit_events
@@ -57,7 +58,13 @@ def diagnose_node(state: RecoveryState) -> RecoveryState:
 
         data = json.loads(content)
         
-        diagnosis_str = data.get("diagnosis", "TEMPORARY_FAILURE").upper()
+        raw_diag = data.get("diagnosis", "TEMPORARY_FAILURE").upper()
+        # Validate against DiagnosisType enum
+        if hasattr(DiagnosisType, raw_diag):
+            diagnosis_str = raw_diag
+        else:
+            diagnosis_str = DiagnosisType.TEMPORARY_FAILURE.value
+
         confidence_val = float(data.get("confidence", 0.8))
         reason_str = str(data.get("reason", "AI Diagnosis Completed"))
 
@@ -73,16 +80,17 @@ def diagnose_node(state: RecoveryState) -> RecoveryState:
             "metadata": {"confidence": confidence_val, "diagnosis": diagnosis_str}
         })
     except Exception as e:
-        logger.error(f"Error during LLM diagnosis: {str(e)}. Falling back to safe defaults.", exc_info=True)
+        logger.error(f"Error during LLM diagnosis: {str(e)}. Defaulting to fail-closed HUMAN routing.", exc_info=True)
         state["diagnosis"] = DiagnosisType.TEMPORARY_FAILURE.value
         state["diagnosis_confidence"] = 0.0
         state["diagnosis_reason"] = f"LLM Diagnosis Exception: {str(e)}"
+        state["forced_human"] = True
         
         audit_events.append({
             "event_type": AuditEventType.LLM_OUTPUT_INVALID.value,
             "actor_type": ActorType.AI.value,
             "actor_id": "GROQ_LLM",
-            "reason": f"LLM diagnosis exception: {str(e)}. Defaulting to HUMAN review.",
+            "reason": f"LLM diagnosis exception: {str(e)}. Fail-closed safety forced HUMAN review.",
             "metadata": {"error": str(e)}
         })
 

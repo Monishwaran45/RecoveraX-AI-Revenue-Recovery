@@ -38,7 +38,7 @@ def route_reevaluation(state: RecoveryState) -> str:
     if status == "STOPPED":
         return "stop"
     else:
-        return END
+        return "diagnose"
 
 def build_recovery_graph():
     builder = StateGraph(RecoveryState)
@@ -100,7 +100,7 @@ def build_recovery_graph():
         route_reevaluation,
         {
             "stop": "stop",
-            END: END
+            "diagnose": "diagnose"
         }
     )
     

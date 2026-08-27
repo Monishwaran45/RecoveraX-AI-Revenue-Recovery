@@ -92,8 +92,15 @@ export async function executeRetry(id: string): Promise<RecoveryCase | undefined
       method: "POST",
     });
     if (res.ok) {
-      store.markRecovered(id);
-      return await getCase(id);
+      const updatedCase = await getCase(id);
+      if (updatedCase) {
+        if (updatedCase.status === "RECOVERED") {
+          store.markRecovered(id);
+        } else if (updatedCase.status === "BLOCKED") {
+          store.rejectCase(id);
+        }
+        return updatedCase;
+      }
     }
   } catch (e) {
     console.warn(`Backend executeRetry(${id}) failed:`, e);

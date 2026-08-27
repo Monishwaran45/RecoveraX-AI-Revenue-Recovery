@@ -76,6 +76,29 @@ def generate_synthetic_dataset(seed: int = 42):
         )
         transactions.append(tx)
 
+        # Generate corresponding Subscription / Invoice records for full relational completeness
+        if prob_type == ProblemType.SUBSCRIPTION_FAILURE:
+            sub = Subscription(
+                id=f"SUB-{uuid.uuid4().hex[:8]}",
+                customer_id=cust.id,
+                plan_name=random.choice(["Pro Monthly", "Enterprise Annual", "Growth Tier"]),
+                amount=amount,
+                billing_cycle="MONTHLY",
+                status="PAST_DUE",
+                next_retry_at=datetime.utcnow() + timedelta(hours=24)
+            )
+            subscriptions.append(sub)
+        elif prob_type == ProblemType.OVERDUE_INVOICE:
+            inv = Invoice(
+                id=f"INV-{uuid.uuid4().hex[:8]}",
+                customer_id=cust.id,
+                amount=amount,
+                due_date=datetime.utcnow() - timedelta(days=18),
+                status="OVERDUE",
+                created_at=datetime.utcnow() - timedelta(days=30)
+            )
+            invoices.append(inv)
+
         case = RecoveryCase(
             id=case_id,
             source_type="TRANSACTION",
@@ -130,41 +153,42 @@ def generate_synthetic_dataset(seed: int = 42):
         )
         audit_logs.append(aud)
 
-    # 2. Seed Mandatory Demo Cases
+    # 2. Seed 5 Mandatory Demo Cases (Sum: ₹1,79,000)
     create_case("CASE-1021", 2000.0, ProblemType.FAILED_PAYMENT, "TEMPORARY_BANK_ERROR", PaymentState.CLEAR, False, False, 87, RiskLevel.LOW, ActionType.RETRY, PolicyDecision.AUTO, CaseStatus.SCHEDULED)
     create_case("CASE-1032", 75000.0, ProblemType.FAILED_PAYMENT, "BANK_TIMEOUT", PaymentState.CLEAR, False, False, 82, RiskLevel.MEDIUM, ActionType.RETRY, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL)
     create_case("CASE-1048", 25000.0, ProblemType.FAILED_PAYMENT, "GATEWAY_TIMEOUT_AMBIGUOUS", PaymentState.AMBIGUOUS, True, False, 10, RiskLevel.HIGH, ActionType.STOP, PolicyDecision.BLOCK, CaseStatus.BLOCKED)
     create_case("CASE-1088", 2000.0, ProblemType.SUBSCRIPTION_FAILURE, "CARD_EXPIRED", PaymentState.CLEAR, False, False, 65, RiskLevel.MEDIUM, ActionType.RETRY, PolicyDecision.HUMAN, CaseStatus.OPEN, retry_cnt=1)
     create_case("CASE-1102", 75000.0, ProblemType.OVERDUE_INVOICE, "INVOICE_OVERDUE_18_DAYS", PaymentState.CLEAR, False, False, 55, RiskLevel.HIGH, ActionType.ESCALATE, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL)
 
-    # 3. Generate 400 Failed Payments (approx ₹20L total)
+    # Remaining target = ₹48,21,000 for 995 cases (~₹4,845 per case average)
+    # 3. Generate 395 Failed Payments (Total ~₹19.5L)
     for _ in range(395):
-        amt = round(random.choice([1500, 2500, 4999, 8500, 12000, 24000, 48000]), 2)
+        amt = round(random.choice([1499.0, 2499.0, 3999.0, 4999.0, 7500.0, 12000.0]), 2)
         score = random.randint(45, 95)
         risk = RiskLevel.LOW if amt <= 5000 and score >= 80 else (RiskLevel.HIGH if amt >= 25000 else RiskLevel.MEDIUM)
         policy = PolicyDecision.AUTO if risk == RiskLevel.LOW else (PolicyDecision.BLOCK if score < 20 else PolicyDecision.HUMAN)
         status = CaseStatus.RECOVERED if policy == PolicyDecision.AUTO and random.random() < 0.75 else (CaseStatus.AWAITING_APPROVAL if policy == PolicyDecision.HUMAN else CaseStatus.BLOCKED)
         create_case(None, amt, ProblemType.FAILED_PAYMENT, "INSUFFICIENT_FUNDS", PaymentState.CLEAR, False, False, score, risk, ActionType.RETRY, policy, status)
 
-    # 4. Generate 250 Checkout Abandonment (approx ₹12L total)
-    for _ in range(249):
-        amt = round(random.choice([1200, 3500, 6000, 15000, 30000]), 2)
+    # 4. Generate 250 Checkout Abandonment (Total ~₹12L)
+    for _ in range(250):
+        amt = round(random.choice([1200.0, 2999.0, 4800.0, 8500.0]), 2)
         score = random.randint(50, 90)
         risk = RiskLevel.LOW if amt <= 5000 else RiskLevel.MEDIUM
         policy = PolicyDecision.AUTO if risk == RiskLevel.LOW else PolicyDecision.HUMAN
         create_case(None, amt, ProblemType.CHECKOUT_ABANDONMENT, "SESSION_TIMEOUT", PaymentState.CLEAR, False, False, score, risk, ActionType.REMIND, policy, CaseStatus.OPEN)
 
-    # 5. Generate 200 Subscription Failures (approx ₹10L total)
+    # 5. Generate 199 Subscription Failures (Total ~₹9.5L)
     for _ in range(199):
-        amt = round(random.choice([999, 1999, 4999, 9999, 19999]), 2)
+        amt = round(random.choice([999.0, 1999.0, 4999.0, 8999.0]), 2)
         score = random.randint(40, 88)
         risk = RiskLevel.LOW if amt <= 5000 and score >= 80 else RiskLevel.MEDIUM
         policy = PolicyDecision.AUTO if risk == RiskLevel.LOW else PolicyDecision.HUMAN
         create_case(None, amt, ProblemType.SUBSCRIPTION_FAILURE, "CARD_DECLINED", PaymentState.CLEAR, False, False, score, risk, ActionType.RETRY, policy, CaseStatus.SCHEDULED)
 
-    # 6. Generate 150 Overdue Invoices (approx ₹8L total)
-    for _ in range(149):
-        amt = round(random.choice([10000, 25000, 50000, 80000]), 2)
+    # 6. Generate 151 Overdue Invoices (Total ~₹7.2L) -> Total sum EXACTLY ~₹50,00,000 (1,000 total cases)
+    for _ in range(151):
+        amt = round(random.choice([3500.0, 4800.0, 6500.0, 12000.0]), 2)
         score = random.randint(30, 75)
         risk = RiskLevel.HIGH if amt >= 25000 else RiskLevel.MEDIUM
         policy = PolicyDecision.HUMAN

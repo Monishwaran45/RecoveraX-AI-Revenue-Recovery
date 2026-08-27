@@ -27,17 +27,44 @@ class ActionService:
 
         status_str = tx.status.value if tx else "FAILED"
         state_str = tx.payment_state.value if tx else "CLEAR"
+        possible_debit = tx.possible_customer_debit if tx else False
 
-        await audit_service.log_event(
-            db=db,
-            case_id=case.id,
-            event_type=AuditEventType.PAYMENT_RECHECKED,
-            actor_type=ActorType.VERIFIER,
-            actor_id="GATEWAY_VERIFIER",
-            reason=f"Payment state re-checked prior to action: status={status_str}, payment_state={state_str}",
-            metadata_json={"status": status_str, "payment_state": state_str}
-        )
+        if status_str == "SUCCESS":
+            case.status = CaseStatus.RECOVERED
+            case.policy_decision = PolicyDecision.STOP
+            await audit_service.log_event(
+                db=db,
+                case_id=case.id,
+                event_type=AuditEventType.REVENUE_RECOVERED,
+                actor_type=ActorType.VERIFIER,
+                actor_id="GATEWAY_VERIFIER",
+                reason="Fresh re-check verified payment was settled with bank gateway. Case marked RECOVERED.",
+                metadata_json={"status": "SUCCESS"}
+            )
+        elif state_str == "AMBIGUOUS" or possible_debit:
+            case.status = CaseStatus.BLOCKED
+            case.policy_decision = PolicyDecision.BLOCK
+            await audit_service.log_event(
+                db=db,
+                case_id=case.id,
+                event_type=AuditEventType.ACTION_BLOCKED,
+                actor_type=ActorType.POLICY,
+                actor_id="GATEWAY_VERIFIER",
+                reason="Fresh re-check detected unconfirmed bank state or possible customer debit risk. Retry hard-blocked.",
+                metadata_json={"payment_state": state_str, "possible_customer_debit": possible_debit}
+            )
+        else:
+            await audit_service.log_event(
+                db=db,
+                case_id=case.id,
+                event_type=AuditEventType.PAYMENT_RECHECKED,
+                actor_type=ActorType.VERIFIER,
+                actor_id="GATEWAY_VERIFIER",
+                reason=f"Payment state re-checked prior to action: status={status_str}, payment_state={state_str}",
+                metadata_json={"status": status_str, "payment_state": state_str}
+            )
 
+        await db.commit()
         return case
 
     @staticmethod
@@ -81,6 +108,30 @@ class ActionService:
             )
             await db.commit()
             return case
+
+        # Enforce mandatory Human Approval authorization check
+        if policy_eval.decision == PolicyDecision.HUMAN or case.policy_decision == PolicyDecision.HUMAN:
+            from app.models.approval import ApprovalRequest
+            from app.policy.enums import ApprovalStatus
+            app_query = select(ApprovalRequest).where(
+                ApprovalRequest.case_id == case.id,
+                ApprovalRequest.status.in_([ApprovalStatus.APPROVED, ApprovalStatus.MODIFIED])
+            )
+            app_res = await db.execute(app_query)
+            approved_req = app_res.scalar_one_or_none()
+            if not approved_req:
+                case.status = CaseStatus.AWAITING_APPROVAL
+                await audit_service.log_event(
+                    db=db,
+                    case_id=case.id,
+                    event_type=AuditEventType.ACTION_BLOCKED,
+                    actor_type=ActorType.POLICY,
+                    actor_id="DETERMINISTIC_POLICY_ENGINE",
+                    reason="Pre-execution check BLOCKED: Case requires human authorization, but no merchant sign-off record exists.",
+                    metadata_json={"decision": "HUMAN_APPROVAL_REQUIRED"}
+                )
+                await db.commit()
+                return case
 
         # Execute retry via simulator
         case.status = CaseStatus.EXECUTING
