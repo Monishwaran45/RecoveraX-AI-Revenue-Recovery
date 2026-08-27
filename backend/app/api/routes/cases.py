@@ -16,6 +16,8 @@ async def get_cases(
     search: Optional[str] = Query(None),
     sort_by: str = Query("created_at"),
     sort_order: str = Query("desc"),
+    limit: int = Query(50),
+    offset: int = Query(0),
     db: AsyncSession = Depends(get_db)
 ):
     return await case_service.get_cases(
@@ -25,7 +27,9 @@ async def get_cases(
         problem_type=problem_type,
         search=search,
         sort_by=sort_by,
-        sort_order=sort_order
+        sort_order=sort_order,
+        limit=limit,
+        offset=offset
     )
 
 @router.get("/cases/{case_id}", response_model=RecoveryCaseDetailRead)

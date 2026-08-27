@@ -1,24 +1,17 @@
 import { store } from "../store";
 import { RecoveryCase, ModifyActionInput } from "../types";
 import { BACKEND_URL } from "./config";
-import { getCase } from "./cases";
+import { getCase, getCases } from "./cases";
 
 export async function getApprovalCases(): Promise<RecoveryCase[]> {
   try {
-    const res = await fetch(`${BACKEND_URL}/approvals`, {
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        if (data.length === 0) return [];
-        const caseIds = data.map((item: any) => item.case_id);
-        const cases = await Promise.all(caseIds.map((id: string) => getCase(id)));
-        return cases.filter((c): c is RecoveryCase => c !== undefined);
-      }
+    // Optimized: Single HTTP query for AWAITING_APPROVAL status instead of N+1 requests
+    const cases = await getCases({ status: "Human Approval" });
+    if (cases && cases.length >= 0) {
+      return cases;
     }
   } catch (e) {
-    console.warn("Backend /approvals unreachable, using store fallback:", e);
+    console.warn("Backend /cases?status=AWAITING_APPROVAL unreachable, using store fallback:", e);
   }
   return store.getApprovalQueue();
 }

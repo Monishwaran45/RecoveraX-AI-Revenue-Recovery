@@ -20,7 +20,9 @@ class CaseService:
         problem_type: Optional[str] = None,
         search: Optional[str] = None,
         sort_by: str = "created_at",
-        sort_order: str = "desc"
+        sort_order: str = "desc",
+        limit: int = 50,
+        offset: int = 0
     ) -> List[RecoveryCase]:
         query = select(RecoveryCase).options(
             selectinload(RecoveryCase.customer),
@@ -50,6 +52,7 @@ class CaseService:
         else:
             query = query.order_by(asc(order_col))
 
+        query = query.limit(limit).offset(offset)
         result = await db.execute(query)
         cases = list(result.scalars().all())
         
