@@ -1,0 +1,9 @@
+from enum import Enum
+
+class SimulatorOutcome(str, Enum):
+    SUCCESS = "SUCCESS"
+    TEMPORARY_FAILURE = "TEMPORARY_FAILURE"
+    PERMANENT_FAILURE = "PERMANENT_FAILURE"
+    PENDING = "PENDING"
+    AMBIGUOUS = "AMBIGUOUS"
+    FRAUD = "FRAUD"
