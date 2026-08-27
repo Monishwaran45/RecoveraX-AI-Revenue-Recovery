@@ -6,7 +6,7 @@ AI Revenue Recovery detects revenue at risk, diagnoses root causes using **Groq 
 
 ---
 
-## 🏛️ Core Product Philosophy
+## Core Product Philosophy
 
 ```
 AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRMS  →  HUMAN CONTROLS RISK
@@ -26,7 +26,7 @@ AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRM
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```
 AI-Revenue-Recovery/
@@ -57,7 +57,7 @@ AI-Revenue-Recovery/
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 1. Prerequisites
 - **Node.js**: `v18.17+`
@@ -124,7 +124,7 @@ venv\Scripts\python -m pytest tests
 
 ---
 
-## 🎯 Mandatory Demo Cases
+## Mandatory Demo Cases
 
 | Case ID | Amount | Problem Type | Diagnosis | Recovery Score | Policy Decision | Outcome |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -136,7 +136,7 @@ venv\Scripts\python -m pytest tests
 
 ---
 
-## 🛡️ Deterministic Safety Rules
+## Deterministic Safety Rules
 
 1. **Rule 1 (`MAX_AUTO_RETRY_AMOUNT = 5000`)**: Transactions exceeding ₹5,000 require **HUMAN** approval.
 2. **Rule 2 (`MIN_AUTO_RECOVERY_SCORE = 80`)**: Recovery scores < 80 require **HUMAN** approval or **BLOCK**.
