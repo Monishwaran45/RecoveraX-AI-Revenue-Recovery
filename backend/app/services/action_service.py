@@ -30,8 +30,11 @@ class ActionService:
         possible_debit = tx.possible_customer_debit if tx else False
 
         if status_str == "SUCCESS":
+            recovered_amount = float(tx.amount) if tx else float(case.amount_at_risk)
             case.status = CaseStatus.RECOVERED
             case.policy_decision = PolicyDecision.STOP
+            case.verification_result = "VERIFIED_SUCCESS"
+            case.amount_recovered = recovered_amount
             await audit_service.log_event(
                 db=db,
                 case_id=case.id,
@@ -39,11 +42,13 @@ class ActionService:
                 actor_type=ActorType.VERIFIER,
                 actor_id="GATEWAY_VERIFIER",
                 reason="Fresh re-check verified payment was settled with bank gateway. Case marked RECOVERED.",
-                metadata_json={"status": "SUCCESS"}
+                metadata_json={"status": "SUCCESS", "amount_recovered": recovered_amount}
             )
         elif state_str == "AMBIGUOUS" or possible_debit:
             case.status = CaseStatus.BLOCKED
             case.policy_decision = PolicyDecision.BLOCK
+            case.verification_result = "VERIFIED_AMBIGUOUS"
+            case.amount_recovered = 0.0
             await audit_service.log_event(
                 db=db,
                 case_id=case.id,
@@ -54,6 +59,12 @@ class ActionService:
                 metadata_json={"payment_state": state_str, "possible_customer_debit": possible_debit}
             )
         else:
+            # A fresh check does not authorize execution. It only confirms that the
+            # transaction is still eligible to proceed to the pre-execution policy gate.
+            if case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED, CaseStatus.STOPPED]:
+                return await case_service.get_case_by_id(db, case.id)
+            case.amount_recovered = 0.0
+            case.verification_result = "PENDING"
             await audit_service.log_event(
                 db=db,
                 case_id=case.id,
@@ -79,11 +90,12 @@ class ActionService:
         tx_res = await db.execute(tx_query)
         tx = tx_res.scalar_one_or_none()
 
-        # Never execute a terminal case or case that reached max retries limit
+        # Never execute a terminal case or a case that reached its retry limit.
         if case.retry_count >= case.max_retries or case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED, CaseStatus.STOPPED]:
             if case.retry_count >= case.max_retries and case.status != CaseStatus.RECOVERED:
                 case.status = CaseStatus.STOPPED
                 case.verification_result = "STOPPED"
+                case.amount_recovered = 0.0
                 await db.commit()
             return await case_service.get_case_by_id(db, case.id)
 
@@ -104,6 +116,7 @@ class ActionService:
         if policy_eval.decision == PolicyDecision.BLOCK:
             case.status = CaseStatus.BLOCKED
             case.policy_decision = PolicyDecision.BLOCK
+            case.amount_recovered = 0.0
             await audit_service.log_event(
                 db=db,
                 case_id=case.id,
@@ -128,6 +141,7 @@ class ActionService:
             approved_req = app_res.scalars().first()
             if not approved_req:
                 case.status = CaseStatus.AWAITING_APPROVAL
+                case.amount_recovered = 0.0
                 await audit_service.log_event(
                     db=db,
                     case_id=case.id,
@@ -202,6 +216,8 @@ class ActionService:
                 )
         except Exception as e:
             case.status = CaseStatus.BLOCKED
+            case.amount_recovered = 0.0
+            case.verification_result = "EXECUTION_ERROR"
             action_rec.status = "BLOCKED"
             action_rec.result = str(e)
             await audit_service.log_event(
@@ -227,6 +243,8 @@ class ActionService:
 
         case.status = CaseStatus.STOPPED
         case.policy_decision = PolicyDecision.STOP
+        case.amount_recovered = 0.0
+        case.verification_result = "STOPPED"
 
         await audit_service.log_event(
             db=db,
