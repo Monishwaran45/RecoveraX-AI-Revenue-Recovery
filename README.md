@@ -176,6 +176,12 @@ flowchart TD
    LANGSMITH_ENDPOINT=https://api.smith.langchain.com
    ```
 
+### 📸 LangSmith Dashboard & Tracing Evidence
+
+| 12-Node Execution DAG & LLM Spans | Real-Time Execution Runs & Sub-Second Latencies |
+| :---: | :---: |
+| ![LangSmith Trace Detail](./docs/images/langsmith_trace_detail.png) | ![LangSmith Runs List](./docs/images/langsmith_runs_list.png) |
+
 ---
 
 ## 📁 Repository Structure
