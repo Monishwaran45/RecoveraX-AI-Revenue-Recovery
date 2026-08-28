@@ -15,7 +15,8 @@ def get_groq_llm() -> Optional[ChatGroq]:
         return ChatGroq(
             groq_api_key=api_key,
             model_name=settings.GROQ_MODEL,
-            temperature=0.1
+            temperature=0.1,
+            max_retries=5
         )
     except Exception as e:
         logger.error(f"Failed to initialize ChatGroq: {str(e)}")

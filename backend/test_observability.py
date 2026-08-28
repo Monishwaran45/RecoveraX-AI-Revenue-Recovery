@@ -14,6 +14,7 @@ async def main():
             if c:
                 cust_name = c.customer.name if c.customer else "Customer"
                 print(f"[OK] {c.id} ({cust_name}): INR {c.amount_at_risk:,.2f} | Problem: {c.problem_type.value} | Score: {c.recovery_score}/100 | Policy: {c.policy_decision.value} | Status: {c.status.value}")
+            await asyncio.sleep(2)
 
 if __name__ == "__main__":
     asyncio.run(main())
