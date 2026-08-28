@@ -30,7 +30,10 @@ export function mapCaseToScenario(c: any, index: number): Scenario {
   };
   const icon = iconMap[c.type] || (c.status === "BLOCKED" ? ShieldAlert : CreditCard);
 
-  const badge: "AUTO" | "HUMAN" | "BLOCK" = c.status === "BLOCKED" ? "BLOCK" : (c.policyDecision?.type === "AUTO" ? "AUTO" : "HUMAN");
+  const policyVal = String(c.policyDecision?.type || c.policyDecision || c.status || "HUMAN").toUpperCase();
+  const badge: "AUTO" | "HUMAN" | "BLOCK" = policyVal.includes("AUTO")
+    ? "AUTO"
+    : (policyVal.includes("BLOCK") || c.status === "BLOCKED" || c.status === "STOPPED" ? "BLOCK" : "HUMAN");
   const badgeBg = badge === "AUTO" 
     ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
     : (badge === "BLOCK" ? "bg-rose-50 text-rose-800 border-rose-200" : "bg-amber-50 text-amber-800 border-amber-200");

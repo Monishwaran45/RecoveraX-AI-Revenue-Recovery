@@ -15,13 +15,33 @@ from app.data.generator import generate_synthetic_dataset
 
 logger = logging.getLogger(__name__)
 
+from app.policy.enums import PolicyDecision, CaseStatus, RiskLevel
+
+def ensure_demo_cases_updated(db: Session):
+    demo_updates = {
+        "CASE-1001": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW),
+        "CASE-1002": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH),
+        "CASE-1003": (PolicyDecision.BLOCK, CaseStatus.BLOCKED, RiskLevel.HIGH),
+        "CASE-1004": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW),
+        "CASE-1005": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.LOW),
+        "CASE-1006": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH),
+    }
+    for c_id, (policy, status, risk) in demo_updates.items():
+        case = db.scalar(select(RecoveryCase).where(RecoveryCase.id == c_id))
+        if case:
+            case.policy_decision = policy
+            case.status = status
+            case.risk_level = risk
+    db.commit()
+
 def seed_database_if_empty():
     Base.metadata.create_all(bind=sync_engine)
     
     with SyncSessionLocal() as db:
         existing = db.scalars(select(RecoveryCase)).first()
         if existing:
-            logger.info("Database already seeded with recovery cases.")
+            ensure_demo_cases_updated(db)
+            logger.info("Database already seeded. Demo case decisions updated.")
             return
 
         logger.info("Seeding database with 1,000 synthetic cases and demo cases (seed=42)...")

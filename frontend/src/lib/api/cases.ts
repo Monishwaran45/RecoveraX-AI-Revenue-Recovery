@@ -59,7 +59,22 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     },
   ];
 
-  const policyType = item.policy_decision || (item.amount_at_risk > 50000 || item.recovery_score < 80 ? "HUMAN" : "AUTO");
+  let rawPolicy = "";
+  if (typeof item.policy_decision === "string") {
+    rawPolicy = item.policy_decision;
+  } else if (item.policy_decision?.value) {
+    rawPolicy = item.policy_decision.value;
+  } else if (item.policy_decision?.type) {
+    rawPolicy = item.policy_decision.type;
+  }
+
+  if (!rawPolicy) {
+    if (item.status === "BLOCKED") rawPolicy = "BLOCK";
+    else if (item.status === "SCHEDULED" || item.status === "RECOVERED") rawPolicy = "AUTO";
+    else rawPolicy = (item.amount_at_risk || 0) <= 50000 && (item.recovery_score || 50) >= 80 ? "AUTO" : "HUMAN";
+  }
+
+  const policyType = rawPolicy.toUpperCase();
 
   return {
     id: item.id,
