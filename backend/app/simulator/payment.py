@@ -30,7 +30,7 @@ class PaymentSimulator:
         if current_retry_count < len(profile.retry_outcomes):
             outcome = profile.retry_outcomes[current_retry_count]
         else:
-            outcome = TransactionStatus.SUCCESS if random.random() < 0.7 else TransactionStatus.FAILED
+            outcome = profile.retry_outcomes[-1] if profile.retry_outcomes else TransactionStatus.SUCCESS
 
         if outcome == TransactionStatus.SUCCESS:
             return TransactionStatus.SUCCESS, PaymentState.CLEAR, "Payment successfully settled with bank gateway"

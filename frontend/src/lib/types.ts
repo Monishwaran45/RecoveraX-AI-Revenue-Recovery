@@ -42,6 +42,12 @@ export interface AuditEvent {
   badgeText?: string;
 }
 
+export interface CaseOutcome {
+  state: "RECOVERED" | "AWAITING_APPROVAL" | "BLOCKED" | "STOPPED" | "FAILED" | "SCHEDULED" | "OPEN";
+  amountRecovered: number;
+  verificationResult: string;
+}
+
 export interface RecoveryCase {
   id: string;
   customerName: string;
@@ -63,6 +69,7 @@ export interface RecoveryCase {
   verificationResult?: string;
   amountRecovered?: number;
   approvalStatus?: string;
+  outcome?: CaseOutcome;
   scheduledDelayMinutes: number;
   auditTimeline: AuditEvent[];
   createdAt: string;

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.models.recovery_case import RecoveryCase
 from app.models.transaction import Transaction
 from app.models.action import ActionModel
-from app.policy.enums import CaseStatus, TransactionStatus, PaymentState, PolicyDecision, AuditEventType, ActorType
+from app.policy.enums import CaseStatus, TransactionStatus, PaymentState, PolicyDecision, AuditEventType, ActorType, RiskLevel, ActionType
 from app.policy.engine import policy_engine
 from app.simulator.payment import payment_simulator
 from app.services.audit_service import audit_service
@@ -79,8 +79,12 @@ class ActionService:
         tx_res = await db.execute(tx_query)
         tx = tx_res.scalar_one_or_none()
 
-        # Never execute a terminal or approval-waiting case.
-        if case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED, CaseStatus.STOPPED, CaseStatus.AWAITING_APPROVAL]:
+        # Never execute a terminal case or case that reached max retries limit
+        if case.retry_count >= case.max_retries or case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED, CaseStatus.STOPPED]:
+            if case.retry_count >= case.max_retries and case.status != CaseStatus.RECOVERED:
+                case.status = CaseStatus.STOPPED
+                case.verification_result = "STOPPED"
+                await db.commit()
             return await case_service.get_case_by_id(db, case.id)
 
         policy_eval = policy_engine.evaluate(
@@ -121,7 +125,7 @@ class ActionService:
                 ApprovalRequest.status.in_([ApprovalStatus.APPROVED, ApprovalStatus.MODIFIED])
             )
             app_res = await db.execute(app_query)
-            approved_req = app_res.scalar_one_or_none()
+            approved_req = app_res.scalars().first()
             if not approved_req:
                 case.status = CaseStatus.AWAITING_APPROVAL
                 await audit_service.log_event(
@@ -163,6 +167,8 @@ class ActionService:
 
             if status == TransactionStatus.SUCCESS:
                 case.status = CaseStatus.RECOVERED
+                case.verification_result = "VERIFIED_SUCCESS"
+                case.amount_recovered = case.amount_at_risk
                 action_rec.status = "SUCCESS"
                 action_rec.amount_recovered = case.amount_at_risk
                 if tx:
@@ -180,6 +186,8 @@ class ActionService:
                 )
             else:
                 case.status = CaseStatus.FAILED
+                case.verification_result = "VERIFIED_FAILED"
+                case.amount_recovered = 0.0
                 action_rec.status = "FAILED"
                 if tx:
                     tx.status = TransactionStatus.FAILED
@@ -229,6 +237,55 @@ class ActionService:
             reason=reason or "Recovery case explicitly stopped",
             metadata_json={"status": "STOPPED"}
         )
+
+        await db.commit()
+        return await case_service.get_case_by_id(db, case.id)
+
+    @staticmethod
+    async def reset_case(db: AsyncSession, case_id: str) -> Optional[RecoveryCase]:
+        query = select(RecoveryCase).where(RecoveryCase.id == case_id)
+        res = await db.execute(query)
+        case = res.scalar_one_or_none()
+        if not case:
+            return None
+
+        tx_query = select(Transaction).where(Transaction.id == case.source_id)
+        tx_res = await db.execute(tx_query)
+        tx = tx_res.scalar_one_or_none()
+
+        demo_defaults = {
+            "CASE-1001": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW, 87, ActionType.RETRY, "NONE", 0.0, "NOT_REQUIRED", TransactionStatus.FAILED, PaymentState.CLEAR, False, 0, 15000.0),
+            "CASE-1002": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH, 78, ActionType.RETRY, "NONE", 0.0, "PENDING", TransactionStatus.FAILED, PaymentState.CLEAR, False, 0, 75000.0),
+            "CASE-1003": (PolicyDecision.BLOCK, CaseStatus.BLOCKED, RiskLevel.HIGH, 10, ActionType.STOP, "BLOCKED", 0.0, "NOT_REQUIRED", TransactionStatus.AMBIGUOUS, PaymentState.AMBIGUOUS, True, 0, 25000.0),
+            "CASE-1004": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW, 85, ActionType.RETRY, "NONE", 0.0, "NOT_REQUIRED", TransactionStatus.FAILED, PaymentState.CLEAR, False, 0, 2499.0),
+            "CASE-1005": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.LOW, 75, ActionType.REMIND, "NONE", 0.0, "PENDING", TransactionStatus.FAILED, PaymentState.CLEAR, False, 0, 8500.0),
+            "CASE-1006": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH, 65, ActionType.ESCALATE, "NONE", 0.0, "PENDING", TransactionStatus.FAILED, PaymentState.CLEAR, False, 0, 120000.0),
+        }
+
+        if case_id in demo_defaults:
+            policy, status, risk, score, action, v_res, amt_rec, app_stat, tx_stat, p_state, poss_debit, retry_cnt, amt_risk = demo_defaults[case_id]
+            case.policy_decision = policy
+            case.status = status
+            case.risk_level = risk
+            case.recovery_score = score
+            case.recommended_action = action
+            case.verification_result = v_res
+            case.amount_recovered = amt_rec
+            case.approval_status = app_stat
+            case.retry_count = retry_cnt
+            case.amount_at_risk = amt_risk
+            if tx:
+                tx.amount = amt_risk
+                tx.status = tx_stat
+                tx.payment_state = p_state
+                tx.possible_customer_debit = poss_debit
+                tx.retry_count = retry_cnt
+        from app.models.approval import ApprovalRequest
+        from app.policy.enums import ApprovalStatus
+
+        app_reqs = (await db.execute(select(ApprovalRequest).where(ApprovalRequest.case_id == case.id))).scalars().all()
+        for ar in app_reqs:
+            ar.status = ApprovalStatus.PENDING if case.status == CaseStatus.AWAITING_APPROVAL else ApprovalStatus.APPROVED
 
         await db.commit()
         return await case_service.get_case_by_id(db, case.id)

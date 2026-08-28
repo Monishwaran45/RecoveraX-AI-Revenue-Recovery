@@ -1,6 +1,7 @@
 "use client";
 
 import { CreditCard, RefreshCw, ShoppingCart, FileText, ShieldAlert } from "lucide-react";
+import { formatDynamicTitle } from "../../lib/api/cases";
 
 export interface Scenario {
   id: string;
@@ -30,17 +31,22 @@ export function mapCaseToScenario(c: any, index: number): Scenario {
   };
   const icon = iconMap[c.type] || (c.status === "BLOCKED" ? ShieldAlert : CreditCard);
 
-  const policyVal = String(c.policyDecision?.type || c.policyDecision?.value || c.policyDecision || c.status || "HUMAN").toUpperCase();
-  const badge: "AUTO" | "HUMAN" | "BLOCK" = (policyVal.includes("AUTO") || c.status === "SCHEDULED")
-    ? "AUTO"
-    : ((policyVal.includes("BLOCK") || c.status === "BLOCKED" || c.status === "STOPPED") ? "BLOCK" : "HUMAN");
+  const policyVal = String(c.policyDecision?.type || c.policyDecision?.value || c.policyDecision || "").toUpperCase();
+  let badge: "AUTO" | "HUMAN" | "BLOCK" = "HUMAN";
+  if (policyVal.includes("BLOCK") || c.status === "BLOCKED" || c.status === "STOPPED") {
+    badge = "BLOCK";
+  } else if (policyVal.includes("HUMAN") || c.status === "HUMAN_APPROVAL" || c.status === "AWAITING_APPROVAL") {
+    badge = "HUMAN";
+  } else if (policyVal.includes("AUTO") || c.status === "SCHEDULED" || c.status === "RECOVERED") {
+    badge = "AUTO";
+  }
 
   const badgeBg = badge === "AUTO" 
     ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
     : (badge === "BLOCK" ? "bg-rose-50 text-rose-800 border-rose-200" : "bg-amber-50 text-amber-800 border-amber-200");
   const badgeText = badge === "AUTO" ? "🟢 AUTO APPROVED" : (badge === "BLOCK" ? "🔴 POLICY BLOCKED" : "🟡 HUMAN APPROVAL");
 
-  const title = c.problem || c.title || (c.type ? String(c.type).replace(/_/g, " ") : "") || `Case ${c.id}`;
+  const title = c.title || formatDynamicTitle(c.problem || c.type) || `Case ${c.id}`;
 
   return {
     id: `sc-${c.id}`,

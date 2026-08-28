@@ -36,13 +36,15 @@ class ExperimentService:
 
             baseline_recovered += base_recovered
 
-            # Strategy 2: RecoveraX Agent Strategy (Full ML scoring + Deterministic Safety Policy + Recheck + Simulator Execution)
-            if c.status == CaseStatus.RECOVERED:
-                ai_rec = c.amount_at_risk
+            # Strategy 2: RecoveraX Agent Strategy (Money Truth: Only verified success counts)
+            is_verified = (c.status == CaseStatus.RECOVERED and (getattr(c, 'verification_result', None) == "VERIFIED_SUCCESS" or (getattr(c, 'amount_recovered', 0.0) or 0.0) > 0))
+            
+            if is_verified:
+                ai_rec = getattr(c, 'amount_recovered', None) or c.amount_at_risk
                 ai_outcome = "RECOVERED"
-            elif c.policy_decision == PolicyDecision.AUTO and c.recovery_score >= 80:
-                ai_rec = c.amount_at_risk
-                ai_outcome = "RECOVERED"
+            elif c.policy_decision == PolicyDecision.AUTO:
+                ai_rec = 0.0
+                ai_outcome = "AUTO_AUTHORIZED_AWAITING_EXECUTION"
             elif c.policy_decision == PolicyDecision.BLOCK or c.status == CaseStatus.BLOCKED:
                 ai_rec = 0.0
                 ai_outcome = "BLOCKED_SAFETY"
@@ -98,10 +100,11 @@ class ExperimentService:
             exp.ai_recovery_rate = round((exp.ai_recovered / exp.revenue_at_risk) * 100.0, 1)
 
         results = getattr(exp, "results", []) or []
-        exp.auto_count = sum(1 for r in results if r.ai_outcome == "RECOVERED")
+        exp.auto_count = sum(1 for r in results if r.ai_outcome in ("RECOVERED", "AUTO_AUTHORIZED_AWAITING_EXECUTION"))
         exp.human_count = sum(1 for r in results if r.ai_outcome == "AWAITING_HUMAN_APPROVAL")
         exp.blocked_count = sum(1 for r in results if r.ai_outcome in ("BLOCKED_SAFETY", "STOPPED"))
         exp.stopped_count = sum(1 for r in results if r.ai_outcome == "STOPPED")
+        exp.verified_recovery_count = sum(1 for r in results if r.ai_outcome == "RECOVERED")
         exp.safety_actions_prevented = exp.blocked_count
         return exp
 

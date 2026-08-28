@@ -61,13 +61,45 @@ class CaseService:
         result = await db.execute(query)
         cases = list(result.scalars().all())
         
-        # Attach latest recommendation if present
+        # Attach latest recommendation & outcome
         for c in cases:
             if c.recommendations:
                 c.latest_recommendation = sorted(c.recommendations, key=lambda r: r.created_at, reverse=True)[0]
             else:
                 c.latest_recommendation = None
+            CaseService.attach_outcome(c)
         return cases
+
+    @staticmethod
+    def attach_outcome(c: RecoveryCase):
+        if not c:
+            return
+        
+        v_res = getattr(c, 'verification_result', None) or "NONE"
+        amt_rec = getattr(c, 'amount_recovered', 0.0) or 0.0
+        app_stat = getattr(c, 'approval_status', None) or "NOT_REQUIRED"
+
+        state = "OPEN"
+        if c.status == CaseStatus.RECOVERED and (v_res == "VERIFIED_SUCCESS" or amt_rec > 0):
+            state = "RECOVERED"
+        elif c.status == CaseStatus.BLOCKED:
+            state = "BLOCKED"
+        elif c.status == CaseStatus.STOPPED or app_stat == "REJECTED":
+            state = "STOPPED"
+        elif c.status == CaseStatus.FAILED or v_res == "VERIFIED_FAILED":
+            state = "FAILED"
+        elif c.status == CaseStatus.AWAITING_APPROVAL or app_stat == "PENDING" or c.policy_decision == PolicyDecision.HUMAN:
+            state = "AWAITING_APPROVAL"
+            amt_rec = 0.0
+        elif c.status == CaseStatus.SCHEDULED:
+            state = "SCHEDULED"
+
+        from app.schemas.recovery_case import CaseOutcomeSchema
+        c.outcome = CaseOutcomeSchema(
+            state=state,
+            amount_recovered=amt_rec if state == "RECOVERED" else 0.0,
+            verification_result=v_res if state == "RECOVERED" else ("BLOCKED" if state == "BLOCKED" else ("VERIFIED_FAILED" if state == "FAILED" else "NONE"))
+        )
 
     @staticmethod
     async def get_case_by_id(db: AsyncSession, case_id: str) -> Optional[RecoveryCase]:
@@ -80,8 +112,10 @@ class CaseService:
         )
         result = await db.execute(query)
         case = result.scalar_one_or_none()
-        if case and case.recommendations:
-            case.latest_recommendation = sorted(case.recommendations, key=lambda r: r.created_at, reverse=True)[0]
+        if case:
+            if case.recommendations:
+                case.latest_recommendation = sorted(case.recommendations, key=lambda r: r.created_at, reverse=True)[0]
+            CaseService.attach_outcome(case)
         return case
 
     @staticmethod

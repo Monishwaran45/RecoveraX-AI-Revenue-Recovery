@@ -35,15 +35,33 @@ class ApprovalService:
         if not case:
             return None
 
-        # Update approval request
-        for req in case.approval_requests:
-            if req.status == ApprovalStatus.PENDING:
-                req.status = ApprovalStatus.APPROVED
-                req.human_decision = "APPROVE"
-                req.reason = reason or "Human operator approved AI recommendation"
-                req.resolved_at = datetime.utcnow()
+        # Update or create approval request
+        pending_found = False
+        if case.approval_requests:
+            for req in case.approval_requests:
+                if req.status == ApprovalStatus.PENDING:
+                    req.status = ApprovalStatus.APPROVED
+                    req.human_decision = "APPROVE"
+                    req.reason = reason or "Human operator approved AI recommendation"
+                    req.resolved_at = datetime.utcnow()
+                    pending_found = True
+
+        if not pending_found:
+            new_app = ApprovalRequest(
+                id=f"APP-{uuid.uuid4().hex[:8]}",
+                case_id=case.id,
+                status=ApprovalStatus.APPROVED,
+                ai_recommendation=f"Recommend {case.recommended_action.value} delay 30m. Explicit merchant sign-off granted.",
+                reason=reason or "Human operator approved AI recommendation",
+                human_decision="APPROVE",
+                created_at=datetime.utcnow(),
+                resolved_at=datetime.utcnow()
+            )
+            db.add(new_app)
 
         case.status = CaseStatus.SCHEDULED
+        case.approval_status = "APPROVED"
+        case.policy_decision = PolicyDecision.AUTO
         
         await audit_service.log_event(
             db=db,

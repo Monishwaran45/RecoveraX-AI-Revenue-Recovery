@@ -47,6 +47,6 @@ FAILURE_PROFILES = {
         initial_payment_state=PaymentState.CLEAR,
         possible_customer_debit=False,
         fraud_signal=False,
-        retry_outcomes=[TransactionStatus.FAILED, TransactionStatus.SUCCESS]
+        retry_outcomes=[TransactionStatus.SUCCESS]
     ),
 }

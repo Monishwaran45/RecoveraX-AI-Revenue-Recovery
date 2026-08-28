@@ -25,12 +25,18 @@ class RecoveryCaseBase(BaseModel):
     retry_count: int = 0
     max_retries: int = 2
 
+class CaseOutcomeSchema(BaseModel):
+    state: str
+    amount_recovered: float
+    verification_result: str
+
 class RecoveryCaseRead(RecoveryCaseBase):
     id: str
     created_at: datetime
     updated_at: datetime
     customer: Optional[CustomerRead] = None
     latest_recommendation: Optional[RecommendationRead] = None
+    outcome: Optional[CaseOutcomeSchema] = None
 
     model_config = ConfigDict(from_attributes=True)
 

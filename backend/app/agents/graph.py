@@ -77,11 +77,11 @@ def build_recovery_graph():
         }
     )
     
-    # HITL Interrupt Node End
+    # Analysis graph terminal nodes
     builder.add_edge("human_approval", END)
+    builder.add_edge("schedule", END)
     
     # Execution & Verification Path
-    builder.add_edge("schedule", "recheck")
     builder.add_edge("recheck", "execute")
     builder.add_edge("execute", "verify")
     

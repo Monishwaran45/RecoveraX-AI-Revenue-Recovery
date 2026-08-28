@@ -14,7 +14,7 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
   const isBlocked = caseData.status === "BLOCKED";
   const isStopped = caseData.status === "STOPPED" || caseData.status === "REJECTED";
   const isFailed = caseData.status === "FAILED";
-  const isHuman = caseData.status === "HUMAN_APPROVAL" || caseData.policyDecision?.type === "HUMAN" || caseData.approvalStatus === "PENDING";
+  const isHuman = (caseData.status === "HUMAN_APPROVAL" || caseData.approvalStatus === "PENDING" || caseData.policyDecision?.type === "HUMAN") && !isRecovered && !isBlocked && !isStopped && !isFailed;
   
   const isReminderAction = caseData.recommendedAction === "REMIND" || caseData.recommendedAction === "ESCALATE" || caseData.type === "CHECKOUT" || caseData.type === "INVOICE";
 
@@ -61,7 +61,7 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
                 ? "⛔ RECOVERY STOPPED"
                 : isFailed
                 ? "🔴 RECOVERY FAILED"
-                : "🟡 HUMAN APPROVAL REQUIRED"}
+                : "🟡 RECOVERY AWAITING APPROVAL"}
             </h3>
             <p className="text-xs opacity-90 mt-1 font-medium">
               {isRecovered

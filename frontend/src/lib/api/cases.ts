@@ -1,6 +1,12 @@
 import { RecoveryCase, RiskLevel, CaseStatus, CaseType, PolicyDecisionType } from "../types";
 import { BACKEND_URL } from "./config";
 
+export function formatDynamicTitle(rawStr?: string): string {
+  if (!rawStr) return "Payment Failure Detected";
+  const cleaned = String(rawStr).replace(/_/g, " ").trim().toLowerCase();
+  return cleaned.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function mapBackendCaseToFrontend(item: any): RecoveryCase {
   const riskVal: RiskLevel = (item.risk_level as RiskLevel) || "MEDIUM";
   
@@ -66,15 +72,11 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
 
   let policyType: PolicyDecisionType = "HUMAN";
   const strUpper = String(rawPolicy || "").toUpperCase();
-  if (strUpper.includes("BLOCK")) {
+  if (strUpper.includes("BLOCK") || item.status === "BLOCKED") {
     policyType = "BLOCK";
-  } else if (strUpper.includes("AUTO")) {
-    policyType = "AUTO";
-  } else if (strUpper.includes("HUMAN")) {
+  } else if (strUpper.includes("HUMAN") || item.status === "AWAITING_APPROVAL") {
     policyType = "HUMAN";
-  } else if (item.status === "BLOCKED") {
-    policyType = "BLOCK";
-  } else if (item.status === "SCHEDULED" || item.status === "RECOVERED") {
+  } else if (strUpper.includes("AUTO") || item.status === "SCHEDULED") {
     policyType = "AUTO";
   } else {
     policyType = "HUMAN";
@@ -85,18 +87,33 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
   const approvalStatus = item.approval_status || (item.status === "AWAITING_APPROVAL" ? "PENDING" : "NOT_REQUIRED");
 
   let statusVal: CaseStatus = "OPEN";
-  if (item.status === "AWAITING_APPROVAL" || approvalStatus === "PENDING") statusVal = "HUMAN_APPROVAL";
-  else if (item.status === "SCHEDULED") statusVal = "SCHEDULED";
-  else if (item.status === "RECOVERED" && verificationResult === "VERIFIED_SUCCESS") statusVal = "RECOVERED";
+  if (item.status === "RECOVERED" && (verificationResult === "VERIFIED_SUCCESS" || amountRecovered > 0)) statusVal = "RECOVERED";
   else if (item.status === "BLOCKED") statusVal = "BLOCKED";
+  else if (item.status === "SCHEDULED") statusVal = "SCHEDULED";
+  else if (item.status === "AWAITING_APPROVAL" || approvalStatus === "PENDING") statusVal = "HUMAN_APPROVAL";
   else if (item.status === "STOPPED" || approvalStatus === "REJECTED") statusVal = "REJECTED";
   else if (item.status === "MODIFIED") statusVal = "MODIFIED";
+
+  const rawTitleStr = item.title || item.problem_type || rec.diagnosis;
+  const problemTitle = formatDynamicTitle(rawTitleStr);
+
+  const backendOutcome = item.outcome || {
+    state: statusVal === "HUMAN_APPROVAL" ? "AWAITING_APPROVAL" : statusVal,
+    amount_recovered: statusVal === "RECOVERED" ? amountRecovered : 0,
+    verification_result: verificationResult,
+  };
+
+  const outcomeObj = {
+    state: (backendOutcome.state || "OPEN") as any,
+    amountRecovered: backendOutcome.state === "RECOVERED" ? (backendOutcome.amount_recovered || 0) : 0,
+    verificationResult: backendOutcome.verification_result || "NONE",
+  };
 
   return {
     id: item.id,
     customerName: cust.name || "Customer",
     customerEmail: cust.email || "customer@example.com",
-    problem: rec.reason || rec.diagnosis || item.problem_type || "Payment failure detected",
+    problem: problemTitle,
     amount: item.amount_at_risk || 0,
     score: item.recovery_score || 50,
     recoveryScore: item.recovery_score || 50,
@@ -128,8 +145,9 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     },
     status: statusVal,
     verificationResult,
-    amountRecovered,
+    amountRecovered: statusVal === "RECOVERED" ? amountRecovered : 0,
     approvalStatus,
+    outcome: outcomeObj,
     scheduledDelayMinutes: rec.delay_minutes || 30,
     auditTimeline: Array.isArray(item.audit_logs) && item.audit_logs.length > 0
       ? item.audit_logs.map((log: any) => ({
@@ -267,6 +285,18 @@ export async function stopCase(id: string, reason?: string): Promise<RecoveryCas
   });
   if (!res.ok) {
     throw new Error(`Failed to stop case ${id} via backend API: HTTP ${res.status}`);
+  }
+  const item = await res.json();
+  return mapBackendCaseToFrontend(item);
+}
+
+export async function resetCase(id: string): Promise<RecoveryCase> {
+  const res = await fetch(`${BACKEND_URL}/cases/${id}/reset`, {
+    method: "POST",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to reset case ${id} via backend API: HTTP ${res.status}`);
   }
   const item = await res.json();
   return mapBackendCaseToFrontend(item);

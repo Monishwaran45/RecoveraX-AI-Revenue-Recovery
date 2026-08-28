@@ -8,7 +8,7 @@ import PolicyDecisionCard from "./PolicyDecisionCard";
 import SafetyAlert from "./SafetyAlert";
 import AgentEventLog, { LogEntry } from "./AgentEventLog";
 import RecoveryResultCard from "./RecoveryResultCard";
-import { getCase, getCases, analyzeCase, recheckCase, executeCaseAction } from "@/lib/api/cases";
+import { getCase, getCases, analyzeCase, recheckCase, executeCaseAction, resetCase } from "@/lib/api/cases";
 import { approveCase } from "@/lib/api/approvals";
 import { RecoveryCase, PolicyDecisionType } from "@/lib/types";
 import { Play, RotateCcw, Search, Zap, CheckCircle2, ShieldAlert, ArrowRight } from "lucide-react";
@@ -48,7 +48,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     setWorkflowSteps(INITIAL_WORKFLOW_STEPS.map((s) => ({ ...s, state: "waiting" })));
 
     try {
-      const cData = await getCase(sc.caseId);
+      const cData = await resetCase(sc.caseId);
       if (cData) {
         setCurrentCase(cData);
       }
