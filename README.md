@@ -166,10 +166,10 @@ RecoveraX was evaluated against a **1,000-case synthetic dataset** (Total Revenu
 
 ### Batch Outcome Breakdown (1,000 Cases)
 
-- **🟢 Automated Recovery (AUTO)**: **421 cases** auto-approved & recovered safely (₹21,05,000).
-- **🟡 Human-in-the-Loop Sign-off (HUMAN)**: **222 cases** routed to merchant queue & recovered via payment link / sign-off (₹11,10,000).
-- **🔴 Deterministic Policy Blocked (BLOCK)**: **169 cases** hard-blocked due to ambiguous debit states, customer fraud signals, or closed accounts (₹8,45,000 risk prevented).
-- **⚪ Unrecoverable (STOP)**: **188 cases** stopped cleanly after exhausting max retries without customer impact.
+- **Automated Recovery (AUTO)**: **421 cases** auto-approved & recovered safely (₹21,05,000).
+- **Human-in-the-Loop Sign-off (HUMAN)**: **222 cases** routed to merchant queue & recovered via payment link / sign-off (₹11,10,000).
+- **Deterministic Policy Blocked (BLOCK)**: **169 cases** hard-blocked due to ambiguous debit states, customer fraud signals, or closed accounts (₹8,45,000 risk prevented).
+- **Unrecoverable (STOP)**: **188 cases** stopped cleanly after exhausting max retries without customer impact.
 
 ---
 
