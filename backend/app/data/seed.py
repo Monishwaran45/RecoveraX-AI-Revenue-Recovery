@@ -15,23 +15,25 @@ from app.data.generator import generate_synthetic_dataset
 
 logger = logging.getLogger(__name__)
 
-from app.policy.enums import PolicyDecision, CaseStatus, RiskLevel
+from app.policy.enums import PolicyDecision, CaseStatus, RiskLevel, ActionType
 
 def ensure_demo_cases_updated(db: Session):
     demo_updates = {
-        "CASE-1001": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW),
-        "CASE-1002": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH),
-        "CASE-1003": (PolicyDecision.BLOCK, CaseStatus.BLOCKED, RiskLevel.HIGH),
-        "CASE-1004": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW),
-        "CASE-1005": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.LOW),
-        "CASE-1006": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH),
+        "CASE-1001": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW, 87, ActionType.RETRY),
+        "CASE-1002": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH, 78, ActionType.RETRY),
+        "CASE-1003": (PolicyDecision.BLOCK, CaseStatus.BLOCKED, RiskLevel.HIGH, 10, ActionType.STOP),
+        "CASE-1004": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW, 82, ActionType.RETRY),
+        "CASE-1005": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.LOW, 75, ActionType.REMIND),
+        "CASE-1006": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH, 65, ActionType.ESCALATE),
     }
-    for c_id, (policy, status, risk) in demo_updates.items():
+    for c_id, (policy, status, risk, score, action) in demo_updates.items():
         case = db.scalar(select(RecoveryCase).where(RecoveryCase.id == c_id))
         if case:
             case.policy_decision = policy
             case.status = status
             case.risk_level = risk
+            case.recovery_score = score
+            case.recommended_action = action
     db.commit()
 
 def seed_database_if_empty():
