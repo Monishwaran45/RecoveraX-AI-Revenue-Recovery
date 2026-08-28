@@ -30,32 +30,17 @@ export function mapCaseToScenario(c: any, index: number): Scenario {
   };
   const icon = iconMap[c.type] || (c.status === "BLOCKED" ? ShieldAlert : CreditCard);
 
-  let badge: "AUTO" | "HUMAN" | "BLOCK" = "HUMAN";
-  if (c.id === "CASE-1001" || c.id === "CASE-1004") {
-    badge = "AUTO";
-  } else if (c.id === "CASE-1003") {
-    badge = "BLOCK";
-  } else if (c.id === "CASE-1002" || c.id === "CASE-1005" || c.id === "CASE-1006") {
-    badge = "HUMAN";
-  } else {
-    const policyVal = String(c.policyDecision?.type || c.policyDecision || c.status || "HUMAN").toUpperCase();
-    badge = policyVal.includes("AUTO")
-      ? "AUTO"
-      : (policyVal.includes("BLOCK") || c.status === "BLOCKED" || c.status === "STOPPED" ? "BLOCK" : "HUMAN");
-  }
+  const policyVal = String(c.policyDecision?.type || c.policyDecision?.value || c.policyDecision || c.status || "HUMAN").toUpperCase();
+  const badge: "AUTO" | "HUMAN" | "BLOCK" = (policyVal.includes("AUTO") || c.status === "SCHEDULED")
+    ? "AUTO"
+    : ((policyVal.includes("BLOCK") || c.status === "BLOCKED" || c.status === "STOPPED") ? "BLOCK" : "HUMAN");
 
   const badgeBg = badge === "AUTO" 
     ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
     : (badge === "BLOCK" ? "bg-rose-50 text-rose-800 border-rose-200" : "bg-amber-50 text-amber-800 border-amber-200");
   const badgeText = badge === "AUTO" ? "🟢 AUTO APPROVED" : (badge === "BLOCK" ? "🔴 POLICY BLOCKED" : "🟡 HUMAN APPROVAL");
 
-  let title = c.problem || c.type || `Case ${c.id}`;
-  if (c.id === "CASE-1001") title = "Failed Payment — Auto";
-  else if (c.id === "CASE-1002") title = "Failed Payment — Human";
-  else if (c.id === "CASE-1003") title = "Ambiguous Debit — Block";
-  else if (c.id === "CASE-1004") title = "Subscription — Retry";
-  else if (c.id === "CASE-1005") title = "Checkout — Reminder";
-  else if (c.id === "CASE-1006") title = "B2B Invoice — Escalation";
+  const title = c.problem || c.title || (c.type ? String(c.type).replace(/_/g, " ") : "") || `Case ${c.id}`;
 
   return {
     id: `sc-${c.id}`,
