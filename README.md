@@ -26,7 +26,7 @@ AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRM
 
 ---
 
-## 📐 System Architecture
+## System Architecture
 
 ```mermaid
 flowchart TD
@@ -88,7 +88,7 @@ flowchart TD
 
 ---
 
-## 🔄 LangGraph 12-Node Agent Workflow Pipeline
+## LangGraph 12-Node Agent Workflow Pipeline
 
 RecoveraX implements a stateful **12-node Bounded Execution Graph** in LangGraph ([`backend/app/agents/graph.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/agents/graph.py)):
 
@@ -176,7 +176,7 @@ flowchart TD
    LANGSMITH_ENDPOINT=https://api.smith.langchain.com
    ```
 
-### 📸 LangSmith Dashboard & Tracing Evidence
+### LangSmith Dashboard & Tracing Evidence
 
 | 12-Node Execution DAG & LLM Spans | Real-Time Execution Runs & Sub-Second Latencies |
 | :---: | :---: |
@@ -184,7 +184,7 @@ flowchart TD
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 Razorpay AI Buildathon/
@@ -267,7 +267,7 @@ npm run dev
 
 ---
 
-## 🎯 Test Scenarios (Database Seeded)
+## Test Scenarios (Database Seeded)
 
 RecoveraX automatically seeds **6 primary scenario cases** at the top of the test suite in `recovery.db`:
 
@@ -282,7 +282,7 @@ RecoveraX automatically seeds **6 primary scenario cases** at the top of the tes
 
 ---
 
-## 📊 Measured Batch Recovery Benchmark (1,001 Cases)
+## Measured Batch Recovery Benchmark (1,001 Cases)
 
 RecoveraX was evaluated against a **1,001-case synthetic dataset** (Total Revenue at Risk: **₹50,00,000.00**), producing 100% reproducible evaluation results:
 
