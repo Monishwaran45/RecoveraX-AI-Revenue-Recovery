@@ -3,7 +3,6 @@ import uuid
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from app.models.recovery_case import RecoveryCase
 from app.models.transaction import Transaction
 from app.models.action import ActionModel
@@ -80,7 +79,11 @@ class ActionService:
         tx_res = await db.execute(tx_query)
         tx = tx_res.scalar_one_or_none()
 
-        # Reload & re-verify policy check before action execution
+        # Never execute a case that has already reached a terminal state.
+        if case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED, CaseStatus.STOPPED, CaseStatus.AWAITING_APPROVAL]:
+            return await case_service.get_case_by_id(db, case.id)
+
+        # Reload & re-verify policy check before action execution.
         policy_eval = policy_engine.evaluate(
             transaction_status=TransactionStatus(tx.status.value if tx else "FAILED"),
             payment_state=PaymentState(tx.payment_state.value if tx else "CLEAR"),
@@ -110,7 +113,8 @@ class ActionService:
             await db.commit()
             return await case_service.get_case_by_id(db, case.id)
 
-        # Enforce mandatory Human Approval authorization check
+        # Enforce mandatory Human Approval authorization check.
+        # A HUMAN decision must pause the case; it must never fall through to execution.
         if policy_eval.decision == PolicyDecision.HUMAN or case.policy_decision == PolicyDecision.HUMAN:
             from app.models.approval import ApprovalRequest
             from app.policy.enums import ApprovalStatus
@@ -134,7 +138,7 @@ class ActionService:
                 await db.commit()
                 return await case_service.get_case_by_id(db, case.id)
 
-        # Execute retry via simulator
+        # Execute retry via simulator only after all authorization checks pass.
         case.status = CaseStatus.EXECUTING
         action_rec = ActionModel(
             id=f"ACT-{uuid.uuid4().hex[:8]}",
@@ -156,10 +160,10 @@ class ActionService:
                 payment_state=PaymentState(tx.payment_state.value if tx else "CLEAR"),
                 failure_profile_id="TEMPORARY_BANK_ERROR"
             )
-            
+
             case.retry_count += 1
             action_rec.result = message
-            
+
             if status == TransactionStatus.SUCCESS:
                 case.status = CaseStatus.RECOVERED
                 action_rec.status = "SUCCESS"
@@ -167,7 +171,7 @@ class ActionService:
                 if tx:
                     tx.status = TransactionStatus.SUCCESS
                     tx.payment_state = PaymentState.CLEAR
-                
+
                 await audit_service.log_event(
                     db=db,
                     case_id=case.id,
