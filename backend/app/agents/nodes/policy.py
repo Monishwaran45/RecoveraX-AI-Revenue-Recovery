@@ -2,6 +2,8 @@ from app.agents.state import RecoveryState
 from app.policy.engine import policy_engine
 from app.policy.enums import TransactionStatus, PaymentState, ActionType, RiskLevel, PolicyDecision, AuditEventType, ActorType
 
+from app.config import settings
+
 def policy_check_node(state: RecoveryState) -> RecoveryState:
     """
     Node 5: Policy Check
@@ -10,13 +12,13 @@ def policy_check_node(state: RecoveryState) -> RecoveryState:
     """
     tx = state.get("transaction", {})
     
-    # Determine risk level
+    # Determine risk level based on configured settings
     amount = tx.get("amount", 0.0)
     score = state.get("recovery_score", 50)
     
-    if tx.get("possible_customer_debit") or tx.get("fraud_signal") or tx.get("payment_state") == "AMBIGUOUS" or amount >= 25000:
+    if tx.get("possible_customer_debit") or tx.get("fraud_signal") or tx.get("payment_state") == "AMBIGUOUS" or amount > settings.HUMAN_APPROVAL_AMOUNT:
         risk_level = RiskLevel.HIGH
-    elif amount >= 5000 or score < 80:
+    elif amount > settings.MAX_AUTO_RETRY_AMOUNT or score < settings.MIN_AUTO_RECOVERY_SCORE:
         risk_level = RiskLevel.MEDIUM
     else:
         risk_level = RiskLevel.LOW
@@ -41,9 +43,11 @@ def policy_check_node(state: RecoveryState) -> RecoveryState:
         recovery_score=score,
         risk_level=risk_level,
         diagnosis=state.get("diagnosis", "TEMPORARY_FAILURE"),
+        max_auto_retry_amount=settings.MAX_AUTO_RETRY_AMOUNT,
+        min_auto_recovery_score=settings.MIN_AUTO_RECOVERY_SCORE,
     )
     
-    if state.get("forced_human") or state.get("diagnosis_confidence", 1.0) == 0.0:
+    if (state.get("forced_human") or state.get("diagnosis_confidence", 1.0) == 0.0) and eval_result.decision != PolicyDecision.BLOCK:
         state["policy_decision"] = PolicyDecision.HUMAN.value
         state["policy_reason"] = "LLM failure or forced human safety rule triggered"
     else:

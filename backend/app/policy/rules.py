@@ -27,7 +27,7 @@ def evaluate_policy_rules(
     recovery_score: int,
     risk_level: RiskLevel,
     diagnosis: str,
-    max_auto_retry_amount: float = 5000.0,
+    max_auto_retry_amount: float = 50000.0,
     min_auto_recovery_score: int = 80,
 ) -> PolicyEvaluation:
     rules_evaluated = []

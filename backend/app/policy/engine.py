@@ -29,8 +29,12 @@ class PolicyEngine:
         recovery_score: int,
         risk_level: RiskLevel,
         diagnosis: str,
+        max_auto_retry_amount: float = None,
+        min_auto_recovery_score: int = None,
     ) -> PolicyEvaluation:
         try:
+            max_amt = max_auto_retry_amount if max_auto_retry_amount is not None else self.max_auto_retry_amount
+            min_score = min_auto_recovery_score if min_auto_recovery_score is not None else self.min_auto_recovery_score
             return evaluate_policy_rules(
                 transaction_status=transaction_status,
                 payment_state=payment_state,
@@ -43,8 +47,8 @@ class PolicyEngine:
                 recovery_score=recovery_score,
                 risk_level=risk_level,
                 diagnosis=diagnosis,
-                max_auto_retry_amount=self.max_auto_retry_amount,
-                min_auto_recovery_score=self.min_auto_recovery_score,
+                max_auto_retry_amount=max_amt,
+                min_auto_recovery_score=min_score,
             )
         except Exception as e:
             logger.error(f"Policy Engine exception encountered: {str(e)}. Failing closed to BLOCK.", exc_info=True)
