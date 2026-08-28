@@ -1,4 +1,4 @@
-import { RecoveryCase, RiskLevel, CaseStatus, CaseType } from "../types";
+import { RecoveryCase, RiskLevel, CaseStatus, CaseType, PolicyDecisionType } from "../types";
 import { BACKEND_URL } from "./config";
 
 function mapBackendCaseToFrontend(item: any): RecoveryCase {
@@ -9,11 +9,7 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
   else if (item.problem_type === "OVERDUE_INVOICE") caseType = "INVOICE";
   else if (item.problem_type === "CHECKOUT_ABANDONMENT") caseType = "CHECKOUT";
 
-  let statusVal: CaseStatus = "OPEN";
-  if (item.status === "AWAITING_APPROVAL") statusVal = "HUMAN_APPROVAL";
-  else if (item.status === "SCHEDULED") statusVal = "SCHEDULED";
-  else if (item.status === "RECOVERED") statusVal = "RECOVERED";
-  else if (item.status === "BLOCKED") statusVal = "BLOCKED";
+
 
   const rec = item.latest_recommendation || (Array.isArray(item.recommendations) && item.recommendations[0]) || {};
   const cust = item.customer || {};

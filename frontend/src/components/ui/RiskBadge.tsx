@@ -34,6 +34,8 @@ export function StatusBadge({ status }: { status: CaseStatus }) {
     BLOCKED: { bg: "bg-rose-50", text: "text-rose-900", border: "border-rose-200", label: "Blocked", dot: "bg-rose-500" },
     REJECTED: { bg: "bg-slate-100", text: "text-slate-600", border: "border-slate-300", label: "Rejected", dot: "bg-slate-400" },
     MODIFIED: { bg: "bg-indigo-50", text: "text-indigo-900", border: "border-indigo-200", label: "Modified by Human", dot: "bg-indigo-500" },
+    STOPPED: { bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-300", label: "Stopped", dot: "bg-slate-400" },
+    FAILED: { bg: "bg-rose-50", text: "text-rose-900", border: "border-rose-200", label: "Failed", dot: "bg-rose-500" },
   };
 
   const style = styles[status] || styles.OPEN;
