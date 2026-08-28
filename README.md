@@ -6,7 +6,7 @@ RecoveraX detects revenue at risk, diagnoses root cause failure patterns using *
 
 ---
 
-## 💡 Core Product Philosophy
+## Core Product Philosophy
 
 ```
 AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRMS  →  HUMAN CONTROLS RISK
@@ -88,7 +88,7 @@ flowchart TD
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 Razorpay AI Buildathon/
@@ -117,7 +117,7 @@ Razorpay AI Buildathon/
 
 ---
 
-## 🚀 Quick Start Guide
+##  Quick Start Guide
 
 ### 1. Prerequisites
 - **Node.js**: `v18.17+`
@@ -177,16 +177,16 @@ RecoveraX automatically seeds **6 primary scenario cases** at the top of the tes
 
 | Case ID | Scenario Title | Customer Name | Amount | Policy Decision | Risk Tier & Action |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`CASE-1001`** | 🔄 **Failed Payment — Auto Recovery** | Rahul Enterprises | `₹15,000` | `🟢 AUTO APPROVED` | Low Risk / Automated Retry |
-| **`CASE-1002`** | 👤 **Failed Payment — Human Approval** | Sharma Logistics | `₹75,000` | `🟡 HUMAN APPROVAL` | High Risk / High Amount Sign-off |
-| **`CASE-1003`** | 🔴 **Ambiguous Debit — Block Risk** | Aarav Tech Solutions | `₹25,000` | `🔴 POLICY BLOCKED` | High Risk / Double-Charge Safety Block |
-| **`CASE-1004`** | 🔁 **Subscription Failure — Retry Loop** | Priya SaaS Services | `₹2,499` | `🟢 AUTO APPROVED` | Medium Risk / Recurring Mandate Retry |
-| **`CASE-1005`** | 📩 **Checkout Abandonment — Reminder** | Vikram Retailers | `₹8,500` | `🟡 HUMAN APPROVAL` | Low Risk / 1-Click Payment Link |
-| **`CASE-1006`** | 🧾 **B2B Invoice — Escalation** | Global Trade Corp | `₹1,20,000` | `🟡 HUMAN APPROVAL` | High Risk / Overdue Invoice Escalation |
+| **`CASE-1001`** | **Failed Payment — Auto Recovery** | Rahul Enterprises | `₹15,000` | ` AUTO APPROVED` | Low Risk / Automated Retry |
+| **`CASE-1002`** | **Failed Payment — Human Approval** | Sharma Logistics | `₹75,000` | ` HUMAN APPROVAL` | High Risk / High Amount Sign-off |
+| **`CASE-1003`** | **Ambiguous Debit — Block Risk** | Aarav Tech Solutions | `₹25,000` | ` POLICY BLOCKED` | High Risk / Double-Charge Safety Block |
+| **`CASE-1004`** | **Subscription Failure — Retry Loop** | Priya SaaS Services | `₹2,499` | ` AUTO APPROVED` | Medium Risk / Recurring Mandate Retry |
+| **`CASE-1005`** | **Checkout Abandonment — Reminder** | Vikram Retailers | `₹8,500` | ` HUMAN APPROVAL` | Low Risk / 1-Click Payment Link |
+| **`CASE-1006`** | **B2B Invoice — Escalation** | Global Trade Corp | `₹1,20,000` | ` HUMAN APPROVAL` | High Risk / Overdue Invoice Escalation |
 
 ---
 
-## 📊 Measured Batch Recovery Benchmark (1,000 Cases)
+## Measured Batch Recovery Benchmark (1,000 Cases)
 
 RecoveraX was evaluated against a **1,000-case synthetic dataset** (Total Revenue at Risk: **₹50,00,000.00**):
 
@@ -201,7 +201,7 @@ RecoveraX was evaluated against a **1,000-case synthetic dataset** (Total Revenu
 
 ---
 
-## 🛡️ Deterministic Safety Rules
+## Deterministic Safety Rules
 
 1. **Rule 1 (`MAX_AUTO_RETRY_AMOUNT = 50000`)**: Transactions exceeding ₹50,000 require **HUMAN** approval.
 2. **Rule 2 (`MIN_AUTO_RECOVERY_SCORE = 80`)**: Recovery scores < 80 require **HUMAN** approval or **BLOCK**.
