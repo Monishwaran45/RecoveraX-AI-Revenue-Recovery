@@ -11,6 +11,8 @@ from app.policy.enums import CaseStatus, RiskLevel, ProblemType, AuditEventType,
 from app.agents.graph import recovery_graph
 from app.services.audit_service import audit_service
 
+from app.observability import get_recovery_trace_tags, get_recovery_trace_metadata
+
 class CaseService:
     @staticmethod
     async def get_cases(
@@ -121,8 +123,26 @@ class CaseService:
             "audit_events": []
         }
 
-        # Run LangGraph pipeline
-        final_state = recovery_graph.invoke(initial_state)
+        # Run LangGraph pipeline with LangSmith tracing metadata
+        config = {
+            "run_name": f"RecoveraX Recovery Case [{case.id}]",
+            "tags": get_recovery_trace_tags(case.problem_type.value, case.policy_decision.value, case.status.value),
+            "metadata": get_recovery_trace_metadata(
+                case_id=case.id,
+                transaction_id=case.source_id,
+                customer_id=case.customer_id,
+                amount_at_risk=case.amount_at_risk,
+                problem_type=case.problem_type.value,
+                risk_level=case.risk_level.value,
+                recovery_score=case.recovery_score,
+                recommended_action=case.recommended_action.value,
+                policy_decision=case.policy_decision.value,
+                status=case.status.value,
+                retry_count=case.retry_count,
+                max_retries=case.max_retries,
+            )
+        }
+        final_state = recovery_graph.invoke(initial_state, config=config)
 
         # Update case model fields from final state
         case.recovery_score = final_state.get("recovery_score", case.recovery_score)

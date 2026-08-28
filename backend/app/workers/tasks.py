@@ -6,8 +6,10 @@ from app.config import settings
 from app.database.session import AsyncSessionLocal
 from app.services.action_service import action_service
 from app.policy.enums import CaseStatus, PolicyDecision
+from app.observability import configure_langsmith, sanitize_trace_data
 
 logger = logging.getLogger(__name__)
+configure_langsmith()
 
 async def _run_async_retry(case_id: str):
     async with AsyncSessionLocal() as db:

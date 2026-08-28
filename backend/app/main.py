@@ -6,12 +6,15 @@ from app.config import settings
 from app.data.seed import seed_database_if_empty
 from app.api.routes import dashboard, cases, approvals, actions, audit, experiments
 
+from app.observability import configure_langsmith
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Initializing RecoveraX Backend Services...")
+    configure_langsmith()
     seed_database_if_empty()
     yield
     logger.info("Shutting down backend services.")

@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = Field(default="", alias="GROQ_API_KEY")
     GROQ_MODEL: str = Field(default="groq/compound-mini", alias="GROQ_MODEL")
     
+    # LangSmith Observability & Tracing
+    LANGSMITH_TRACING: bool = Field(default=False, alias="LANGSMITH_TRACING")
+    LANGSMITH_API_KEY: str = Field(default="", alias="LANGSMITH_API_KEY")
+    LANGSMITH_PROJECT: str = Field(default="RecoveraX", alias="LANGSMITH_PROJECT")
+    LANGSMITH_ENDPOINT: str = Field(default="https://api.smith.langchain.com", alias="LANGSMITH_ENDPOINT")
+    
     # Demo & Retry Configurations
     DEMO_MODE: bool = Field(default=False, alias="DEMO_MODE")
     DEMO_RETRY_DELAY_SECONDS: int = Field(default=10, alias="DEMO_RETRY_DELAY_SECONDS")
