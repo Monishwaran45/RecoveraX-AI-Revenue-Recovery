@@ -79,11 +79,10 @@ class ActionService:
         tx_res = await db.execute(tx_query)
         tx = tx_res.scalar_one_or_none()
 
-        # Terminal/approval-waiting states cannot be executed directly.
+        # Never execute a terminal or approval-waiting case.
         if case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED, CaseStatus.STOPPED, CaseStatus.AWAITING_APPROVAL]:
             return await case_service.get_case_by_id(db, case.id)
 
-        # Reload & re-verify policy before every execution.
         policy_eval = policy_engine.evaluate(
             transaction_status=TransactionStatus(tx.status.value if tx else "FAILED"),
             payment_state=PaymentState(tx.payment_state.value if tx else "CLEAR"),
@@ -113,7 +112,7 @@ class ActionService:
             await db.commit()
             return await case_service.get_case_by_id(db, case.id)
 
-        # HUMAN is fail-closed: no retry is queued/executed until explicit approval exists.
+        # HUMAN is fail-closed. Explicit merchant approval is required before execution.
         if policy_eval.decision == PolicyDecision.HUMAN or case.policy_decision == PolicyDecision.HUMAN:
             from app.models.approval import ApprovalRequest
             from app.policy.enums import ApprovalStatus
@@ -131,13 +130,12 @@ class ActionService:
                     event_type=AuditEventType.ACTION_BLOCKED,
                     actor_type=ActorType.POLICY,
                     actor_id="DETERMINISTIC_POLICY_ENGINE",
-                    reason="Pre-execution check BLOCKED: explicit merchant approval is required before execution.",
+                    reason="Execution paused: explicit merchant approval is required.",
                     metadata_json={"decision": "HUMAN_APPROVAL_REQUIRED"}
                 )
                 await db.commit()
                 return await case_service.get_case_by_id(db, case.id)
 
-        # Execute retry only after all authorization checks pass.
         case.status = CaseStatus.EXECUTING
         action_rec = ActionModel(
             id=f"ACT-{uuid.uuid4().hex[:8]}",
@@ -194,7 +192,6 @@ class ActionService:
                     reason=f"Retry attempt failed. Gateway message: {message}",
                     metadata_json={"result": "FAILED"}
                 )
-
         except Exception as e:
             case.status = CaseStatus.BLOCKED
             action_rec.status = "BLOCKED"
