@@ -73,27 +73,16 @@ def recommend_action_node(state: RecoveryState) -> RecoveryState:
         })
     except Exception as e:
         logger.error(f"Error during LLM action recommendation: {str(e)}", exc_info=True)
-        prob_type = str(tx.get("problem_type", "FAILED_PAYMENT"))
-        if "CHECKOUT" in prob_type:
-            act = ActionType.REMIND.value
-            rsn = "Dispatch 1-click checkout recovery link to customer."
-        elif "INVOICE" in prob_type:
-            act = ActionType.ESCALATE.value
-            rsn = "Escalate overdue invoice to account manager for follow-up."
-        else:
-            act = ActionType.RETRY.value
-            rsn = "Recommend payment retry strategy based on recovery score evaluation."
-
-        state["recommended_action"] = act
+        state["recommended_action"] = ActionType.RETRY.value
         state["delay_minutes"] = 30
-        state["reason"] = rsn
+        state["reason"] = "AI recommendation fallback: RETRY action evaluated under safety policy rules."
         
         audit_events.append({
-            "event_type": AuditEventType.ACTION_RECOMMENDED.value,
-            "actor_type": ActorType.SYSTEM.value,
-            "actor_id": "HEURISTIC_RECOMMENDER",
-            "reason": f"Heuristic recommendation fallback executed: {rsn}",
-            "metadata": {"fallback": True, "error": str(e)}
+            "event_type": AuditEventType.LLM_OUTPUT_INVALID.value,
+            "actor_type": ActorType.AI.value,
+            "actor_id": "GROQ_LLM",
+            "reason": f"LLM action recommendation failed ({str(e)}). Routing to HUMAN review.",
+            "metadata": {"error": str(e)}
         })
 
     state["audit_events"] = audit_events

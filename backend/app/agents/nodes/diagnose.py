@@ -80,17 +80,18 @@ def diagnose_node(state: RecoveryState) -> RecoveryState:
             "metadata": {"confidence": confidence_val, "diagnosis": diagnosis_str}
         })
     except Exception as e:
-        logger.error(f"Error during LLM diagnosis: {str(e)}. Using heuristic failure pattern diagnosis.", exc_info=True)
+        logger.error(f"Error during LLM diagnosis: {str(e)}. Defaulting to fail-closed HUMAN routing.", exc_info=True)
         state["diagnosis"] = DiagnosisType.TEMPORARY_FAILURE.value
-        state["diagnosis_confidence"] = 0.85
-        state["diagnosis_reason"] = "Transient bank network failure pattern identified by diagnostic engine."
+        state["diagnosis_confidence"] = 0.0
+        state["diagnosis_reason"] = "LLM evaluation unavailable; fail-closed safety forced HUMAN review."
+        state["forced_human"] = True
         
         audit_events.append({
-            "event_type": AuditEventType.AI_DIAGNOSED.value,
-            "actor_type": ActorType.SYSTEM.value,
-            "actor_id": "HEURISTIC_DIAGNOSTIC_ENGINE",
-            "reason": f"Heuristic diagnostic fallback executed: {str(e)}",
-            "metadata": {"fallback": True, "error": str(e)}
+            "event_type": AuditEventType.LLM_OUTPUT_INVALID.value,
+            "actor_type": ActorType.AI.value,
+            "actor_id": "GROQ_LLM",
+            "reason": f"LLM diagnosis exception: {str(e)}. Fail-closed safety forced HUMAN review.",
+            "metadata": {"error": str(e)}
         })
 
     state["audit_events"] = audit_events
