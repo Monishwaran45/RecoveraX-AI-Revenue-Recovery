@@ -153,7 +153,7 @@ def generate_synthetic_dataset(seed: int = 42):
 
     # 2. Seed 5 Mandatory Demo Cases (Sum: ₹1,79,000)
     create_case("CASE-1021", 2000.0, ProblemType.FAILED_PAYMENT, "TEMPORARY_BANK_ERROR", PaymentState.CLEAR, False, False, 87, RiskLevel.LOW, ActionType.RETRY, PolicyDecision.AUTO, CaseStatus.SCHEDULED)
-    create_case("CASE-1032", 75000.0, ProblemType.FAILED_PAYMENT, "BANK_TIMEOUT", PaymentState.CLEAR, False, False, 82, RiskLevel.MEDIUM, ActionType.RETRY, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL)
+    create_case("CASE-1032", 8500.0, ProblemType.CHECKOUT_ABANDONMENT, "SESSION_TIMEOUT", PaymentState.CLEAR, False, False, 75, RiskLevel.MEDIUM, ActionType.REMIND, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL)
     create_case("CASE-1048", 25000.0, ProblemType.FAILED_PAYMENT, "GATEWAY_TIMEOUT_AMBIGUOUS", PaymentState.AMBIGUOUS, True, False, 10, RiskLevel.HIGH, ActionType.STOP, PolicyDecision.BLOCK, CaseStatus.BLOCKED)
     create_case("CASE-1088", 2000.0, ProblemType.SUBSCRIPTION_FAILURE, "CARD_EXPIRED", PaymentState.CLEAR, False, False, 65, RiskLevel.MEDIUM, ActionType.RETRY, PolicyDecision.HUMAN, CaseStatus.OPEN, retry_cnt=1)
     create_case("CASE-1102", 75000.0, ProblemType.OVERDUE_INVOICE, "INVOICE_OVERDUE_18_DAYS", PaymentState.CLEAR, False, False, 55, RiskLevel.HIGH, ActionType.ESCALATE, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL)

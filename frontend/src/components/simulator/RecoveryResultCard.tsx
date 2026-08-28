@@ -1,17 +1,20 @@
 "use client";
 
-import { CheckCircle2, ShieldAlert, ArrowRight, RefreshCw, Zap } from "lucide-react";
+import { CheckCircle2, ShieldAlert, ArrowRight, RefreshCw, Zap, Send } from "lucide-react";
 import { RecoveryCase } from "@/lib/types";
 
 interface RecoveryResultCardProps {
   caseData: RecoveryCase;
   onRunAgain?: () => void;
+  onApproveAndExecute?: () => void;
 }
 
-export default function RecoveryResultCard({ caseData, onRunAgain }: RecoveryResultCardProps) {
+export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndExecute }: RecoveryResultCardProps) {
   const isRecovered = caseData.status === "RECOVERED";
   const isBlocked = caseData.status === "BLOCKED";
   const isHuman = caseData.status === "HUMAN_APPROVAL";
+  
+  const isReminderAction = caseData.recommendedAction === "REMIND" || caseData.recommendedAction === "ESCALATE" || caseData.type === "CHECKOUT" || caseData.type === "INVOICE";
 
   return (
     <div
@@ -56,21 +59,33 @@ export default function RecoveryResultCard({ caseData, onRunAgain }: RecoveryRes
             </h3>
             <p className="text-xs opacity-90 mt-1 font-medium">
               {isRecovered
-                ? `Revenue of ₹${caseData.amount.toLocaleString("en-IN")} successfully retried and deposited.`
+                ? `Revenue of ₹${caseData.amount.toLocaleString("en-IN")} successfully recovered and deposited.`
                 : isBlocked
                 ? `Execution of ₹${caseData.amount.toLocaleString("en-IN")} blocked by Policy Engine to prevent duplicate charge.`
-                : `Amount ₹${caseData.amount.toLocaleString("en-IN")} routed to merchant approval queue.`}
+                : isReminderAction
+                ? `Amount ₹${caseData.amount.toLocaleString("en-IN")} routed to merchant approval queue. Click 'Send Reminder Link & Recover' to dispatch 1-click payment link.`
+                : `Amount ₹${caseData.amount.toLocaleString("en-IN")} routed to merchant approval queue. Click 'Approve & Execute Retry' to grant sign-off.`}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 border-t sm:border-t-0 sm:border-l border-white/20 pt-3 sm:pt-0 sm:pl-6">
-          <div className="text-right">
+        <div className="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-white/20 pt-3 sm:pt-0 sm:pl-6">
+          <div className="text-right mr-2">
             <span className="text-[11px] font-semibold opacity-75 block">Total Recovered</span>
             <span className="text-3xl font-extrabold font-mono text-white">
               {isRecovered ? `₹${caseData.amount.toLocaleString("en-IN")}` : "₹0"}
             </span>
           </div>
+
+          {isHuman && onApproveAndExecute && (
+            <button
+              onClick={onApproveAndExecute}
+              className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs rounded-lg shadow-md transition-all flex items-center gap-2 shrink-0 animate-pulse"
+            >
+              {isReminderAction ? <Send className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+              {isReminderAction ? "Send Reminder Link & Recover" : "Approve & Execute Retry"}
+            </button>
+          )}
 
           {onRunAgain && (
             <button

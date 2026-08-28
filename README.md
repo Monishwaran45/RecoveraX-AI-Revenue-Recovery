@@ -68,6 +68,30 @@ RecoveraX/
 
 ### 2. Running Backend (FastAPI + LangGraph)
 
+#### Option A: Fast Setup with `uv` (Recommended)
+```bash
+cd backend
+
+# 1. Create Virtual Environment
+uv venv
+
+# 2. Activate Virtual Environment
+# On Windows (PowerShell):
+.venv\Scripts\activate
+# On Linux/macOS:
+source .venv/bin/activate
+
+# 3. Install Dependencies
+uv add -r requirements.txt
+
+# 4. Configure Environment Variables
+cp .env.example .env
+
+# 5. Start FastAPI Backend Server
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+#### Option B: Standard Setup (`venv` + `pip`)
 ```bash
 cd backend
 
@@ -83,12 +107,8 @@ pip install -r requirements.txt
 
 # 3. Configure Environment Variables
 cp .env.example .env
-# Add your GROQ_API_KEY to backend/.env
 
-# 4. (Optional) Initialize MySQL Database
-python scripts/init_mysql.py root password localhost 3306 recovery_db
-
-# 5. Start FastAPI Backend Server
+# 4. Start FastAPI Backend Server
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -118,9 +138,13 @@ npm run dev
 
 ```bash
 cd backend
-venv\Scripts\python -m pytest tests
+# With uv environment:
+.venv\Scripts\python -m pytest --ignore=test_llm.py
+
+# With standard venv:
+venv\Scripts\python -m pytest --ignore=test_llm.py
 ```
-*Executes all 14 unit and integration tests covering scoring, safety policy rules, payment simulator, and LangGraph workflow.*
+*Executes unit and integration tests covering scoring, safety policy rules, payment simulator, and LangGraph workflow.*
 
 ---
 

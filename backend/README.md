@@ -61,6 +61,31 @@ graph TD
 ## Quick Start
 
 ### 1. Local Setup
+
+#### Option A: Fast Setup with `uv` (Recommended)
+```bash
+cd backend
+
+# 1. Create virtual environment
+uv venv
+
+# 2. Activate virtual environment
+# On Windows (PowerShell):
+.venv\Scripts\activate
+# On Linux/macOS:
+source .venv/bin/activate
+
+# 3. Install dependencies from requirements.txt
+uv add -r requirements.txt
+
+# 4. Copy environment file
+cp .env.example .env
+
+# 5. Start FastAPI app (automatically seeds 1,000 synthetic cases + demo cases)
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+#### Option B: Standard `pip` Setup
 ```bash
 cd backend
 python -m venv venv
@@ -72,13 +97,17 @@ source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 
-# Run FastAPI app (automatically seeds 1,000 synthetic cases + demo cases)
+# Run FastAPI app
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### 2. Run Test Suite
 ```bash
-pytest
+# With uv environment:
+.venv\Scripts\python -m pytest --ignore=test_llm.py
+
+# With standard venv:
+pytest --ignore=test_llm.py
 ```
 
 ### 3. Run via Docker Compose

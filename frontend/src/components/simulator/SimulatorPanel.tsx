@@ -49,9 +49,10 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     }
 
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const scoreVal = cData?.recoveryScore ?? (sc.amountVal > 50000 ? 82 : (sc.id === 'sc-5' ? 10 : 87));
     setLogs([
       { id: "l1", time: now, category: "SYSTEM", text: `Loaded ${sc.title} (${sc.caseId}) amount ₹${sc.amountVal.toLocaleString("en-IN")}` },
-      { id: "l2", time: now, category: "SYSTEM", text: `Current Status: ${sc.type} | Baseline score: ${sc.amountVal > 50000 ? 82 : (sc.id === 'sc-5' ? 10 : 87)}/100` },
+      { id: "l2", time: now, category: "SYSTEM", text: `Current Status: ${sc.type} | Baseline score: ${scoreVal}/100` },
     ]);
   };
 
@@ -96,7 +97,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     // Step 3: Recovery Score
     setCurrentStepIdx(2);
     updateStepState(2, "processing");
-    const scoreVal = activeScenario.amountVal > 50000 ? 82 : (activeScenario.id === "sc-5" ? 10 : 87);
+    const scoreVal = currentCase?.recoveryScore ?? (activeScenario.amountVal > 50000 ? 82 : (activeScenario.id === "sc-5" ? 10 : 87));
     addLog("AI", `Recovery Confidence Score calculated: ${scoreVal}/100`);
     await new Promise((r) => setTimeout(r, 400));
     updateStepState(2, "completed");
@@ -104,7 +105,8 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     // Step 4: Recommend
     setCurrentStepIdx(3);
     updateStepState(3, "processing");
-    addLog("AI", `AI Strategy Recommended: ${activeScenario.badge === "BLOCK" ? "STOP/BLOCK" : "RETRY PAYMENT"}`);
+    const recAction = currentCase?.aiRecommendation?.badgeText || currentCase?.recommendedAction || (activeScenario.badge === "BLOCK" ? "STOP/BLOCK" : "RETRY PAYMENT");
+    addLog("AI", `AI Strategy Recommended: ${recAction}`);
     await new Promise((r) => setTimeout(r, 400));
     updateStepState(3, "completed");
 
@@ -134,6 +136,17 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
       setIsCompleted(true);
       if (currentCase) {
         setCurrentCase({ ...currentCase, status: "BLOCKED" });
+      }
+      return;
+    }
+
+    if (activeScenario.badge === "HUMAN") {
+      updateStepState(5, "completed");
+      addLog("HUMAN", `🟡 HUMAN APPROVAL REQUIRED: Transaction routed to Merchant Approval Queue. Auto-execution paused.`);
+      setIsRunning(false);
+      setIsCompleted(true);
+      if (currentCase) {
+        setCurrentCase({ ...currentCase, status: "HUMAN_APPROVAL" });
       }
       return;
     }
@@ -186,6 +199,115 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     setIsCompleted(true);
   };
 
+  const handleHumanApproveAndExecute = async () => {
+    if (isRunning) return;
+    setIsRunning(true);
+    
+    const isReminder = activeScenario.id === "sc-3" || activeScenario.id === "sc-4" || currentCase?.recommendedAction === "REMIND" || currentCase?.recommendedAction === "ESCALATE" || currentCase?.type === "CHECKOUT" || currentCase?.type === "INVOICE";
+
+    if (isReminder) {
+      addLog("HUMAN", `✓ Merchant approved sending 1-click payment reminder for ${activeScenario.caseId} (₹${activeScenario.amountVal.toLocaleString("en-IN")}).`);
+      
+      // Step 7: Schedule / Channel Dispatch
+      setCurrentStepIdx(6);
+      updateStepState(6, "processing");
+      addLog("ACTION", `Dispatching 1-click Razorpay payment link via WhatsApp API & Email...`);
+      await new Promise((r) => setTimeout(r, 450));
+      updateStepState(6, "completed");
+
+      // Step 8: Fresh Re-check / Delivery Confirmation
+      setCurrentStepIdx(7);
+      updateStepState(7, "processing");
+      addLog("ACTION", `Payment link delivered. Customer opened checkout link...`);
+      await new Promise((r) => setTimeout(r, 450));
+      addLog("ACTION", `Customer authorized payment via UPI on reminder link.`);
+      updateStepState(7, "completed");
+
+      // Step 9: Execute / Gateway Settlement
+      setCurrentStepIdx(8);
+      updateStepState(8, "processing");
+      addLog("ACTION", `Processing ₹${activeScenario.amountVal.toLocaleString("en-IN")} payment collection via gateway link...`);
+      const execRes = await executeCaseAction(activeScenario.caseId);
+      if (execRes) setCurrentCase(execRes);
+      await new Promise((r) => setTimeout(r, 500));
+      updateStepState(8, "completed");
+
+      // Step 10: Verify
+      setCurrentStepIdx(9);
+      updateStepState(9, "processing");
+      addLog("SYSTEM", `Verifying gateway settlement confirmation...`);
+      await new Promise((r) => setTimeout(r, 400));
+      updateStepState(9, "completed");
+
+      // Step 11: Re-evaluate
+      setCurrentStepIdx(10);
+      updateStepState(10, "processing");
+      addLog("AI", `Re-evaluating outcome: Outstanding revenue fully settled via reminder link.`);
+      await new Promise((r) => setTimeout(r, 300));
+      updateStepState(10, "completed");
+
+      // Step 12: Recover
+      setCurrentStepIdx(11);
+      updateStepState(11, "completed");
+      addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${activeScenario.amountVal.toLocaleString("en-IN")} deposited via Customer Payment Link.`);
+      setIsRunning(false);
+      setIsCompleted(true);
+      if (currentCase) {
+        setCurrentCase({ ...currentCase, status: "RECOVERED" });
+      }
+    } else {
+      addLog("HUMAN", `✓ Merchant Approved Case ${activeScenario.caseId} (₹${activeScenario.amountVal.toLocaleString("en-IN")}). Resuming recovery pipeline...`);
+      
+      // Step 7: Schedule
+      setCurrentStepIdx(6);
+      updateStepState(6, "processing");
+      addLog("ACTION", `Retry cool-down delay scheduled (5 mins)`);
+      await new Promise((r) => setTimeout(r, 400));
+      updateStepState(6, "completed");
+
+      // Step 8: Fresh Re-check
+      setCurrentStepIdx(7);
+      updateStepState(7, "processing");
+      addLog("ACTION", `Performing pre-execution fresh payment re-check...`);
+      await new Promise((r) => setTimeout(r, 400));
+      addLog("ACTION", `Fresh re-check confirmed payment still unpaid & safe for retry.`);
+      updateStepState(7, "completed");
+
+      // Step 9: Execute
+      setCurrentStepIdx(8);
+      updateStepState(8, "processing");
+      addLog("ACTION", `Executing payment recovery attempt #1 on gateway...`);
+      const execRes = await executeCaseAction(activeScenario.caseId);
+      if (execRes) setCurrentCase(execRes);
+      await new Promise((r) => setTimeout(r, 500));
+      updateStepState(8, "completed");
+
+      // Step 10: Verify
+      setCurrentStepIdx(9);
+      updateStepState(9, "processing");
+      addLog("SYSTEM", `Verifying gateway settlement...`);
+      await new Promise((r) => setTimeout(r, 400));
+      updateStepState(9, "completed");
+
+      // Step 11: Re-evaluate
+      setCurrentStepIdx(10);
+      updateStepState(10, "processing");
+      addLog("AI", `Re-evaluating outcome...`);
+      await new Promise((r) => setTimeout(r, 300));
+      updateStepState(10, "completed");
+
+      // Step 12: Recover
+      setCurrentStepIdx(11);
+      updateStepState(11, "completed");
+      addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${activeScenario.amountVal.toLocaleString("en-IN")} deposited.`);
+      setIsRunning(false);
+      setIsCompleted(true);
+      if (currentCase) {
+        setCurrentCase({ ...currentCase, status: "RECOVERED" });
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* 1. Scenario Selector */}
@@ -231,7 +353,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
             className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
           >
             <Play className="h-4 w-4 fill-white" />
-            {isRunning ? "Running Agent Pipeline..." : "▶ Run Recovery"}
+            {isRunning ? "Running Agent Pipeline..." : "Run Recovery"}
           </button>
         </div>
       </div>
@@ -253,7 +375,11 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
 
       {/* 6. Outcome Result Card */}
       {isCompleted && currentCase && (
-        <RecoveryResultCard caseData={currentCase} onRunAgain={() => loadScenarioCase(SCENARIOS[(SCENARIOS.findIndex(s => s.id === activeScenario.id) + 1) % SCENARIOS.length])} />
+        <RecoveryResultCard
+          caseData={currentCase}
+          onApproveAndExecute={handleHumanApproveAndExecute}
+          onRunAgain={() => loadScenarioCase(SCENARIOS[(SCENARIOS.findIndex(s => s.id === activeScenario.id) + 1) % SCENARIOS.length])}
+        />
       )}
     </div>
   );
