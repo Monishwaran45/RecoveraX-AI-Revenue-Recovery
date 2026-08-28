@@ -173,7 +173,9 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
 
     if (polDecision === "HUMAN" || c?.status === "HUMAN_APPROVAL") {
       updateStepState(5, "completed");
+      for (let i = 6; i <= 11; i++) updateStepState(i, "pending");
       addLog("HUMAN", `🟡 HUMAN APPROVAL REQUIRED: ${c?.policyDecision?.reason || "High risk / amount requires human sign-off."}`);
+      addLog("ACTION", `⏸️ Waiting for merchant approval. Payment execution halted.`);
       setIsRunning(false);
       setIsCompleted(true);
       return;
@@ -184,7 +186,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     // Step 7: Schedule (Celery background worker queue)
     setCurrentStepIdx(6);
     updateStepState(6, "processing");
-    addLog("ACTION", `Retry scheduled & enqueued with delay timer (${c?.scheduledDelayMinutes || 30} mins)`);
+    addLog("ACTION", `Retry scheduled with delay timer (${c?.scheduledDelayMinutes || 30} mins)`);
     await new Promise((r) => setTimeout(r, 300));
     updateStepState(6, "completed");
 
@@ -195,6 +197,14 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     const rechecked = await recheckCase(activeScenario.caseId);
     if (rechecked) setCurrentCase(rechecked);
     await new Promise((r) => setTimeout(r, 300));
+    
+    if (rechecked?.status === "BLOCKED" || rechecked?.status === "RECOVERED") {
+      addLog("POLICY", `Re-check returned state: ${rechecked.status}. Halting execution.`);
+      setIsRunning(false);
+      setIsCompleted(true);
+      return;
+    }
+    
     addLog("ACTION", `Fresh re-check confirmed settlement clear & safe for retry.`);
     updateStepState(7, "completed");
 
@@ -221,11 +231,16 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     await new Promise((r) => setTimeout(r, 300));
     updateStepState(10, "completed");
 
-    // Step 12: Recover / Stop
+    // Step 12: Recover / Stop (Authoritative backend state check!)
     setCurrentStepIdx(11);
-    updateStepState(11, "completed");
-    const finalAmount = execRes?.amount || c?.amount || activeScenario.amountVal;
-    addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${finalAmount.toLocaleString("en-IN")} deposited.`);
+    if (execRes?.status === "RECOVERED") {
+      updateStepState(11, "completed");
+      const finalAmount = execRes?.amount || c?.amount || activeScenario.amountVal;
+      addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${finalAmount.toLocaleString("en-IN")} deposited.`);
+    } else {
+      updateStepState(11, "failed");
+      addLog("SYSTEM", `🔴 RECOVERY UNVERIFIED / FAILED: Status = ${execRes?.status || "FAILED"}`);
+    }
     setIsRunning(false);
     setIsCompleted(true);
   };
@@ -279,9 +294,14 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
 
     // Step 12: Recover
     setCurrentStepIdx(11);
-    updateStepState(11, "completed");
-    const finalAmt = execRes?.amount || currentCase?.amount || activeScenario.amountVal;
-    addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${finalAmt.toLocaleString("en-IN")} deposited.`);
+    if (execRes?.status === "RECOVERED") {
+      updateStepState(11, "completed");
+      const finalAmt = execRes?.amount || currentCase?.amount || activeScenario.amountVal;
+      addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${finalAmt.toLocaleString("en-IN")} deposited.`);
+    } else {
+      updateStepState(11, "failed");
+      addLog("SYSTEM", `🔴 RECOVERY UNVERIFIED / FAILED: Status = ${execRes?.status || "FAILED"}`);
+    }
     setIsRunning(false);
     setIsCompleted(true);
   };

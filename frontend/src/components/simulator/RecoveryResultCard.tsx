@@ -12,7 +12,9 @@ interface RecoveryResultCardProps {
 export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndExecute }: RecoveryResultCardProps) {
   const isRecovered = caseData.status === "RECOVERED";
   const isBlocked = caseData.status === "BLOCKED";
-  const isHuman = caseData.status === "HUMAN_APPROVAL";
+  const isStopped = caseData.status === "STOPPED";
+  const isFailed = caseData.status === "FAILED";
+  const isHuman = caseData.status === "HUMAN_APPROVAL" || caseData.policyDecision?.type === "HUMAN";
   
   const isReminderAction = caseData.recommendedAction === "REMIND" || caseData.recommendedAction === "ESCALATE" || caseData.type === "CHECKOUT" || caseData.type === "INVOICE";
 
@@ -21,7 +23,7 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
       className={`border rounded-xl p-6 shadow-md transition-all ${
         isRecovered
           ? "bg-emerald-950/40 border-emerald-500/80 text-emerald-100"
-          : isBlocked
+          : (isBlocked || isStopped || isFailed)
           ? "bg-rose-950/40 border-rose-500/80 text-rose-100"
           : "bg-amber-950/40 border-amber-500/80 text-amber-100"
       }`}
@@ -32,14 +34,14 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
             className={`p-3 rounded-xl shadow-md ${
               isRecovered
                 ? "bg-emerald-600 text-white"
-                : isBlocked
+                : (isBlocked || isStopped || isFailed)
                 ? "bg-rose-600 text-white"
                 : "bg-amber-600 text-white"
             }`}
           >
             {isRecovered ? (
               <CheckCircle2 className="h-7 w-7" />
-            ) : isBlocked ? (
+            ) : (isBlocked || isStopped || isFailed) ? (
               <ShieldAlert className="h-7 w-7" />
             ) : (
               <Zap className="h-7 w-7" />
@@ -54,7 +56,11 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
               {isRecovered
                 ? "✓ RECOVERY COMPLETE"
                 : isBlocked
-                ? "🛡 ACTION SAFELY BLOCKED"
+                ? "🛡 RECOVERY BLOCKED"
+                : isStopped
+                ? "⛔ RECOVERY STOPPED"
+                : isFailed
+                ? "🔴 RECOVERY FAILED"
                 : "🟡 HUMAN APPROVAL REQUIRED"}
             </h3>
             <p className="text-xs opacity-90 mt-1 font-medium">
@@ -62,6 +68,10 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
                 ? `Revenue of ₹${caseData.amount.toLocaleString("en-IN")} successfully recovered and deposited.`
                 : isBlocked
                 ? `Execution of ₹${caseData.amount.toLocaleString("en-IN")} blocked by Policy Engine to prevent duplicate charge.`
+                : isStopped
+                ? `Recovery process stopped. No monetary recovery executed.`
+                : isFailed
+                ? `Recovery retry failed. Gateway response unverified.`
                 : isReminderAction
                 ? `Amount ₹${caseData.amount.toLocaleString("en-IN")} routed to merchant approval queue. Click 'Send Reminder Link & Recover' to dispatch 1-click payment link.`
                 : `Amount ₹${caseData.amount.toLocaleString("en-IN")} routed to merchant approval queue. Click 'Approve & Execute Retry' to grant sign-off.`}
