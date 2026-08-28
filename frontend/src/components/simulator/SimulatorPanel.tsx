@@ -10,7 +10,7 @@ import AgentEventLog, { LogEntry } from "./AgentEventLog";
 import RecoveryResultCard from "./RecoveryResultCard";
 import { getCase, getCases, analyzeCase, recheckCase, executeCaseAction } from "@/lib/api/cases";
 import { approveCase } from "@/lib/api/approvals";
-import { RecoveryCase } from "@/lib/types";
+import { RecoveryCase, PolicyDecisionType } from "@/lib/types";
 import { Play, RotateCcw, Search, Zap, CheckCircle2, ShieldAlert, ArrowRight } from "lucide-react";
 
 const INITIAL_WORKFLOW_STEPS: WorkflowStep[] = [
@@ -126,7 +126,8 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     const diag = c?.aiRecommendation?.diagnosis || "TEMPORARY_FAILURE";
     const score = c?.score ?? c?.recoveryScore ?? 80;
     const recAction = c?.aiRecommendation?.badgeText || c?.recommendedAction || "RETRY";
-    const polDecision = String(c?.policyDecision?.type || (typeof c?.policyDecision === "string" ? c.policyDecision : "HUMAN")).toUpperCase();
+    const rawPol = String(c?.policyDecision?.type || c?.policyDecision || "").toUpperCase();
+    const polDecision: PolicyDecisionType = rawPol.includes("BLOCK") ? "BLOCK" : (rawPol.includes("AUTO") ? "AUTO" : "HUMAN");
     const isHumanRequired = polDecision === "HUMAN" || c?.status === "HUMAN_APPROVAL" || c?.approvalStatus === "PENDING";
     const isBlocked = polDecision === "BLOCK" || c?.status === "BLOCKED";
 

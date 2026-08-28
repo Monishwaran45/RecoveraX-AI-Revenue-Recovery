@@ -64,13 +64,21 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     rawPolicy = item.policy_decision.type;
   }
 
-  if (!rawPolicy) {
-    if (item.status === "BLOCKED") rawPolicy = "BLOCK";
-    else if (item.status === "SCHEDULED" || item.status === "RECOVERED") rawPolicy = "AUTO";
-    else rawPolicy = "HUMAN";
+  let policyType: PolicyDecisionType = "HUMAN";
+  const strUpper = String(rawPolicy || "").toUpperCase();
+  if (strUpper.includes("BLOCK")) {
+    policyType = "BLOCK";
+  } else if (strUpper.includes("AUTO")) {
+    policyType = "AUTO";
+  } else if (strUpper.includes("HUMAN")) {
+    policyType = "HUMAN";
+  } else if (item.status === "BLOCKED") {
+    policyType = "BLOCK";
+  } else if (item.status === "SCHEDULED" || item.status === "RECOVERED") {
+    policyType = "AUTO";
+  } else {
+    policyType = "HUMAN";
   }
-
-  const policyType = rawPolicy.toUpperCase();
 
   const verificationResult = item.verification_result || (item.status === "RECOVERED" ? "VERIFIED_SUCCESS" : "NONE");
   const amountRecovered = item.amount_recovered !== undefined ? item.amount_recovered : (item.status === "RECOVERED" ? (item.amount_at_risk || 0) : 0);
