@@ -1,4 +1,4 @@
-# RecoveraX Engine — Backend MVP
+# RecoveraX Engine — Backend 
 
 **RecoveraX**
 
@@ -6,7 +6,7 @@ An autonomous revenue recovery backend engine with deterministic financial safet
 
 ---
 
-## 🏛️ Core Product Philosophy
+## Core Product Philosophy
 
 ```
 AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRMS  →  HUMAN CONTROLS RISK
@@ -18,7 +18,7 @@ AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRM
 
 ---
 
-## 📐 LangGraph Workflow Architecture
+## LangGraph Workflow Architecture
 
 ```mermaid
 graph TD
@@ -47,7 +47,7 @@ graph TD
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Framework**: FastAPI (Async Python 3.12+)
 - **LLM**: Groq API (`ChatGroq`, `llama-3.3-70b-versatile`) via `langchain-groq`
@@ -58,7 +58,7 @@ graph TD
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Local Setup
 ```bash
