@@ -137,7 +137,48 @@ graph TD
 
 ---
 
-## Repository Structure
+## 🔍 LangSmith Observability & Tracing Architecture
+
+RecoveraX embeds **LangSmith** as a centralized, non-intrusive **observability and tracing layer** ([`backend/app/observability/langsmith.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/observability/langsmith.py)):
+
+```mermaid
+flowchart TD
+    subgraph Execution ["RecoveraX Core Engine"]
+        FastAPI["FastAPI REST Routes"]
+        LangGraph["LangGraph 12-Node Graph"]
+        Groq["Groq LLM (groq/compound-mini)"]
+        PolicyEngine["Deterministic Safety Policy"]
+        Simulator["Payment Gateway Simulator"]
+    end
+
+    subgraph Observability ["Observability Layer (Passive Only)"]
+        LangSmith["LangSmith Dashboard & Tracing"]
+        Sanitizer["Data Sanitizer (Redacts CVV/Keys)"]
+        TraceLogger["Run Spans, Latency & Error Metrics"]
+    end
+
+    LangGraph -. Traces & Tags .-> Sanitizer
+    Groq -. LLM Token & Latency .-> Sanitizer
+    Simulator -. Outcome State .-> Sanitizer
+    Sanitizer --> LangSmith
+    LangSmith --> TraceLogger
+```
+
+### Key Tracing Principles
+1. **Passive Observability Only**: LangSmith observes execution telemetry; it **NEVER** authorizes, modifies, or executes financial transactions.
+2. **End-to-End Tracing**: Every recovery execution creates a top-level run `RecoveraX Recovery Case [CASE-XXXX]` with child spans for LLM reasoning, ML scoring, safety policy checks, gateway retries, and bank settlement verification.
+3. **Sensitive Data Sanitization**: `sanitize_trace_data()` automatically redacts sensitive keys (`card_number`, `cvv`, `api_key`, `password`, `payment_secret`, `bank_credentials`).
+4. **Environment Configuration**:
+   ```env
+   LANGSMITH_TRACING=true
+   LANGSMITH_API_KEY=your_langsmith_api_key
+   LANGSMITH_PROJECT=RecoveraX
+   LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+   ```
+
+---
+
+## 📁 Repository Structure
 
 ```
 Razorpay AI Buildathon/
