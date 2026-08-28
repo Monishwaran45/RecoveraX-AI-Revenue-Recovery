@@ -138,7 +138,7 @@ docker-compose up --build
 
 ---
 
-## 📊 Measured Batch Recovery Evidence (Track 03 Benchmark)
+## Measured Batch Recovery Evidence (Track 03 Benchmark)
 
 | Metric | Baseline Strategy (Naive Retries) | RecoveraX AI Agent Pipeline | Impact / Lift |
 | :--- | :--- | :--- | :--- |
@@ -152,7 +152,7 @@ docker-compose up --build
 
 ---
 
-## 🎯 Seeded Demo Cases
+## Seeded Demo Cases
 
 - `CASE-1021`: ₹2,000 FAILED_PAYMENT (`TEMPORARY_BANK_ERROR`) → Score 87, Policy `AUTO` → Retry `SUCCESS` (₹2,000 Recovered)
 - `CASE-1032`: ₹8,500 CHECKOUT_ABANDONMENT (`SESSION_TIMEOUT`) → Score 75, Policy `HUMAN` → Payment Link Sent (₹8,500 Recovered)
