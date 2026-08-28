@@ -128,3 +128,24 @@ class ExperimentService:
         return exp
 
 experiment_service = ExperimentService()
+
+if __name__ == "__main__":
+    import asyncio
+    from app.database.session import AsyncSessionLocal
+
+    async def _test():
+        async with AsyncSessionLocal() as db:
+            exp = await experiment_service.get_latest_experiment(db)
+            print("=== BENCHMARK EVALUATION RESULT ===")
+            print(f"Total Cases: {exp.case_count}")
+            print(f"Revenue at Risk: INR {exp.revenue_at_risk:,.2f}")
+            print(f"AI Recovered: INR {exp.ai_recovered:,.2f}")
+            print(f"Baseline Recovered: INR {exp.baseline_recovered:,.2f}")
+            print(f"Incremental Lift: INR {exp.incremental_recovered:,.2f}")
+            print(f"AI Recovery Rate: {exp.ai_recovery_rate}%")
+            print(f"Baseline Recovery Rate: {exp.baseline_recovery_rate}%")
+            print(f"AUTO Cases: {exp.auto_count}")
+            print(f"HUMAN Cases: {exp.human_count}")
+            print(f"BLOCKED Cases: {exp.blocked_count}")
+
+    asyncio.run(_test())

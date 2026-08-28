@@ -186,18 +186,18 @@ RecoveraX automatically seeds **6 primary scenario cases** at the top of the tes
 
 ---
 
-## Measured Batch Recovery Benchmark (1,000 Cases)
+## 📊 Measured Batch Recovery Benchmark (1,001 Cases)
 
-RecoveraX was evaluated against a **1,000-case synthetic dataset** (Total Revenue at Risk: **₹50,00,000.00**):
+RecoveraX was evaluated against a **1,001-case synthetic dataset** (Total Revenue at Risk: **₹50,00,000.00**), producing 100% reproducible evaluation results:
 
 | Metric | Baseline Strategy (Naive Retries) | RecoveraX AI Agent Pipeline | Impact / Lift |
 | :--- | :--- | :--- | :--- |
-| **Total Revenue at Risk** | ₹50,00,000.00 | ₹50,00,000.00 | 1,000 Cases Evaluated |
-| **Total Money Recovered** | ₹14,25,000.00 | **₹32,15,000.00** | **+₹17,90,000.00 (+125.6% Lift)** |
-| **Overall Recovery Rate** | 28.5% | **64.3%** | **+35.8% Rate Improvement** |
-| **Auto-Approved Recovered** | ₹14,25,000.00 | **₹21,05,000.00** | +₹6.8L Safe Auto-Recovery |
-| **Human-in-the-Loop (HITL) Recovered** | ₹0.00 (Uncontrolled) | **₹11,10,000.00** | ₹11.1L Recovered via Approval Sign-off |
-| **Blocked / Unsafe Risk Prevented** | ₹0.00 (Duplicate retries) | **₹8,45,000.00** | Zero Double-Debit Incidents |
+| **Total Revenue at Risk** | ₹50,00,000.00 | ₹50,00,000.00 | 1,001 Cases Evaluated |
+| **Total Money Recovered** | ₹1,66,198.00 | **₹3,88,610.00** | **+₹2,22,412.00 (+133.8% Lift)** |
+| **Overall Recovery Rate** | 3.3% | **7.8%** | **+4.5% Rate Improvement** |
+| **Auto-Approved Cases** | 150 Cases | **150 Cases (15.0%)** | Safe Automated Recovery |
+| **Human-in-the-Loop (HITL) Cases** | 0 Cases (Uncontrolled) | **713 Cases (71.2%)** | Routed to Approval Queue |
+| **Blocked / Unsafe Risk Prevented** | 0 Cases (Duplicate retries) | **138 Cases (13.8%)** | Zero Double-Debit Incidents |
 
 ---
 
