@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { 
-  LayoutDashboard, 
-  FolderKanban, 
-  ShieldCheck, 
-  Zap, 
+import {
+  LayoutDashboard,
+  FolderKanban,
+  ShieldCheck,
+  Zap,
   ChevronRight
 } from "lucide-react";
 import { store } from "@/lib/store";
@@ -55,7 +55,7 @@ export default function Sidebar() {
             <h1 className="font-bold text-white text-base tracking-tight leading-tight">
               AI Revenue Recovery
             </h1>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5">Buildathon Track 3</p>
+            <p className="text-[11px] font-medium text-slate-400 mt-0.5"></p>
           </div>
         </div>
       </div>
@@ -73,11 +73,10 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
-                isActive
+              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors ${isActive
                   ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-bold"
                   : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3">
                 <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-slate-400"}`} />

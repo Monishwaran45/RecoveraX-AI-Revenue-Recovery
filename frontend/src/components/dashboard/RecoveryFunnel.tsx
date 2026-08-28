@@ -1,12 +1,32 @@
-import { TrendingUp, ArrowRight, ShieldCheck, DollarSign, CheckCircle2, Zap, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
+import { DashboardMetrics } from "@/lib/types";
 
-export default function RecoveryFunnel() {
+interface RecoveryFunnelProps {
+  metrics?: DashboardMetrics | null;
+}
+
+export default function RecoveryFunnel({ metrics }: RecoveryFunnelProps) {
+  const atRisk = metrics?.revenueAtRisk || 5000000;
+  const recoverable = metrics?.recoverableRevenue || 4120000;
+  const gross = metrics?.grossRecovered || 3100000;
+  const incremental = metrics?.incrementalRecovered || 900000;
+
+  const conv1 = "100%";
+  const conv2 = atRisk > 0 ? `${((recoverable / atRisk) * 100).toFixed(1)}%` : "0%";
+  const conv3 = atRisk > 0 ? `${((gross / atRisk) * 100).toFixed(1)}%` : "0%";
+  const conv4 = atRisk > 0 ? `${((incremental / atRisk) * 100).toFixed(1)}%` : "0%";
+
+  const formatLakhs = (val: number) => {
+    if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+    return `₹${val.toLocaleString("en-IN")}`;
+  };
+
   const stages = [
     {
       step: "01",
       name: "Revenue at Risk",
-      amount: "₹50.0L",
-      conversion: "100%",
+      amount: formatLakhs(atRisk),
+      conversion: conv1,
       subtext: "Failed payments & risk events",
       barWidth: "w-full",
       barColor: "bg-slate-300",
@@ -15,30 +35,30 @@ export default function RecoveryFunnel() {
     {
       step: "02",
       name: "Recoverable Revenue",
-      amount: "₹41.2L",
-      conversion: "82.4%",
-      subtext: "Qualified AI recovery score",
-      barWidth: "w-[82%]",
+      amount: formatLakhs(recoverable),
+      conversion: conv2,
+      subtext: "Qualified AI recovery score (>= 70)",
+      barWidth: `w-[${Math.min(100, Math.round((recoverable / (atRisk || 1)) * 100))}%]`,
       barColor: "bg-blue-600",
       textColor: "text-blue-700",
     },
     {
       step: "03",
       name: "Gross Recovered",
-      amount: "₹31.0L",
-      conversion: "62.0%",
+      amount: formatLakhs(gross),
+      conversion: conv3,
       subtext: "Successfully retried & deposited",
-      barWidth: "w-[62%]",
+      barWidth: `w-[${Math.min(100, Math.round((gross / (atRisk || 1)) * 100))}%]`,
       barColor: "bg-emerald-500",
       textColor: "text-emerald-700",
     },
     {
       step: "04",
       name: "Incremental Net Saved",
-      amount: "₹9.0L",
-      conversion: "18.0%",
-      subtext: "Saved from hard churn",
-      barWidth: "w-[18%]",
+      amount: formatLakhs(incremental),
+      conversion: conv4,
+      subtext: "Saved above baseline churn",
+      barWidth: `w-[${Math.min(100, Math.round((incremental / (atRisk || 1)) * 100))}%]`,
       barColor: "bg-emerald-700",
       textColor: "text-emerald-800",
     },
@@ -57,14 +77,14 @@ export default function RecoveryFunnel() {
             <p className="text-xs text-slate-500">Stage-by-stage conversion from gross risk to net recovered revenue</p>
           </div>
         </div>
-        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-          62.0% Overall Net Conversion
+        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 font-mono">
+          {conv3} Overall Net Conversion
         </span>
       </div>
 
       {/* Pipeline Stage Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 relative">
-        {stages.map((stage, idx) => (
+        {stages.map((stage) => (
           <div
             key={stage.name}
             className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-xl relative flex flex-col justify-between"
@@ -73,7 +93,7 @@ export default function RecoveryFunnel() {
             <div>
               <div className="flex items-center justify-between text-xs mb-1.5">
                 <span className="font-mono text-[11px] font-bold text-slate-400">STAGE {stage.step}</span>
-                <span className={`font-bold text-xs ${stage.textColor}`}>{stage.conversion}</span>
+                <span className={`font-mono font-bold text-xs ${stage.textColor}`}>{stage.conversion}</span>
               </div>
 
               {/* Progress bar visual */}
@@ -82,7 +102,7 @@ export default function RecoveryFunnel() {
               </div>
 
               <h4 className="text-xs font-semibold text-slate-600">{stage.name}</h4>
-              <p className="text-2xl font-bold tracking-tight text-slate-900 mt-0.5">{stage.amount}</p>
+              <p className="text-2xl font-bold tracking-tight text-slate-900 mt-0.5 font-mono tabular-nums">{stage.amount}</p>
             </div>
 
             <p className="text-[11px] text-slate-500 mt-2 font-medium border-t border-slate-200/60 pt-2">

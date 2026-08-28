@@ -16,11 +16,13 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
         incrementalRecovered: data.incremental_recovered,
         recoveryRate: data.recovery_rate,
         decisionDistribution: {
-          auto: data.auto_count || 172,
-          human: data.human_count || 824,
-          blocked: data.blocked_count || 11,
+          auto: data.auto_count || 0,
+          human: data.human_count || 0,
+          blocked: data.blocked_count || 0,
         },
         safetyActionsPrevented: data.safety_actions_prevented,
+        totalCases: data.total_cases || 0,
+        recoveryTrend: data.recovery_trend || [],
       };
     }
   } catch (e) {

@@ -1,14 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Bell, ChevronDown } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { getCases } from "@/lib/api/cases";
+import { RecoveryCase } from "@/lib/types";
+import { store } from "@/lib/store";
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [alerts, setAlerts] = useState<RecoveryCase[]>([]);
+
+  const fetchAlerts = async () => {
+    const data = await getCases({ limit: 5 } as any);
+    setAlerts(data.slice(0, 5));
+  };
+
+  useEffect(() => {
+    fetchAlerts();
+    return store.subscribe(fetchAlerts);
+  }, []);
 
   const getPageTitle = () => {
     if (pathname === "/dashboard") return "Dashboard";
@@ -63,28 +77,44 @@ export default function Header() {
             title="Notifications"
           >
             <Bell className="h-5 w-5" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white"></span>
+            {alerts.length > 0 && (
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
+            )}
           </button>
 
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-xl shadow-lg p-4 z-50 animate-in fade-in duration-150">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <span className="text-xs font-semibold text-slate-900">Risk Stream Alerts</span>
-                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">3 Active</span>
+                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                  {alerts.length} Active
+                </span>
               </div>
               <div className="space-y-2 mt-2.5 max-h-60 overflow-y-auto">
-                <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-100 text-xs">
-                  <p className="font-semibold text-amber-950">CASE-1032 requires human sign-off</p>
-                  <p className="text-amber-800 text-[11px] mt-0.5">Amount ₹75,000 exceeds auto limit.</p>
-                </div>
-                <div className="p-2.5 bg-blue-50 rounded-lg border border-blue-100 text-xs">
-                  <p className="font-semibold text-blue-950">CASE-1021 auto-retry scheduled</p>
-                  <p className="text-blue-800 text-[11px] mt-0.5">Cool-down timer set to 30 mins.</p>
-                </div>
-                <div className="p-2.5 bg-rose-50 rounded-lg border border-rose-100 text-xs">
-                  <p className="font-semibold text-rose-950">CASE-1048 retry hard-blocked</p>
-                  <p className="text-rose-800 text-[11px] mt-0.5">Ambiguous debit risk prevented.</p>
-                </div>
+                {alerts.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => {
+                      setShowNotifications(false);
+                      router.push(`/cases/${c.id}`);
+                    }}
+                    className={`p-2.5 rounded-lg border text-xs cursor-pointer hover:bg-slate-50 transition-colors ${
+                      c.policyDecision.type === "HUMAN"
+                        ? "bg-amber-50/70 border-amber-200"
+                        : c.policyDecision.type === "BLOCK"
+                        ? "bg-rose-50/70 border-rose-200"
+                        : "bg-emerald-50/70 border-emerald-200"
+                    }`}
+                  >
+                    <p className="font-semibold text-slate-900 flex items-center justify-between">
+                      <span className="font-mono">{c.id}</span>
+                      <span className="font-mono font-bold">₹{c.amount.toLocaleString("en-IN")}</span>
+                    </p>
+                    <p className="text-slate-600 text-[11px] mt-0.5 truncate">
+                      {c.customerName} — {c.policyDecision.decisionLabel}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           )}

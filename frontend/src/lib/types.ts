@@ -70,12 +70,14 @@ export interface DashboardMetrics {
   grossRecovered: number;
   incrementalRecovered: number;
   recoveryRate?: number;
+  totalCases?: number;
   safetyActionsPrevented: number;
   decisionDistribution: {
     auto: number;
     human: number;
     blocked: number;
   };
+  recoveryTrend?: Array<{ day: string; recovered: number; attempted: number }>;
 }
 
 export interface ModifyActionInput {

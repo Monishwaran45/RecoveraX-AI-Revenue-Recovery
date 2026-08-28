@@ -50,6 +50,25 @@ class DashboardService:
 
         safety_actions_prevented = blocked_count
 
+        # Dynamic 7-day recovery trend calculated from database cases
+        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        daily_totals = {day: {"recovered": 0.0, "attempted": 0.0} for day in days}
+        for c in cases:
+            day_name = c.created_at.strftime("%a") if c.created_at else "Mon"
+            if day_name in daily_totals:
+                daily_totals[day_name]["attempted"] += c.amount_at_risk
+                if c.status == CaseStatus.RECOVERED:
+                    daily_totals[day_name]["recovered"] += c.amount_at_risk
+
+        recovery_trend = [
+            {
+                "day": day,
+                "recovered": round(daily_totals[day]["recovered"], 2),
+                "attempted": round(daily_totals[day]["attempted"], 2)
+            }
+            for day in days
+        ]
+
         return DashboardMetrics(
             revenue_at_risk=round(revenue_at_risk, 2),
             recoverable_revenue=round(recoverable_revenue, 2),
@@ -62,7 +81,8 @@ class DashboardService:
             stopped_count=stopped_count,
             total_cases=total_cases,
             decision_distribution=decision_distribution,
-            safety_actions_prevented=safety_actions_prevented
+            safety_actions_prevented=safety_actions_prevented,
+            recovery_trend=recovery_trend
         )
 
 dashboard_service = DashboardService()

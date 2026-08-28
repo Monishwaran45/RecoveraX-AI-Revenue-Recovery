@@ -50,3 +50,5 @@ class DashboardMetrics(BaseModel):
     total_cases: int
     decision_distribution: List[dict]
     safety_actions_prevented: int
+    recovery_trend: List[dict] = []
+

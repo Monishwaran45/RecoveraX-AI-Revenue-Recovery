@@ -19,6 +19,51 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
   const rec = item.latest_recommendation || (Array.isArray(item.recommendations) && item.recommendations[0]) || {};
   const cust = item.customer || {};
 
+  // Dynamically generate evidence signals from DB customer history and case metrics
+  const evidence = [
+    {
+      id: "e1",
+      text: `Customer LTV: ₹${(cust.lifetime_value || 0).toLocaleString("en-IN")} (${cust.successful_payment_count || 0} successful payments)`,
+      isPositive: (cust.successful_payment_count || 0) > 3,
+    },
+    {
+      id: "e2",
+      text: `Historical Payment Delay: ${cust.average_payment_delay_days || 0} days avg`,
+      isPositive: (cust.average_payment_delay_days || 0) < 5,
+    },
+    {
+      id: "e3",
+      text: `AI Risk Assessment: ${riskVal} Risk Tier (Confidence Score ${item.recovery_score || 50}/100)`,
+      isPositive: (item.recovery_score || 50) >= 70,
+    },
+    {
+      id: "e4",
+      text: `Attempt Tracking: ${item.retry_count || 0} of max ${item.max_retries || 2} retries executed`,
+      isPositive: (item.retry_count || 0) < (item.max_retries || 2),
+    },
+  ];
+
+  // Dynamically generate policy compliance rules from DB item fields
+  const rules = [
+    {
+      id: "r1",
+      text: `Amount Policy: ₹${(item.amount_at_risk || 0).toLocaleString("en-IN")} <= ₹50,000 Auto Limit`,
+      passed: (item.amount_at_risk || 0) <= 50000,
+    },
+    {
+      id: "r2",
+      text: `Confidence Threshold: ${item.recovery_score || 50}/100 >= 80 Score Minimum`,
+      passed: (item.recovery_score || 50) >= 80,
+    },
+    {
+      id: "r3",
+      text: `Retry Limit: ${item.retry_count || 0} < ${item.max_retries || 2} Max Attempts`,
+      passed: (item.retry_count || 0) < (item.max_retries || 2),
+    },
+  ];
+
+  const policyType = item.policy_decision || (item.amount_at_risk > 50000 || item.recovery_score < 80 ? "HUMAN" : "AUTO");
+
   return {
     id: item.id,
     customerName: cust.name || "Customer",
@@ -28,44 +73,61 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     score: item.recovery_score || 50,
     risk: riskVal,
     type: caseType,
-    paymentState: "CLEARLY_FAILED",
-    possibleDebit: false,
+    paymentState: item.status === "BLOCKED" ? "AMBIGUOUS" : "CLEARLY_FAILED",
+    possibleDebit: item.status === "BLOCKED",
     retryCount: item.retry_count || 0,
     maxRetries: item.max_retries || 2,
     aiRecommendation: {
       badgeText: item.recommended_action || "RETRY",
       diagnosis: rec.diagnosis || "TEMPORARY_FAILURE",
-      recommendation: rec.reason || `Recommend ${item.recommended_action || "RETRY"}`,
+      recommendation: rec.reason || `Recommend ${item.recommended_action || "RETRY"} action`,
       score: item.recovery_score || 50,
-      expectedValue: rec.expected_recovery_value || (item.amount_at_risk * 0.8),
-      evidence: [
-        { id: "e1", text: `Customer history: ${cust.successful_payment_count || 5} successful payments`, isPositive: true },
-        { id: "e2", text: "Payment state: CLEAR", isPositive: true },
-        { id: "e3", text: `Risk level: ${item.risk_level}`, isPositive: riskVal === "LOW" },
-      ],
+      expectedValue: rec.expected_recovery_value || Math.round((item.amount_at_risk * (item.recovery_score || 50)) / 100),
+      evidence,
     },
     policyDecision: {
-      type: item.policy_decision || "HUMAN",
-      decisionLabel: item.policy_decision === "AUTO" ? "AUTOMATED RECOVERY" : (item.policy_decision === "BLOCK" ? "POLICY BLOCKED" : "HUMAN APPROVAL REQUIRED"),
-      reason: item.policy_decision === "AUTO" ? "Automated recovery authorized" : (item.policy_decision === "BLOCK" ? "Safety engine blocked payment" : "Human approval required for safety"),
-      rules: [
-        { id: "r1", text: `Amount: ₹${(item.amount_at_risk || 0).toLocaleString("en-IN")}`, passed: true },
-        { id: "r2", text: "Policy Threshold: ₹5,000", passed: true },
-      ],
-      explanation: "Policy evaluation completed",
+      type: policyType,
+      decisionLabel: policyType === "AUTO" ? "AUTOMATED RECOVERY" : (policyType === "BLOCK" ? "POLICY BLOCKED" : "HUMAN APPROVAL REQUIRED"),
+      reason: policyType === "AUTO"
+        ? "Automated recovery authorized by deterministic policy rules."
+        : (policyType === "BLOCK"
+        ? "Safety engine blocked execution due to potential duplicate debit or policy violation."
+        : `Amount (₹${(item.amount_at_risk || 0).toLocaleString("en-IN")}) or risk tier requires explicit merchant sign-off.`),
+      rules,
+      explanation: "Policy evaluation completed against active rule engine.",
     },
     status: statusVal,
-    scheduledDelayMinutes: 30,
+    scheduledDelayMinutes: rec.delay_minutes || 30,
     auditTimeline: Array.isArray(item.audit_logs) && item.audit_logs.length > 0
       ? item.audit_logs.map((log: any) => ({
           id: log.id,
-          timestamp: new Date(log.timestamp).toLocaleTimeString(),
+          timestamp: new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           title: log.event_type,
           description: log.reason,
-          category: log.actor_type === "AI" ? "AI" : (log.actor_type === "POLICY" ? "POLICY" : "SYSTEM"),
+          category: log.actor_type === "AI" ? "AI" : (log.actor_type === "POLICY" ? "POLICY" : (log.actor_type === "HUMAN" ? "HUMAN" : "ACTION")),
         }))
       : [
-          { id: "a1", timestamp: new Date(item.created_at || Date.now()).toLocaleTimeString(), title: "CASE_CREATED", description: `Case initialized for ₹${(item.amount_at_risk || 0).toLocaleString("en-IN")}`, category: "SYSTEM" }
+          {
+            id: `aud-${item.id}-1`,
+            timestamp: new Date(item.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            title: "CASE_INITIALIZED",
+            description: `Case initialized from ${item.source_type || 'gateway'} for ₹${(item.amount_at_risk || 0).toLocaleString("en-IN")}`,
+            category: "ACTION",
+          },
+          {
+            id: `aud-${item.id}-2`,
+            timestamp: new Date(item.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            title: "AI_DIAGNOSIS_COMPLETED",
+            description: `Diagnosis: ${rec.diagnosis || 'TEMPORARY_FAILURE'} with score ${item.recovery_score || 50}/100`,
+            category: "AI",
+          },
+          {
+            id: `aud-${item.id}-3`,
+            timestamp: new Date(item.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            title: "POLICY_EVALUATION_COMPLETED",
+            description: `Policy Decision: ${policyType}`,
+            category: "POLICY",
+          },
         ],
     createdAt: item.created_at || new Date().toISOString(),
     updatedAt: item.updated_at || new Date().toISOString(),
