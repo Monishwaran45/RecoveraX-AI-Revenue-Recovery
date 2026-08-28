@@ -12,18 +12,20 @@ def _is_redis_ready(host="localhost", port=6379, timeout=0.2) -> bool:
 def schedule_node(state: RecoveryState) -> RecoveryState:
     """
     Node 7: Schedule Retry
-    Schedules retry attempt with configured delay via Celery worker task.
-    Fails closed to HUMAN review if scheduler dispatch fails.
+    Schedules retry attempt with configured delay.
+    Only enqueues Celery background task when explicit enqueue_celery flag is True,
+    preventing duplicate execution paths during synchronous graph execution.
     """
     audit_events = list(state.get("audit_events", []))
     delay = state.get("delay_minutes", 30)
     case_id = state.get("case_id")
+    enqueue_celery = state.get("enqueue_celery", False)
     
     celery_enqueued = False
     sched_err = None
 
     try:
-        if case_id and _is_redis_ready():
+        if enqueue_celery and case_id and _is_redis_ready():
             from app.workers.tasks import execute_retry_task
             execute_retry_task.apply_async(args=[case_id], retry=False)
             celery_enqueued = True

@@ -13,17 +13,24 @@ configure_langsmith()
 
 async def _run_async_retry(case_id: str):
     async with AsyncSessionLocal() as db:
-        # Step 1: Perform fresh gateway & payment state recheck
-        rechecked_case = await action_service.recheck_case(db, case_id)
-        if not rechecked_case:
+        from app.models.recovery_case import RecoveryCase
+        from sqlalchemy import select
+        
+        case = await db.scalar(select(RecoveryCase).where(RecoveryCase.id == case_id))
+        if not case:
             return None
             
-        # Step 2: If recheck determined payment is settled (RECOVERED) or blocked (AMBIGUOUS/DEBIT_RISK), halt execution!
-        if rechecked_case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED] or rechecked_case.policy_decision == PolicyDecision.BLOCK:
-            logger.info(f"[SCHEDULER] Case {case_id} recheck resulted in {rechecked_case.status.value}. Halting retry execution.")
+        # Idempotency Lock: If case is already RECOVERED, BLOCKED, or STOPPED, skip duplicate execution!
+        if case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED, CaseStatus.STOPPED] or case.policy_decision == PolicyDecision.BLOCK:
+            logger.info(f"[CELERY WORKER] Case {case_id} is already in terminal state {case.status.value}. Skipping duplicate execution path.")
+            return case
+
+        # Step 1: Perform fresh gateway & payment state recheck
+        rechecked_case = await action_service.recheck_case(db, case_id)
+        if not rechecked_case or rechecked_case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED, CaseStatus.STOPPED]:
             return rechecked_case
             
-        # Step 3: Otherwise proceed to execute case action
+        # Step 2: Proceed to execute case action if safe
         return await action_service.execute_case_action(db, case_id)
 
 @celery_app.task(name="tasks.execute_retry_task")
