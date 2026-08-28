@@ -13,20 +13,40 @@ from app.models.approval import ApprovalRequest
 from app.models.audit import AuditLog
 from app.data.generator import generate_synthetic_dataset
 
+from sqlalchemy import select, inspect, text
+
 logger = logging.getLogger(__name__)
 
 from app.policy.enums import PolicyDecision, CaseStatus, RiskLevel, ActionType
 
+def ensure_columns_exist():
+    try:
+        inspector = inspect(sync_engine)
+        if "recovery_cases" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("recovery_cases")]
+            with sync_engine.begin() as conn:
+                if "verification_result" not in columns:
+                    logger.info("Migrating schema: Adding verification_result to recovery_cases table")
+                    conn.execute(text("ALTER TABLE recovery_cases ADD COLUMN verification_result VARCHAR(64) DEFAULT 'NONE'"))
+                if "amount_recovered" not in columns:
+                    logger.info("Migrating schema: Adding amount_recovered to recovery_cases table")
+                    conn.execute(text("ALTER TABLE recovery_cases ADD COLUMN amount_recovered DOUBLE DEFAULT 0.0"))
+                if "approval_status" not in columns:
+                    logger.info("Migrating schema: Adding approval_status to recovery_cases table")
+                    conn.execute(text("ALTER TABLE recovery_cases ADD COLUMN approval_status VARCHAR(32) DEFAULT 'NOT_REQUIRED'"))
+    except Exception as e:
+        logger.warning(f"Column migration check non-fatal exception: {e}")
+
 def ensure_demo_cases_updated(db: Session):
     demo_updates = {
-        "CASE-1001": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW, 87, ActionType.RETRY),
-        "CASE-1002": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH, 78, ActionType.RETRY),
-        "CASE-1003": (PolicyDecision.BLOCK, CaseStatus.BLOCKED, RiskLevel.HIGH, 10, ActionType.STOP),
-        "CASE-1004": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW, 82, ActionType.RETRY),
-        "CASE-1005": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.LOW, 75, ActionType.REMIND),
-        "CASE-1006": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH, 65, ActionType.ESCALATE),
+        "CASE-1001": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW, 87, ActionType.RETRY, "NONE", 0.0, "NOT_REQUIRED"),
+        "CASE-1002": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH, 78, ActionType.RETRY, "NONE", 0.0, "PENDING"),
+        "CASE-1003": (PolicyDecision.BLOCK, CaseStatus.BLOCKED, RiskLevel.HIGH, 10, ActionType.STOP, "BLOCKED", 0.0, "NOT_REQUIRED"),
+        "CASE-1004": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW, 82, ActionType.RETRY, "NONE", 0.0, "NOT_REQUIRED"),
+        "CASE-1005": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.LOW, 75, ActionType.REMIND, "NONE", 0.0, "PENDING"),
+        "CASE-1006": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH, 65, ActionType.ESCALATE, "NONE", 0.0, "PENDING"),
     }
-    for c_id, (policy, status, risk, score, action) in demo_updates.items():
+    for c_id, (policy, status, risk, score, action, v_res, amt_rec, app_stat) in demo_updates.items():
         case = db.scalar(select(RecoveryCase).where(RecoveryCase.id == c_id))
         if case:
             case.policy_decision = policy
@@ -34,9 +54,16 @@ def ensure_demo_cases_updated(db: Session):
             case.risk_level = risk
             case.recovery_score = score
             case.recommended_action = action
+            if not getattr(case, 'verification_result', None):
+                case.verification_result = v_res
+            if getattr(case, 'amount_recovered', None) is None:
+                case.amount_recovered = amt_rec
+            if not getattr(case, 'approval_status', None):
+                case.approval_status = app_stat
     db.commit()
 
 def seed_database_if_empty():
+    ensure_columns_exist()
     Base.metadata.create_all(bind=sync_engine)
     
     with SyncSessionLocal() as db:
