@@ -126,7 +126,9 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     const diag = c?.aiRecommendation?.diagnosis || "TEMPORARY_FAILURE";
     const score = c?.score ?? c?.recoveryScore ?? 80;
     const recAction = c?.aiRecommendation?.badgeText || c?.recommendedAction || "RETRY";
-    const polDecision = c?.policyDecision?.type || "AUTO";
+    const polDecision = String(c?.policyDecision?.type || c?.policyDecision?.value || c?.policyDecision || "HUMAN").toUpperCase();
+    const isHumanRequired = polDecision === "HUMAN" || c?.status === "HUMAN_APPROVAL" || c?.approvalStatus === "PENDING";
+    const isBlocked = polDecision === "BLOCK" || c?.status === "BLOCKED";
 
     // Step 2: Diagnose (Real LLM diagnosis returned from backend)
     setCurrentStepIdx(1);
@@ -162,7 +164,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     addLog("POLICY", `Policy Engine Decision: ${c?.policyDecision?.decisionLabel || polDecision}`);
     await new Promise((r) => setTimeout(r, 300));
 
-    if (polDecision === "BLOCK" || c?.status === "BLOCKED") {
+    if (isBlocked) {
       updateStepState(5, "blocked");
       for (let i = 6; i <= 11; i++) updateStepState(i, "blocked");
       addLog("POLICY", `🔴 HARD BLOCK EXECUTED: ${c?.policyDecision?.reason || "Policy engine blocked execution to prevent double charge."}`);
@@ -171,7 +173,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
       return;
     }
 
-    if (polDecision === "HUMAN" || c?.status === "HUMAN_APPROVAL") {
+    if (isHumanRequired) {
       updateStepState(5, "completed");
       for (let i = 6; i <= 11; i++) updateStepState(i, "pending");
       addLog("HUMAN", `🟡 HUMAN APPROVAL REQUIRED: ${c?.policyDecision?.reason || "High risk / amount requires human sign-off."}`);
@@ -233,9 +235,10 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
 
     // Step 12: Recover / Stop (Authoritative backend state check!)
     setCurrentStepIdx(11);
-    if (execRes?.status === "RECOVERED") {
+    const isVerifiedRecovered = execRes?.status === "RECOVERED" && (execRes?.verificationResult === "VERIFIED_SUCCESS" || (execRes?.amountRecovered || 0) > 0);
+    if (isVerifiedRecovered) {
       updateStepState(11, "completed");
-      const finalAmount = execRes?.amount || c?.amount || activeScenario.amountVal;
+      const finalAmount = execRes?.amountRecovered || execRes?.amount || c?.amount || activeScenario.amountVal;
       addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${finalAmount.toLocaleString("en-IN")} deposited.`);
     } else {
       updateStepState(11, "failed");
@@ -294,9 +297,10 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
 
     // Step 12: Recover
     setCurrentStepIdx(11);
-    if (execRes?.status === "RECOVERED") {
+    const isApprovedVerifiedRecovered = execRes?.status === "RECOVERED" && (execRes?.verificationResult === "VERIFIED_SUCCESS" || (execRes?.amountRecovered || 0) > 0);
+    if (isApprovedVerifiedRecovered) {
       updateStepState(11, "completed");
-      const finalAmt = execRes?.amount || currentCase?.amount || activeScenario.amountVal;
+      const finalAmt = execRes?.amountRecovered || execRes?.amount || currentCase?.amount || activeScenario.amountVal;
       addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${finalAmt.toLocaleString("en-IN")} deposited.`);
     } else {
       updateStepState(11, "failed");

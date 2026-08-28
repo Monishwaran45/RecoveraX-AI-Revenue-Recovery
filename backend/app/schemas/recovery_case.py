@@ -19,6 +19,9 @@ class RecoveryCaseBase(BaseModel):
     recommended_action: ActionType = ActionType.RETRY
     policy_decision: PolicyDecision = PolicyDecision.HUMAN
     status: CaseStatus = CaseStatus.OPEN
+    verification_result: Optional[str] = "NONE"
+    amount_recovered: float = 0.0
+    approval_status: Optional[str] = "NOT_REQUIRED"
     retry_count: int = 0
     max_retries: int = 2
 

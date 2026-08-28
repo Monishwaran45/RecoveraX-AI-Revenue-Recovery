@@ -60,6 +60,9 @@ export interface RecoveryCase {
   aiRecommendation: AIRecommendation;
   policyDecision: PolicyDecision;
   status: CaseStatus;
+  verificationResult?: string;
+  amountRecovered?: number;
+  approvalStatus?: string;
   scheduledDelayMinutes: number;
   auditTimeline: AuditEvent[];
   createdAt: string;

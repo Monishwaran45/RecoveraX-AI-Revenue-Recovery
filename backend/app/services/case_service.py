@@ -160,6 +160,21 @@ class CaseService:
         elif case.policy_decision == PolicyDecision.BLOCK:
             case.status = CaseStatus.BLOCKED
 
+        # Authoritative state machine synchronization
+        if case.policy_decision == PolicyDecision.HUMAN:
+            case.approval_status = "PENDING"
+            case.verification_result = "NONE"
+            case.amount_recovered = 0.0
+        elif case.policy_decision == PolicyDecision.BLOCK:
+            case.approval_status = "NOT_REQUIRED"
+            case.verification_result = "BLOCKED"
+            case.amount_recovered = 0.0
+        elif case.policy_decision == PolicyDecision.AUTO:
+            case.approval_status = "NOT_REQUIRED"
+            if case.status != CaseStatus.RECOVERED:
+                case.verification_result = "NONE"
+                case.amount_recovered = 0.0
+
         # Save recommendation record
         rec = Recommendation(
             id=f"REC-{uuid.uuid4().hex[:8]}",

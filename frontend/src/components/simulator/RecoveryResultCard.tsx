@@ -10,11 +10,11 @@ interface RecoveryResultCardProps {
 }
 
 export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndExecute }: RecoveryResultCardProps) {
-  const isRecovered = caseData.status === "RECOVERED";
+  const isRecovered = caseData.status === "RECOVERED" && (caseData.verificationResult === "VERIFIED_SUCCESS" || (caseData.amountRecovered || 0) > 0);
   const isBlocked = caseData.status === "BLOCKED";
-  const isStopped = caseData.status === "STOPPED";
+  const isStopped = caseData.status === "STOPPED" || caseData.status === "REJECTED";
   const isFailed = caseData.status === "FAILED";
-  const isHuman = caseData.status === "HUMAN_APPROVAL" || caseData.policyDecision?.type === "HUMAN";
+  const isHuman = caseData.status === "HUMAN_APPROVAL" || caseData.policyDecision?.type === "HUMAN" || caseData.approvalStatus === "PENDING";
   
   const isReminderAction = caseData.recommendedAction === "REMIND" || caseData.recommendedAction === "ESCALATE" || caseData.type === "CHECKOUT" || caseData.type === "INVOICE";
 
@@ -83,7 +83,7 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
           <div className="text-right mr-2">
             <span className="text-[11px] font-semibold opacity-75 block">Total Recovered</span>
             <span className="text-3xl font-extrabold font-mono text-white">
-              {isRecovered ? `₹${caseData.amount.toLocaleString("en-IN")}` : "₹0"}
+              {isRecovered ? `₹${(caseData.amountRecovered || caseData.amount).toLocaleString("en-IN")}` : "₹0"}
             </span>
           </div>
 

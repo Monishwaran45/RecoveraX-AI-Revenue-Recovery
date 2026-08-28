@@ -71,10 +71,22 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
   if (!rawPolicy) {
     if (item.status === "BLOCKED") rawPolicy = "BLOCK";
     else if (item.status === "SCHEDULED" || item.status === "RECOVERED") rawPolicy = "AUTO";
-    else rawPolicy = (item.amount_at_risk || 0) <= 50000 && (item.recovery_score || 50) >= 80 ? "AUTO" : "HUMAN";
+    else rawPolicy = "HUMAN";
   }
 
   const policyType = rawPolicy.toUpperCase();
+
+  const verificationResult = item.verification_result || (item.status === "RECOVERED" ? "VERIFIED_SUCCESS" : "NONE");
+  const amountRecovered = item.amount_recovered !== undefined ? item.amount_recovered : (item.status === "RECOVERED" ? (item.amount_at_risk || 0) : 0);
+  const approvalStatus = item.approval_status || (item.status === "AWAITING_APPROVAL" ? "PENDING" : "NOT_REQUIRED");
+
+  let statusVal: CaseStatus = "OPEN";
+  if (item.status === "AWAITING_APPROVAL" || approvalStatus === "PENDING") statusVal = "HUMAN_APPROVAL";
+  else if (item.status === "SCHEDULED") statusVal = "SCHEDULED";
+  else if (item.status === "RECOVERED" && verificationResult === "VERIFIED_SUCCESS") statusVal = "RECOVERED";
+  else if (item.status === "BLOCKED") statusVal = "BLOCKED";
+  else if (item.status === "STOPPED" || approvalStatus === "REJECTED") statusVal = "REJECTED";
+  else if (item.status === "MODIFIED") statusVal = "MODIFIED";
 
   return {
     id: item.id,
@@ -100,7 +112,7 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
       evidence,
     },
     policyDecision: {
-      type: policyType,
+      type: policyType as PolicyDecisionType,
       decisionLabel: policyType === "AUTO" ? "AUTOMATED RECOVERY" : (policyType === "BLOCK" ? "POLICY BLOCKED" : "HUMAN APPROVAL REQUIRED"),
       reason: policyType === "AUTO"
         ? "Automated recovery authorized by deterministic policy rules."
@@ -111,6 +123,9 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
       explanation: "Policy evaluation completed against active rule engine.",
     },
     status: statusVal,
+    verificationResult,
+    amountRecovered,
+    approvalStatus,
     scheduledDelayMinutes: rec.delay_minutes || 30,
     auditTimeline: Array.isArray(item.audit_logs) && item.audit_logs.length > 0
       ? item.audit_logs.map((log: any) => ({
