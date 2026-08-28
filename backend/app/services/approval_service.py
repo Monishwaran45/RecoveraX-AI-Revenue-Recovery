@@ -11,6 +11,8 @@ from app.policy.enums import ApprovalStatus, ActionType, PolicyDecision, CaseSta
 from app.policy.engine import policy_engine
 from app.services.audit_service import audit_service
 
+from app.services.case_service import CaseService
+
 class ApprovalService:
     @staticmethod
     async def get_pending_approvals(db: AsyncSession) -> List[ApprovalRequest]:
@@ -54,8 +56,7 @@ class ApprovalService:
         )
 
         await db.commit()
-        await db.refresh(case)
-        return case
+        return await CaseService.get_case_by_id(db, case_id)
 
     @staticmethod
     async def reject_case(db: AsyncSession, case_id: str, reason: Optional[str] = None) -> Optional[RecoveryCase]:
@@ -88,8 +89,7 @@ class ApprovalService:
         )
 
         await db.commit()
-        await db.refresh(case)
-        return case
+        return await CaseService.get_case_by_id(db, case_id)
 
     @staticmethod
     async def modify_case(
@@ -164,7 +164,6 @@ class ApprovalService:
             )
 
         await db.commit()
-        await db.refresh(case)
-        return case
+        return await CaseService.get_case_by_id(db, case_id)
 
 approval_service = ApprovalService()
