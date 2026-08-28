@@ -11,6 +11,7 @@ from app.policy.enums import CaseStatus, TransactionStatus, PaymentState, Policy
 from app.policy.engine import policy_engine
 from app.simulator.payment import payment_simulator
 from app.services.audit_service import audit_service
+from app.services.case_service import case_service
 
 class ActionService:
     @staticmethod
@@ -65,7 +66,7 @@ class ActionService:
             )
 
         await db.commit()
-        return case
+        return await case_service.get_case_by_id(db, case.id)
 
     @staticmethod
     async def execute_case_action(db: AsyncSession, case_id: str) -> Optional[RecoveryCase]:
@@ -107,7 +108,7 @@ class ActionService:
                 metadata_json={"decision": "BLOCK"}
             )
             await db.commit()
-            return case
+            return await case_service.get_case_by_id(db, case.id)
 
         # Enforce mandatory Human Approval authorization check
         if policy_eval.decision == PolicyDecision.HUMAN or case.policy_decision == PolicyDecision.HUMAN:
@@ -131,7 +132,7 @@ class ActionService:
                     metadata_json={"decision": "HUMAN_APPROVAL_REQUIRED"}
                 )
                 await db.commit()
-                return case
+                return await case_service.get_case_by_id(db, case.id)
 
         # Execute retry via simulator
         case.status = CaseStatus.EXECUTING
@@ -206,8 +207,7 @@ class ActionService:
             )
 
         await db.commit()
-        await db.refresh(case)
-        return case
+        return await case_service.get_case_by_id(db, case.id)
 
     @staticmethod
     async def stop_case(db: AsyncSession, case_id: str, reason: Optional[str] = None) -> Optional[RecoveryCase]:
@@ -231,7 +231,6 @@ class ActionService:
         )
 
         await db.commit()
-        await db.refresh(case)
-        return case
+        return await case_service.get_case_by_id(db, case.id)
 
 action_service = ActionService()

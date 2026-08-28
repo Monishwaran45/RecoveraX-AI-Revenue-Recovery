@@ -197,3 +197,69 @@ export async function getCase(id: string): Promise<RecoveryCase | undefined> {
 
   return store.getCaseById(id);
 }
+
+export async function analyzeCase(id: string): Promise<RecoveryCase | undefined> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/cases/${id}/analyze`, {
+      method: "POST",
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const item = await res.json();
+      return mapBackendCaseToFrontend(item);
+    }
+  } catch (e) {
+    console.warn(`Analyze case ${id} failed:`, e);
+  }
+  return getCase(id);
+}
+
+export async function recheckCase(id: string): Promise<RecoveryCase | undefined> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/cases/${id}/recheck`, {
+      method: "POST",
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const item = await res.json();
+      return mapBackendCaseToFrontend(item);
+    }
+  } catch (e) {
+    console.warn(`Recheck case ${id} failed:`, e);
+  }
+  return getCase(id);
+}
+
+export async function executeCaseAction(id: string): Promise<RecoveryCase | undefined> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/cases/${id}/execute`, {
+      method: "POST",
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const item = await res.json();
+      return mapBackendCaseToFrontend(item);
+    }
+  } catch (e) {
+    console.warn(`Execute case ${id} failed:`, e);
+  }
+  return getCase(id);
+}
+
+export async function stopCase(id: string, reason?: string): Promise<RecoveryCase | undefined> {
+  try {
+    const url = reason ? `${BACKEND_URL}/cases/${id}/stop?reason=${encodeURIComponent(reason)}` : `${BACKEND_URL}/cases/${id}/stop`;
+    const res = await fetch(url, {
+      method: "POST",
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const item = await res.json();
+      return mapBackendCaseToFrontend(item);
+    }
+  } catch (e) {
+    console.warn(`Stop case ${id} failed:`, e);
+  }
+  return getCase(id);
+}
+

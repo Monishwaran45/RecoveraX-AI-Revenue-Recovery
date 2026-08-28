@@ -5,10 +5,13 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
+  Play,
   FolderKanban,
   ShieldCheck,
+  FlaskConical,
+  Terminal,
   Zap,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import { store } from "@/lib/store";
 
@@ -26,9 +29,15 @@ export default function Sidebar() {
 
   const navItems = [
     {
-      label: "Dashboard",
+      label: "Overview",
       href: "/dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      label: "Recovery Simulator",
+      href: "/simulator",
+      icon: Play,
+      isPrimary: true,
     },
     {
       label: "Recovery Cases",
@@ -40,6 +49,16 @@ export default function Sidebar() {
       href: "/approvals",
       icon: ShieldCheck,
       badge: pendingApprovals > 0 ? pendingApprovals : null,
+    },
+    {
+      label: "Experiments",
+      href: "/experiments",
+      icon: FlaskConical,
+    },
+    {
+      label: "Audit Trail",
+      href: "/audit",
+      icon: Terminal,
     },
   ];
 
@@ -55,7 +74,7 @@ export default function Sidebar() {
             <h1 className="font-bold text-white text-base tracking-tight leading-tight">
               AI Revenue Recovery
             </h1>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5"></p>
+            <p className="text-[11px] font-medium text-blue-400 mt-0.5">Agent Ops Console</p>
           </div>
         </div>
       </div>
@@ -67,19 +86,32 @@ export default function Sidebar() {
         </div>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/dashboard" && pathname.startsWith(item.href));
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors ${isActive
+              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                isActive
                   ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-bold"
+                  : item.isPrimary
+                  ? "bg-blue-950/60 border border-blue-800/60 text-blue-300 hover:bg-blue-900/80 hover:text-white"
                   : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-                }`}
+              }`}
             >
               <div className="flex items-center gap-3">
-                <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-slate-400"}`} />
+                <Icon
+                  className={`h-4 w-4 ${
+                    isActive
+                      ? "text-white"
+                      : item.isPrimary
+                      ? "text-blue-400"
+                      : "text-slate-400"
+                  }`}
+                />
                 <span>{item.label}</span>
               </div>
               {item.badge !== null && item.badge !== undefined && (
@@ -103,7 +135,7 @@ export default function Sidebar() {
               <p className="text-xs font-bold text-white leading-tight">Acme Commerce</p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="text-[10px] text-slate-400 font-medium">Sandbox Connected</span>
+                <span className="text-[10px] text-slate-400 font-medium">FastAPI Engine Live</span>
               </div>
             </div>
           </div>

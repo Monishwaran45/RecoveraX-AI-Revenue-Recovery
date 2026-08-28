@@ -1,0 +1,88 @@
+"use client";
+
+import { CheckCircle2, ShieldAlert, ArrowRight, RefreshCw, Zap } from "lucide-react";
+import { RecoveryCase } from "@/lib/types";
+
+interface RecoveryResultCardProps {
+  caseData: RecoveryCase;
+  onRunAgain?: () => void;
+}
+
+export default function RecoveryResultCard({ caseData, onRunAgain }: RecoveryResultCardProps) {
+  const isRecovered = caseData.status === "RECOVERED";
+  const isBlocked = caseData.status === "BLOCKED";
+  const isHuman = caseData.status === "HUMAN_APPROVAL";
+
+  return (
+    <div
+      className={`border rounded-xl p-6 shadow-md transition-all ${
+        isRecovered
+          ? "bg-emerald-950/40 border-emerald-500/80 text-emerald-100"
+          : isBlocked
+          ? "bg-rose-950/40 border-rose-500/80 text-rose-100"
+          : "bg-amber-950/40 border-amber-500/80 text-amber-100"
+      }`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div
+            className={`p-3 rounded-xl shadow-md ${
+              isRecovered
+                ? "bg-emerald-600 text-white"
+                : isBlocked
+                ? "bg-rose-600 text-white"
+                : "bg-amber-600 text-white"
+            }`}
+          >
+            {isRecovered ? (
+              <CheckCircle2 className="h-7 w-7" />
+            ) : isBlocked ? (
+              <ShieldAlert className="h-7 w-7" />
+            ) : (
+              <Zap className="h-7 w-7" />
+            )}
+          </div>
+
+          <div>
+            <span className="font-mono text-xs font-bold uppercase tracking-wider opacity-75">
+              Simulation Result Outcome
+            </span>
+            <h3 className="text-xl font-extrabold tracking-tight text-white mt-0.5">
+              {isRecovered
+                ? "✓ RECOVERY COMPLETE"
+                : isBlocked
+                ? "🛡 ACTION SAFELY BLOCKED"
+                : "🟡 HUMAN APPROVAL REQUIRED"}
+            </h3>
+            <p className="text-xs opacity-90 mt-1 font-medium">
+              {isRecovered
+                ? `Revenue of ₹${caseData.amount.toLocaleString("en-IN")} successfully retried and deposited.`
+                : isBlocked
+                ? `Execution of ₹${caseData.amount.toLocaleString("en-IN")} blocked by Policy Engine to prevent duplicate charge.`
+                : `Amount ₹${caseData.amount.toLocaleString("en-IN")} routed to merchant approval queue.`}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 border-t sm:border-t-0 sm:border-l border-white/20 pt-3 sm:pt-0 sm:pl-6">
+          <div className="text-right">
+            <span className="text-[11px] font-semibold opacity-75 block">Total Recovered</span>
+            <span className="text-3xl font-extrabold font-mono text-white">
+              {isRecovered ? `₹${caseData.amount.toLocaleString("en-IN")}` : "₹0"}
+            </span>
+          </div>
+
+          {onRunAgain && (
+            <button
+              onClick={onRunAgain}
+              className="px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2 shrink-0"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Run Next Scenario
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

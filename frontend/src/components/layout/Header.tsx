@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Bell, ChevronDown } from "lucide-react";
+import { Search, Bell } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCases } from "@/lib/api/cases";
 import { RecoveryCase } from "@/lib/types";
@@ -25,10 +25,13 @@ export default function Header() {
   }, []);
 
   const getPageTitle = () => {
-    if (pathname === "/dashboard") return "Dashboard";
-    if (pathname === "/cases") return "Recovery Cases";
+    if (pathname === "/dashboard") return "Overview & Business Impact";
+    if (pathname === "/simulator") return "Recovery Agent Simulator";
+    if (pathname === "/cases") return "Recovery Cases Operations";
     if (pathname.startsWith("/cases/")) return "Case Detail & Verification";
     if (pathname === "/approvals") return "Human Approval Queue";
+    if (pathname === "/experiments") return "Batch Experiments & Results";
+    if (pathname === "/audit") return "System Audit Trail";
     return "AI Revenue Recovery";
   };
 
@@ -43,30 +46,23 @@ export default function Header() {
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20 shadow-xs">
       {/* Title */}
       <div className="flex items-center gap-3">
-        <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+        <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
           {getPageTitle()}
         </h2>
-        <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          Engine Active
-        </span>
       </div>
 
       {/* Right Controls */}
       <div className="flex items-center gap-4">
         {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="relative w-60 md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <form onSubmit={handleSearchSubmit} className="relative w-52 md:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search Case ID, Customer, Amount..."
+            placeholder="Search Case ID, Customer..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-10 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            className="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
           />
-          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-            ⌘K
-          </span>
         </form>
 
         {/* Notifications */}
@@ -76,7 +72,7 @@ export default function Header() {
             className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg relative transition-colors"
             title="Notifications"
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-4 w-4" />
             {alerts.length > 0 && (
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
             )}
@@ -121,15 +117,13 @@ export default function Header() {
         </div>
 
         {/* Merchant Dropdown */}
-        <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-          <div className="h-8 w-8 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+        <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
+          <div className="h-7 w-7 rounded-lg bg-blue-600 text-white font-bold text-[11px] flex items-center justify-center shadow-xs">
             AC
           </div>
           <div className="hidden sm:block text-left">
             <p className="text-xs font-bold text-slate-900 leading-tight">Acme Commerce</p>
-            <p className="text-[10px] text-slate-500 font-medium">MID: MER-99218</p>
           </div>
-          <ChevronDown className="h-4 w-4 text-slate-400" />
         </div>
       </div>
     </header>

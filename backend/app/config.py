@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
     
     # Demo & Retry Configurations
-    DEMO_MODE: bool = Field(default=True, alias="DEMO_MODE")
+    DEMO_MODE: bool = Field(default=False, alias="DEMO_MODE")
     DEMO_RETRY_DELAY_SECONDS: int = Field(default=10, alias="DEMO_RETRY_DELAY_SECONDS")
     
     # Safety & Policy Engine Thresholds
