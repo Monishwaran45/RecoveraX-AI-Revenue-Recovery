@@ -72,7 +72,7 @@ export default function Sidebar() {
           </div>
           <div>
             <h1 className="font-bold text-white text-base tracking-tight leading-tight">
-              AI Revenue Recovery
+              RecoveraX
             </h1>
             <p className="text-[11px] font-medium text-blue-400 mt-0.5">Agent Ops Console</p>
           </div>

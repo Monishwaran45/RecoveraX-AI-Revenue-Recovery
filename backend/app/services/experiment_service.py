@@ -36,7 +36,7 @@ class ExperimentService:
 
             baseline_recovered += base_recovered
 
-            # Strategy 2: AI Revenue Recovery Agent Strategy (Full ML scoring + Deterministic Safety Policy + Recheck + Simulator Execution)
+            # Strategy 2: RecoveraX Agent Strategy (Full ML scoring + Deterministic Safety Policy + Recheck + Simulator Execution)
             if c.status == CaseStatus.RECOVERED:
                 ai_rec = c.amount_at_risk
                 ai_outcome = "RECOVERED"

@@ -11,14 +11,14 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing AI Revenue Recovery Backend Services...")
+    logger.info("Initializing RecoveraX Backend Services...")
     seed_database_if_empty()
     yield
     logger.info("Shutting down backend services.")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="FastAPI Backend Engine for AI Revenue Recovery (Razorpay AI Buildathon — Track 3)",
+    description="FastAPI Backend Engine for RecoveraX (Razorpay AI Buildathon — Track 3)",
     version="1.0.0",
     lifespan=lifespan
 )

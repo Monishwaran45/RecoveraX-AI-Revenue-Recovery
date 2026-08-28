@@ -1,6 +1,6 @@
-# AI Revenue Recovery Engine — Backend MVP
+# RecoveraX Engine — Backend MVP
 
-**Razorpay AI Buildathon — Track 3: AI Revenue Recovery**
+**RecoveraX**
 
 An autonomous revenue recovery backend engine with deterministic financial safety guardrails and Human-in-the-Loop (HITL) approval routing.
 

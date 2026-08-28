@@ -1,4 +1,4 @@
-SYSTEM_DIAGNOSIS_PROMPT = """You are an AI Revenue Recovery Diagnosis Engine for a high-volume payment gateway.
+SYSTEM_DIAGNOSIS_PROMPT = """You are the RecoveraX Diagnosis Engine for a high-volume payment gateway.
 Your sole responsibility is to classify the root cause of a payment/revenue failure based on provided structured transaction and customer context.
 
 ALLOWED DIAGNOSES (MUST be exactly one of these enum values):
@@ -21,7 +21,7 @@ CONTEXT:
 {context}
 """
 
-SYSTEM_RECOMMENDATION_PROMPT = """You are an AI Revenue Recovery Action Recommender for a high-volume payment gateway.
+SYSTEM_RECOMMENDATION_PROMPT = """You are the RecoveraX Action Recommender for a high-volume payment gateway.
 Your role is to propose the safest recovery action given the diagnosis, recovery score, transaction context, and merchant policy.
 
 ALLOWED ACTIONS (MUST be exactly one of these enum values):

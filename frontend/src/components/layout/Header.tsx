@@ -32,7 +32,7 @@ export default function Header() {
     if (pathname === "/approvals") return "Human Approval Queue";
     if (pathname === "/experiments") return "Batch Experiments & Results";
     if (pathname === "/audit") return "System Audit Trail";
-    return "AI Revenue Recovery";
+    return "RecoveraX";
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {

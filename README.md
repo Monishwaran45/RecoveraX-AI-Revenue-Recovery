@@ -1,8 +1,8 @@
-# AI REVENUE RECOVERY — Autonomous Fintech Safety & Recovery Engine
+# RecoveraX — Autonomous Fintech Safety & Recovery Engine
 
-> **AI Revenue Recovery**
+> **RecoveraX**
 
-AI Revenue Recovery detects revenue at risk, diagnoses root causes using **Groq LLM (`groq/compound` / `llama-3.3-70b-versatile`)**, estimates recovery probability, applies **deterministic financial safety guardrails**, routes risky actions to **Human-in-the-Loop (HITL) approval**, executes approved recovery retries, verifies settlement outcomes, and records an **immutable audit trail**.
+RecoveraX detects revenue at risk, diagnoses root causes using **Groq LLM (`groq/compound` / `llama-3.3-70b-versatile`)**, estimates recovery probability, applies **deterministic financial safety guardrails**, routes risky actions to **Human-in-the-Loop (HITL) approval**, executes approved recovery retries, verifies settlement outcomes, and records an **immutable audit trail**.
 
 ---
 
@@ -29,7 +29,7 @@ AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRM
 ## System Architecture
 
 ```
-AI-Revenue-Recovery/
+RecoveraX/
 ├── frontend/             # Next.js 15 App Router Frontend (TailwindCSS, Inter typography)
 │   ├── src/
 │   │   ├── app/          # App Router Pages (/dashboard, /cases, /cases/[id], /approvals)

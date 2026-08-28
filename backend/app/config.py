@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "AI Revenue Recovery Engine"
+    PROJECT_NAME: str = "RecoveraX Engine"
     API_V1_STR: str = ""
     
     # Database
