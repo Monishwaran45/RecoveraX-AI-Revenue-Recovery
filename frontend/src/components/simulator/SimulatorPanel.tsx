@@ -379,8 +379,8 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
       {/* 3. 13-Stage Workflow Visualization */}
       <AgentWorkflow steps={workflowSteps} currentStepIndex={currentStepIdx} />
 
-      {/* 4. Ambiguous Safety Callout Alert if Scenario 5 */}
-      {activeScenario.id === "sc-5" && (
+      {/* 4. Ambiguous Safety Callout Alert if BLOCKED case */}
+      {(activeScenario.badge === "BLOCK" || activeScenario.caseId === "CASE-1003") && (
         <SafetyAlert amount={activeScenario.amount} caseId={activeScenario.caseId} />
       )}
 
@@ -396,7 +396,13 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
         <RecoveryResultCard
           caseData={currentCase}
           onApproveAndExecute={handleHumanApproveAndExecute}
-          onRunAgain={() => loadScenarioCase(SCENARIOS[(SCENARIOS.findIndex(s => s.id === activeScenario.id) + 1) % SCENARIOS.length])}
+          onRunAgain={() => {
+            if (dynamicScenarios.length > 0) {
+              const idx = dynamicScenarios.findIndex(s => s.id === activeScenario.id || s.caseId === activeScenario.caseId);
+              const nextSc = dynamicScenarios[(idx + 1) % dynamicScenarios.length];
+              if (nextSc) loadScenarioCase(nextSc);
+            }
+          }}
         />
       )}
     </div>
