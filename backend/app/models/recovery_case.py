@@ -1,9 +1,16 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import String, Float, Integer, DateTime, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
 from app.policy.enums import ProblemType, RiskLevel, ActionType, PolicyDecision, CaseStatus
+
+if TYPE_CHECKING:
+    from app.models.customer import Customer
+    from app.models.recommendation import Recommendation
+    from app.models.action import ActionModel
+    from app.models.approval import ApprovalRequest
+    from app.models.audit import AuditLog
 
 class RecoveryCase(Base):
     __tablename__ = "recovery_cases"

@@ -1,6 +1,6 @@
 export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
 export type PolicyDecisionType = "AUTO" | "HUMAN" | "BLOCK";
-export type CaseStatus = "OPEN" | "SCHEDULED" | "HUMAN_APPROVAL" | "RECOVERED" | "BLOCKED" | "REJECTED" | "MODIFIED";
+export type CaseStatus = "OPEN" | "SCHEDULED" | "HUMAN_APPROVAL" | "RECOVERED" | "BLOCKED" | "REJECTED" | "MODIFIED" | "STOPPED" | "FAILED";
 export type CaseType = "FAILED_PAYMENT" | "SUBSCRIPTION" | "CHECKOUT" | "INVOICE";
 export type PaymentState = "CLEARLY_FAILED" | "BANK_TIMEOUT" | "AMBIGUOUS";
 

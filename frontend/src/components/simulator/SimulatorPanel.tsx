@@ -126,7 +126,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     const diag = c?.aiRecommendation?.diagnosis || "TEMPORARY_FAILURE";
     const score = c?.score ?? c?.recoveryScore ?? 80;
     const recAction = c?.aiRecommendation?.badgeText || c?.recommendedAction || "RETRY";
-    const polDecision = String(c?.policyDecision?.type || c?.policyDecision?.value || c?.policyDecision || "HUMAN").toUpperCase();
+    const polDecision = String(c?.policyDecision?.type || (typeof c?.policyDecision === "string" ? c.policyDecision : "HUMAN")).toUpperCase();
     const isHumanRequired = polDecision === "HUMAN" || c?.status === "HUMAN_APPROVAL" || c?.approvalStatus === "PENDING";
     const isBlocked = polDecision === "BLOCK" || c?.status === "BLOCKED";
 
@@ -175,7 +175,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
 
     if (isHumanRequired) {
       updateStepState(5, "completed");
-      for (let i = 6; i <= 11; i++) updateStepState(i, "pending");
+      for (let i = 6; i <= 11; i++) updateStepState(i, "waiting");
       addLog("HUMAN", `🟡 HUMAN APPROVAL REQUIRED: ${c?.policyDecision?.reason || "High risk / amount requires human sign-off."}`);
       addLog("ACTION", `⏸️ Waiting for merchant approval. Payment execution halted.`);
       setIsRunning(false);
