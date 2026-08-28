@@ -18,18 +18,21 @@ def test_dataset_1000_cases_and_50L_target():
     assert len(subs) > 0
     assert len(invs) > 0
 
+from unittest.mock import patch
+
 def test_llm_failure_forces_human_safety():
     state = {
         "transaction": {"amount": 2000.0, "failure_reason": "BANK_ERROR"},
         "customer": {"successful_payment_count": 5},
         "audit_events": []
     }
-    res = diagnose_node(state)
-    assert res.get("diagnosis_confidence") == 0.0
-    assert res.get("forced_human") is True
+    with patch("app.agents.nodes.diagnose.get_groq_llm", return_value=None):
+        res = diagnose_node(state)
+        assert res.get("diagnosis_confidence") == 0.0
+        assert res.get("forced_human") is True
 
-    pol_res = policy_check_node(res)
-    assert pol_res.get("policy_decision") == PolicyDecision.HUMAN.value
+        pol_res = policy_check_node(res)
+        assert pol_res.get("policy_decision") == PolicyDecision.HUMAN.value
 
 def test_recheck_success_stops_workflow():
     state = {

@@ -49,6 +49,8 @@ export interface RecoveryCase {
   problem: string;
   amount: number;
   score: number;
+  recoveryScore?: number;
+  recommendedAction?: string;
   risk: RiskLevel;
   type: CaseType;
   paymentState: PaymentState;

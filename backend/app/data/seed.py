@@ -3,8 +3,15 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.database.session import sync_engine, SyncSessionLocal
 from app.database.base import Base
-from app.data.generator import generate_synthetic_dataset
+from app.models.customer import Customer
+from app.models.transaction import Transaction
+from app.models.subscription import Subscription
+from app.models.invoice import Invoice
 from app.models.recovery_case import RecoveryCase
+from app.models.recommendation import Recommendation
+from app.models.approval import ApprovalRequest
+from app.models.audit import AuditLog
+from app.data.generator import generate_synthetic_dataset
 
 logger = logging.getLogger(__name__)
 

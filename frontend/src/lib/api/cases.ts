@@ -1,4 +1,3 @@
-import { store } from "../store";
 import { RecoveryCase, RiskLevel, CaseStatus, CaseType } from "../types";
 import { BACKEND_URL } from "./config";
 
@@ -19,7 +18,6 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
   const rec = item.latest_recommendation || (Array.isArray(item.recommendations) && item.recommendations[0]) || {};
   const cust = item.customer || {};
 
-  // Dynamically generate evidence signals from DB customer history and case metrics
   const evidence = [
     {
       id: "e1",
@@ -43,7 +41,6 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     },
   ];
 
-  // Dynamically generate policy compliance rules from DB item fields
   const rules = [
     {
       id: "r1",
@@ -71,6 +68,8 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     problem: rec.reason || rec.diagnosis || item.problem_type || "Payment failure detected",
     amount: item.amount_at_risk || 0,
     score: item.recovery_score || 50,
+    recoveryScore: item.recovery_score || 50,
+    recommendedAction: item.recommended_action || "RETRY",
     risk: riskVal,
     type: caseType,
     paymentState: item.status === "BLOCKED" ? "AMBIGUOUS" : "CLEARLY_FAILED",
@@ -140,126 +139,101 @@ export async function getCases(filters?: {
   risk?: string;
   type?: string;
 }): Promise<RecoveryCase[]> {
-  try {
-    const params = new URLSearchParams();
-    if (filters?.search && filters.search.trim()) {
-      params.append("search", filters.search.trim());
-    }
-
-    if (filters?.status && filters.status !== "All") {
-      let st = filters.status.toUpperCase();
-      if (st === "HUMAN APPROVAL" || st === "HUMAN_APPROVAL") st = "AWAITING_APPROVAL";
-      params.append("status", st);
-    }
-
-    if (filters?.risk && filters.risk !== "All") {
-      params.append("risk_level", filters.risk.toUpperCase());
-    }
-
-    if (filters?.type && filters.type !== "All") {
-      let tp = filters.type.toUpperCase();
-      if (tp === "FAILED PAYMENT") tp = "FAILED_PAYMENT";
-      else if (tp === "SUBSCRIPTION") tp = "SUBSCRIPTION_FAILURE";
-      else if (tp === "CHECKOUT") tp = "CHECKOUT_ABANDONMENT";
-      else if (tp === "INVOICE") tp = "OVERDUE_INVOICE";
-      params.append("problem_type", tp);
-    }
-
-    const res = await fetch(`${BACKEND_URL}/cases?${params.toString()}`, {
-      cache: "no-store",
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        return data.map(mapBackendCaseToFrontend);
-      }
-    }
-  } catch (e) {
-    console.warn("Backend API call failed, using store fallback:", e);
+  const params = new URLSearchParams();
+  if (filters?.search && filters.search.trim()) {
+    params.append("search", filters.search.trim());
   }
 
-  return store.getCases(filters);
-}
-
-export async function getCase(id: string): Promise<RecoveryCase | undefined> {
-  try {
-    const res = await fetch(`${BACKEND_URL}/cases/${id}`, {
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const item = await res.json();
-      return mapBackendCaseToFrontend(item);
-    }
-  } catch (e) {
-    console.warn(`Backend getCase(${id}) failed, using store fallback:`, e);
+  if (filters?.status && filters.status !== "All") {
+    let st = filters.status.toUpperCase();
+    if (st === "HUMAN APPROVAL" || st === "HUMAN_APPROVAL") st = "AWAITING_APPROVAL";
+    params.append("status", st);
   }
 
-  return store.getCaseById(id);
-}
-
-export async function analyzeCase(id: string): Promise<RecoveryCase | undefined> {
-  try {
-    const res = await fetch(`${BACKEND_URL}/cases/${id}/analyze`, {
-      method: "POST",
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const item = await res.json();
-      return mapBackendCaseToFrontend(item);
-    }
-  } catch (e) {
-    console.warn(`Analyze case ${id} failed:`, e);
+  if (filters?.risk && filters.risk !== "All") {
+    params.append("risk_level", filters.risk.toUpperCase());
   }
-  return getCase(id);
-}
 
-export async function recheckCase(id: string): Promise<RecoveryCase | undefined> {
-  try {
-    const res = await fetch(`${BACKEND_URL}/cases/${id}/recheck`, {
-      method: "POST",
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const item = await res.json();
-      return mapBackendCaseToFrontend(item);
-    }
-  } catch (e) {
-    console.warn(`Recheck case ${id} failed:`, e);
+  if (filters?.type && filters.type !== "All") {
+    let tp = filters.type.toUpperCase();
+    if (tp === "FAILED PAYMENT") tp = "FAILED_PAYMENT";
+    else if (tp === "SUBSCRIPTION") tp = "SUBSCRIPTION_FAILURE";
+    else if (tp === "CHECKOUT") tp = "CHECKOUT_ABANDONMENT";
+    else if (tp === "INVOICE") tp = "OVERDUE_INVOICE";
+    params.append("problem_type", tp);
   }
-  return getCase(id);
-}
 
-export async function executeCaseAction(id: string): Promise<RecoveryCase | undefined> {
-  try {
-    const res = await fetch(`${BACKEND_URL}/cases/${id}/execute`, {
-      method: "POST",
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const item = await res.json();
-      return mapBackendCaseToFrontend(item);
-    }
-  } catch (e) {
-    console.warn(`Execute case ${id} failed:`, e);
+  const res = await fetch(`${BACKEND_URL}/cases?${params.toString()}`, {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch cases from backend API: HTTP ${res.status}`);
   }
-  return getCase(id);
-}
 
-export async function stopCase(id: string, reason?: string): Promise<RecoveryCase | undefined> {
-  try {
-    const url = reason ? `${BACKEND_URL}/cases/${id}/stop?reason=${encodeURIComponent(reason)}` : `${BACKEND_URL}/cases/${id}/stop`;
-    const res = await fetch(url, {
-      method: "POST",
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const item = await res.json();
-      return mapBackendCaseToFrontend(item);
-    }
-  } catch (e) {
-    console.warn(`Stop case ${id} failed:`, e);
+  const data = await res.json();
+  if (Array.isArray(data)) {
+    return data.map(mapBackendCaseToFrontend);
   }
-  return getCase(id);
+  return [];
 }
 
+export async function getCase(id: string): Promise<RecoveryCase> {
+  const res = await fetch(`${BACKEND_URL}/cases/${id}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch case ${id} from backend API: HTTP ${res.status}`);
+  }
+  const item = await res.json();
+  return mapBackendCaseToFrontend(item);
+}
+
+export async function analyzeCase(id: string): Promise<RecoveryCase> {
+  const res = await fetch(`${BACKEND_URL}/cases/${id}/analyze`, {
+    method: "POST",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to analyze case ${id} via LangGraph backend API: HTTP ${res.status}`);
+  }
+  const item = await res.json();
+  return mapBackendCaseToFrontend(item);
+}
+
+export async function recheckCase(id: string): Promise<RecoveryCase> {
+  const res = await fetch(`${BACKEND_URL}/cases/${id}/recheck`, {
+    method: "POST",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to recheck case ${id} via backend API: HTTP ${res.status}`);
+  }
+  const item = await res.json();
+  return mapBackendCaseToFrontend(item);
+}
+
+export async function executeCaseAction(id: string): Promise<RecoveryCase> {
+  const res = await fetch(`${BACKEND_URL}/cases/${id}/execute`, {
+    method: "POST",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to execute case ${id} via backend API: HTTP ${res.status}`);
+  }
+  const item = await res.json();
+  return mapBackendCaseToFrontend(item);
+}
+
+export async function stopCase(id: string, reason?: string): Promise<RecoveryCase> {
+  const url = reason ? `${BACKEND_URL}/cases/${id}/stop?reason=${encodeURIComponent(reason)}` : `${BACKEND_URL}/cases/${id}/stop`;
+  const res = await fetch(url, {
+    method: "POST",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to stop case ${id} via backend API: HTTP ${res.status}`);
+  }
+  const item = await res.json();
+  return mapBackendCaseToFrontend(item);
+}

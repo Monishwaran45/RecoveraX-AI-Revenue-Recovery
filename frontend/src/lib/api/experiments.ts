@@ -18,72 +18,64 @@ export interface ExperimentDetail {
   created_at: string;
 }
 
-export async function getExperiment(experimentId?: string): Promise<ExperimentDetail | null> {
-  try {
-    const url = experimentId ? `${BACKEND_URL}/experiments/${experimentId}` : `${BACKEND_URL}/experiments/latest`;
-    const res = await fetch(url, { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      const count = data.case_count ?? data.total_cases ?? 1000;
-      const gross = data.ai_recovered ?? data.gross_recovered ?? 3100000;
-      const rate = data.ai_recovery_rate ?? data.recovery_rate ?? 62.0;
+function parseExperimentData(data: any): ExperimentDetail {
+  const count = data.case_count ?? data.total_cases ?? 0;
+  const gross = data.ai_recovered ?? data.gross_recovered ?? 0;
+  const rate = data.ai_recovery_rate ?? data.recovery_rate ?? 0;
+  const results = data.results || [];
 
-      return {
-        id: data.id,
-        name: data.name,
-        case_count: count,
-        total_cases: count,
-        revenue_at_risk: data.revenue_at_risk ?? 5000000,
-        ai_recovered: gross,
-        gross_recovered: gross,
-        incremental_recovered: data.incremental_recovered ?? 900000,
-        recovery_rate: rate,
-        auto_count: data.auto_count ?? 172,
-        human_count: data.human_count ?? 817,
-        blocked_count: data.blocked_count ?? 11,
-        stopped_count: data.stopped_count ?? 0,
-        safety_actions_prevented: data.safety_actions_prevented ?? 11,
-        created_at: data.created_at ?? new Date().toISOString(),
-      };
+  let autoCount = data.auto_count || 0;
+  let humanCount = data.human_count || 0;
+  let blockedCount = data.blocked_count || 0;
+  let stoppedCount = data.stopped_count || 0;
+
+  if (autoCount === 0 && humanCount === 0 && blockedCount === 0 && results.length > 0) {
+    for (const r of results) {
+      if (r.ai_outcome === "RECOVERED") autoCount++;
+      else if (r.ai_outcome === "AWAITING_HUMAN_APPROVAL") humanCount++;
+      else if (r.ai_outcome === "BLOCKED_SAFETY") blockedCount++;
+      else if (r.ai_outcome === "STOPPED") stoppedCount++;
     }
-  } catch (e) {
-    console.warn("Failed to fetch experiment from backend:", e);
+    if (blockedCount === 0 && stoppedCount > 0) blockedCount = stoppedCount;
   }
-  return runBatchExperiment();
+
+  return {
+    id: data.id,
+    name: data.name,
+    case_count: count,
+    total_cases: count,
+    revenue_at_risk: data.revenue_at_risk ?? 0,
+    ai_recovered: gross,
+    gross_recovered: gross,
+    incremental_recovered: data.incremental_recovered ?? 0,
+    recovery_rate: rate,
+    auto_count: autoCount,
+    human_count: humanCount,
+    blocked_count: blockedCount,
+    stopped_count: stoppedCount,
+    safety_actions_prevented: data.safety_actions_prevented || blockedCount,
+    created_at: data.created_at ?? new Date().toISOString(),
+  };
 }
 
-export async function runBatchExperiment(): Promise<ExperimentDetail | null> {
-  try {
-    const res = await fetch(`${BACKEND_URL}/experiments/run`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const count = data.case_count ?? data.total_cases ?? 1000;
-      const gross = data.ai_recovered ?? data.gross_recovered ?? 3100000;
-      const rate = data.ai_recovery_rate ?? data.recovery_rate ?? 62.0;
-
-      return {
-        id: data.id,
-        name: data.name,
-        case_count: count,
-        total_cases: count,
-        revenue_at_risk: data.revenue_at_risk ?? 5000000,
-        ai_recovered: gross,
-        gross_recovered: gross,
-        incremental_recovered: data.incremental_recovered ?? 900000,
-        recovery_rate: rate,
-        auto_count: data.auto_count ?? 172,
-        human_count: data.human_count ?? 817,
-        blocked_count: data.blocked_count ?? 11,
-        stopped_count: data.stopped_count ?? 0,
-        safety_actions_prevented: data.safety_actions_prevented ?? 11,
-        created_at: data.created_at ?? new Date().toISOString(),
-      };
-    }
-  } catch (e) {
-    console.error("Run experiment failed", e);
+export async function getExperiment(experimentId?: string): Promise<ExperimentDetail | null> {
+  const url = experimentId ? `${BACKEND_URL}/experiments/${experimentId}` : `${BACKEND_URL}/experiments/latest`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch experiment data from backend API: HTTP ${res.status}`);
   }
-  return getExperiment();
+  const data = await res.json();
+  return parseExperimentData(data);
+}
+
+export async function runBatchExperiment(): Promise<ExperimentDetail> {
+  const res = await fetch(`${BACKEND_URL}/experiments/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to execute batch experiment on backend API: HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return parseExperimentData(data);
 }

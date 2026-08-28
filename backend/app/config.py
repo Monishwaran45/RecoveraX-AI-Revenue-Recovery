@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     
     # LLM (Groq)
     GROQ_API_KEY: str = Field(default="", alias="GROQ_API_KEY")
-    GROQ_MODEL: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
+    GROQ_MODEL: str = Field(default="groq/compound-mini", alias="GROQ_MODEL")
     
     # Demo & Retry Configurations
     DEMO_MODE: bool = Field(default=False, alias="DEMO_MODE")

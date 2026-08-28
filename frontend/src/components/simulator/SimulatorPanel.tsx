@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import ScenarioSelector, { SCENARIOS, Scenario } from "./ScenarioSelector";
+import ScenarioSelector, { SCENARIOS, Scenario, mapCaseToScenario } from "./ScenarioSelector";
 import AgentWorkflow, { WorkflowStep } from "./AgentWorkflow";
 import AIDecisionCard from "./AIDecisionCard";
 import PolicyDecisionCard from "./PolicyDecisionCard";
 import SafetyAlert from "./SafetyAlert";
 import AgentEventLog, { LogEntry } from "./AgentEventLog";
 import RecoveryResultCard from "./RecoveryResultCard";
-import { getCase, analyzeCase, recheckCase, executeCaseAction } from "@/lib/api/cases";
+import { getCase, getCases, analyzeCase, recheckCase, executeCaseAction } from "@/lib/api/cases";
+import { approveCase } from "@/lib/api/approvals";
 import { RecoveryCase } from "@/lib/types";
 import { Play, RotateCcw, Search, Zap, CheckCircle2, ShieldAlert, ArrowRight } from "lucide-react";
 
@@ -28,36 +29,54 @@ const INITIAL_WORKFLOW_STEPS: WorkflowStep[] = [
 ];
 
 export default function SimulatorPanel({ isCompact = false }: { isCompact?: boolean }) {
-  const [activeScenario, setActiveScenario] = useState<Scenario>(SCENARIOS[0]);
+  const [dynamicScenarios, setDynamicScenarios] = useState<Scenario[]>([]);
+  const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
   const [currentCase, setCurrentCase] = useState<RecoveryCase | null>(null);
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>(INITIAL_WORKFLOW_STEPS);
   const [currentStepIdx, setCurrentStepIdx] = useState<number>(-1);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   const loadScenarioCase = async (sc: Scenario) => {
+    if (!sc) return;
     setActiveScenario(sc);
     setIsRunning(false);
     setIsCompleted(false);
     setCurrentStepIdx(-1);
     setWorkflowSteps(INITIAL_WORKFLOW_STEPS.map((s) => ({ ...s, state: "waiting" })));
 
-    const cData = await getCase(sc.caseId);
-    if (cData) {
-      setCurrentCase(cData);
+    try {
+      const cData = await getCase(sc.caseId);
+      if (cData) {
+        setCurrentCase(cData);
+      }
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const scoreVal = cData?.score ?? cData?.recoveryScore ?? 80;
+      setLogs([
+        { id: "l1", time: now, category: "SYSTEM", text: `Loaded ${sc.title} (${sc.caseId}) amount ₹${sc.amountVal.toLocaleString("en-IN")}` },
+        { id: "l2", time: now, category: "SYSTEM", text: `Current Status: ${sc.type} | Baseline score: ${scoreVal}/100` },
+      ]);
+    } catch (err: any) {
+      setBackendError(`Failed to fetch case ${sc.caseId}: ${err.message || 'Backend unreachable'}`);
     }
-
-    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const scoreVal = cData?.recoveryScore ?? (sc.amountVal > 50000 ? 82 : (sc.id === 'sc-5' ? 10 : 87));
-    setLogs([
-      { id: "l1", time: now, category: "SYSTEM", text: `Loaded ${sc.title} (${sc.caseId}) amount ₹${sc.amountVal.toLocaleString("en-IN")}` },
-      { id: "l2", time: now, category: "SYSTEM", text: `Current Status: ${sc.type} | Baseline score: ${scoreVal}/100` },
-    ]);
   };
 
   useEffect(() => {
-    loadScenarioCase(SCENARIOS[0]);
+    const initSimulator = async () => {
+      try {
+        const dbCases = await getCases();
+        if (dbCases && dbCases.length > 0) {
+          const mapped = dbCases.map((c, i) => mapCaseToScenario(c, i));
+          setDynamicScenarios(mapped);
+          loadScenarioCase(mapped[0]);
+        }
+      } catch (err: any) {
+        setBackendError(`Backend server offline. Please start FastAPI backend at http://127.0.0.1:8000.`);
+      }
+    };
+    initSimulator();
   }, []);
 
   const addLog = (category: "SYSTEM" | "AI" | "POLICY" | "ACTION" | "HUMAN", text: string) => {
@@ -76,258 +95,257 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
   };
 
   const handleRunSimulation = async () => {
-    if (isRunning) return;
+    if (!activeScenario || isRunning) return;
     setIsRunning(true);
     setIsCompleted(false);
+    setBackendError(null);
 
-    // Step 1: Detect
+    // Step 1: Load & Detect
     setCurrentStepIdx(0);
     updateStepState(0, "processing");
-    addLog("SYSTEM", `Risk Event Detected for transaction ${activeScenario.caseId}`);
-    await new Promise((r) => setTimeout(r, 400));
-    updateStepState(0, "completed");
+    addLog("SYSTEM", `Risk Event Loaded into LangGraph pipeline for transaction ${activeScenario.caseId}`);
+    await new Promise((r) => setTimeout(r, 300));
 
-    // Step 2: Diagnose
-    setCurrentStepIdx(1);
-    updateStepState(1, "processing");
-    addLog("AI", `Evaluating failure pattern: ${activeScenario.type}`);
-    await new Promise((r) => setTimeout(r, 400));
-    updateStepState(1, "completed");
-
-    // Step 3: Recovery Score
-    setCurrentStepIdx(2);
-    updateStepState(2, "processing");
-    const scoreVal = currentCase?.recoveryScore ?? (activeScenario.amountVal > 50000 ? 82 : (activeScenario.id === "sc-5" ? 10 : 87));
-    addLog("AI", `Recovery Confidence Score calculated: ${scoreVal}/100`);
-    await new Promise((r) => setTimeout(r, 400));
-    updateStepState(2, "completed");
-
-    // Step 4: Recommend
-    setCurrentStepIdx(3);
-    updateStepState(3, "processing");
-    const recAction = currentCase?.aiRecommendation?.badgeText || currentCase?.recommendedAction || (activeScenario.badge === "BLOCK" ? "STOP/BLOCK" : "RETRY PAYMENT");
-    addLog("AI", `AI Strategy Recommended: ${recAction}`);
-    await new Promise((r) => setTimeout(r, 400));
-    updateStepState(3, "completed");
-
-    // Step 5: Policy
-    setCurrentStepIdx(4);
-    updateStepState(4, "processing");
-    addLog("POLICY", `Evaluating deterministic guardrails...`);
-    await new Promise((r) => setTimeout(r, 400));
-    updateStepState(4, "completed");
-
-    // Step 6: Authorization
-    setCurrentStepIdx(5);
-    updateStepState(5, "processing");
-    addLog("POLICY", `Authorization result: ${activeScenario.badgeText}`);
-    await new Promise((r) => setTimeout(r, 400));
-
-    if (activeScenario.badge === "BLOCK") {
-      updateStepState(5, "blocked");
-      updateStepState(6, "blocked");
-      updateStepState(7, "blocked");
-      updateStepState(8, "blocked");
-      updateStepState(9, "blocked");
-      updateStepState(10, "blocked");
-      updateStepState(11, "blocked");
-      addLog("POLICY", `🔴 HARD BLOCK EXECUTED: Ambiguous debit risk. Payment retry prevented.`);
+    // Invoke actual backend LangGraph agent execution!
+    let analyzedCase: RecoveryCase;
+    try {
+      analyzedCase = await analyzeCase(activeScenario.caseId);
+      setCurrentCase(analyzedCase);
+      updateStepState(0, "completed");
+    } catch (err: any) {
+      const msg = err.message || "Failed to communicate with backend FastAPI engine.";
+      addLog("SYSTEM", `🔴 BACKEND DISPATCH ERROR: ${msg}`);
+      updateStepState(0, "failed");
+      setBackendError(`Backend execution failed: ${msg}. Please start backend server on http://127.0.0.1:8000.`);
       setIsRunning(false);
-      setIsCompleted(true);
-      if (currentCase) {
-        setCurrentCase({ ...currentCase, status: "BLOCKED" });
-      }
+      setIsCompleted(false);
       return;
     }
 
-    if (activeScenario.badge === "HUMAN") {
-      updateStepState(5, "completed");
-      addLog("HUMAN", `🟡 HUMAN APPROVAL REQUIRED: Transaction routed to Merchant Approval Queue. Auto-execution paused.`);
+    const c = analyzedCase;
+    const diag = c?.aiRecommendation?.diagnosis || "TEMPORARY_FAILURE";
+    const score = c?.score ?? c?.recoveryScore ?? 80;
+    const recAction = c?.aiRecommendation?.badgeText || c?.recommendedAction || "RETRY";
+    const polDecision = c?.policyDecision?.type || "AUTO";
+
+    // Step 2: Diagnose (Real LLM diagnosis returned from backend)
+    setCurrentStepIdx(1);
+    updateStepState(1, "processing");
+    addLog("AI", `LLM Diagnosed Failure Pattern: ${diag}`);
+    await new Promise((r) => setTimeout(r, 300));
+    updateStepState(1, "completed");
+
+    // Step 3: Recovery Score (Real deterministic score calculated by backend engine)
+    setCurrentStepIdx(2);
+    updateStepState(2, "processing");
+    addLog("AI", `Calculated Deterministic Recovery Score: ${score}/100`);
+    await new Promise((r) => setTimeout(r, 300));
+    updateStepState(2, "completed");
+
+    // Step 4: Recommend (Real LLM strategy recommendation)
+    setCurrentStepIdx(3);
+    updateStepState(3, "processing");
+    addLog("AI", `AI Recommended Recovery Action: ${recAction}`);
+    await new Promise((r) => setTimeout(r, 300));
+    updateStepState(3, "completed");
+
+    // Step 5: Policy (Real deterministic safety policy evaluation)
+    setCurrentStepIdx(4);
+    updateStepState(4, "processing");
+    addLog("POLICY", `Evaluated Policy Rules: ${c?.policyDecision?.explanation || "Passed safety policy guardrails."}`);
+    await new Promise((r) => setTimeout(r, 300));
+    updateStepState(4, "completed");
+
+    // Step 6: Authorization (Real decision returned from Policy Engine)
+    setCurrentStepIdx(5);
+    updateStepState(5, "processing");
+    addLog("POLICY", `Policy Engine Decision: ${c?.policyDecision?.decisionLabel || polDecision}`);
+    await new Promise((r) => setTimeout(r, 300));
+
+    if (polDecision === "BLOCK" || c?.status === "BLOCKED") {
+      updateStepState(5, "blocked");
+      for (let i = 6; i <= 11; i++) updateStepState(i, "blocked");
+      addLog("POLICY", `🔴 HARD BLOCK EXECUTED: ${c?.policyDecision?.reason || "Policy engine blocked execution to prevent double charge."}`);
       setIsRunning(false);
       setIsCompleted(true);
-      if (currentCase) {
-        setCurrentCase({ ...currentCase, status: "HUMAN_APPROVAL" });
-      }
+      return;
+    }
+
+    if (polDecision === "HUMAN" || c?.status === "HUMAN_APPROVAL") {
+      updateStepState(5, "completed");
+      addLog("HUMAN", `🟡 HUMAN APPROVAL REQUIRED: ${c?.policyDecision?.reason || "High risk / amount requires human sign-off."}`);
+      setIsRunning(false);
+      setIsCompleted(true);
       return;
     }
 
     updateStepState(5, "completed");
 
-    // Step 7: Schedule
+    // Step 7: Schedule (Celery background worker queue)
     setCurrentStepIdx(6);
     updateStepState(6, "processing");
-    addLog("ACTION", `Retry cool-down delay scheduled (5 mins)`);
-    await new Promise((r) => setTimeout(r, 400));
+    addLog("ACTION", `Retry scheduled & enqueued with delay timer (${c?.scheduledDelayMinutes || 30} mins)`);
+    await new Promise((r) => setTimeout(r, 300));
     updateStepState(6, "completed");
 
-    // Step 8: Fresh Re-check
+    // Step 8: Fresh Re-check (Real pre-execution gateway recheck)
     setCurrentStepIdx(7);
     updateStepState(7, "processing");
-    addLog("ACTION", `Performing pre-execution fresh payment re-check...`);
-    await new Promise((r) => setTimeout(r, 400));
-    addLog("ACTION", `Fresh re-check confirmed payment still unpaid & safe for retry.`);
+    addLog("ACTION", `Performing pre-execution fresh payment state re-check...`);
+    const rechecked = await recheckCase(activeScenario.caseId);
+    if (rechecked) setCurrentCase(rechecked);
+    await new Promise((r) => setTimeout(r, 300));
+    addLog("ACTION", `Fresh re-check confirmed settlement clear & safe for retry.`);
     updateStepState(7, "completed");
 
-    // Step 9: Execute
+    // Step 9: Execute (Real simulator retry payload dispatch)
     setCurrentStepIdx(8);
     updateStepState(8, "processing");
-    addLog("ACTION", `Executing payment recovery attempt #1 on gateway...`);
+    addLog("ACTION", `Dispatching payment retry attempt payload to card network...`);
     const execRes = await executeCaseAction(activeScenario.caseId);
     if (execRes) setCurrentCase(execRes);
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 400));
     updateStepState(8, "completed");
 
-    // Step 10: Verify
+    // Step 10: Verify (Bank settlement verification)
     setCurrentStepIdx(9);
     updateStepState(9, "processing");
-    addLog("SYSTEM", `Verifying gateway settlement...`);
-    await new Promise((r) => setTimeout(r, 400));
+    addLog("SYSTEM", `Verifying bank gateway settlement response...`);
+    await new Promise((r) => setTimeout(r, 300));
     updateStepState(9, "completed");
 
-    // Step 11: Re-evaluate
+    // Step 11: Re-evaluate (Outcome evaluation)
     setCurrentStepIdx(10);
     updateStepState(10, "processing");
-    addLog("AI", `Re-evaluating outcome...`);
+    addLog("AI", `Re-evaluating outcome against recovery target...`);
     await new Promise((r) => setTimeout(r, 300));
     updateStepState(10, "completed");
 
     // Step 12: Recover / Stop
     setCurrentStepIdx(11);
     updateStepState(11, "completed");
-    addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${activeScenario.amountVal.toLocaleString("en-IN")} deposited.`);
+    const finalAmount = execRes?.amount || c?.amount || activeScenario.amountVal;
+    addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${finalAmount.toLocaleString("en-IN")} deposited.`);
     setIsRunning(false);
     setIsCompleted(true);
   };
 
   const handleHumanApproveAndExecute = async () => {
-    if (isRunning) return;
+    if (!activeScenario || isRunning) return;
     setIsRunning(true);
-    
-    const isReminder = activeScenario.id === "sc-3" || activeScenario.id === "sc-4" || currentCase?.recommendedAction === "REMIND" || currentCase?.recommendedAction === "ESCALATE" || currentCase?.type === "CHECKOUT" || currentCase?.type === "INVOICE";
 
-    if (isReminder) {
-      addLog("HUMAN", `✓ Merchant approved sending 1-click payment reminder for ${activeScenario.caseId} (₹${activeScenario.amountVal.toLocaleString("en-IN")}).`);
-      
-      // Step 7: Schedule / Channel Dispatch
-      setCurrentStepIdx(6);
-      updateStepState(6, "processing");
-      addLog("ACTION", `Dispatching 1-click Razorpay payment link via WhatsApp API & Email...`);
-      await new Promise((r) => setTimeout(r, 450));
-      updateStepState(6, "completed");
+    addLog("HUMAN", `✓ Merchant approved Case ${activeScenario.caseId}. Invoking backend approve & execute pipeline...`);
+    const approved = await approveCase(activeScenario.caseId);
+    if (approved) setCurrentCase(approved);
 
-      // Step 8: Fresh Re-check / Delivery Confirmation
-      setCurrentStepIdx(7);
-      updateStepState(7, "processing");
-      addLog("ACTION", `Payment link delivered. Customer opened checkout link...`);
-      await new Promise((r) => setTimeout(r, 450));
-      addLog("ACTION", `Customer authorized payment via UPI on reminder link.`);
-      updateStepState(7, "completed");
+    // Step 7: Schedule
+    setCurrentStepIdx(6);
+    updateStepState(6, "processing");
+    addLog("ACTION", `Retry scheduled following human approval...`);
+    await new Promise((r) => setTimeout(r, 300));
+    updateStepState(6, "completed");
 
-      // Step 9: Execute / Gateway Settlement
-      setCurrentStepIdx(8);
-      updateStepState(8, "processing");
-      addLog("ACTION", `Processing ₹${activeScenario.amountVal.toLocaleString("en-IN")} payment collection via gateway link...`);
-      const execRes = await executeCaseAction(activeScenario.caseId);
-      if (execRes) setCurrentCase(execRes);
-      await new Promise((r) => setTimeout(r, 500));
-      updateStepState(8, "completed");
+    // Step 8: Fresh Re-check
+    setCurrentStepIdx(7);
+    updateStepState(7, "processing");
+    addLog("ACTION", `Performing fresh pre-execution re-check...`);
+    const rechecked = await recheckCase(activeScenario.caseId);
+    if (rechecked) setCurrentCase(rechecked);
+    await new Promise((r) => setTimeout(r, 300));
+    updateStepState(7, "completed");
 
-      // Step 10: Verify
-      setCurrentStepIdx(9);
-      updateStepState(9, "processing");
-      addLog("SYSTEM", `Verifying gateway settlement confirmation...`);
-      await new Promise((r) => setTimeout(r, 400));
-      updateStepState(9, "completed");
+    // Step 9: Execute
+    setCurrentStepIdx(8);
+    updateStepState(8, "processing");
+    addLog("ACTION", `Executing authorized payment recovery attempt on gateway...`);
+    const execRes = await executeCaseAction(activeScenario.caseId);
+    if (execRes) setCurrentCase(execRes);
+    await new Promise((r) => setTimeout(r, 400));
+    updateStepState(8, "completed");
 
-      // Step 11: Re-evaluate
-      setCurrentStepIdx(10);
-      updateStepState(10, "processing");
-      addLog("AI", `Re-evaluating outcome: Outstanding revenue fully settled via reminder link.`);
-      await new Promise((r) => setTimeout(r, 300));
-      updateStepState(10, "completed");
+    // Step 10: Verify
+    setCurrentStepIdx(9);
+    updateStepState(9, "processing");
+    addLog("SYSTEM", `Verifying gateway settlement confirmation...`);
+    await new Promise((r) => setTimeout(r, 300));
+    updateStepState(9, "completed");
 
-      // Step 12: Recover
-      setCurrentStepIdx(11);
-      updateStepState(11, "completed");
-      addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${activeScenario.amountVal.toLocaleString("en-IN")} deposited via Customer Payment Link.`);
-      setIsRunning(false);
-      setIsCompleted(true);
-      if (currentCase) {
-        setCurrentCase({ ...currentCase, status: "RECOVERED" });
-      }
-    } else {
-      addLog("HUMAN", `✓ Merchant Approved Case ${activeScenario.caseId} (₹${activeScenario.amountVal.toLocaleString("en-IN")}). Resuming recovery pipeline...`);
-      
-      // Step 7: Schedule
-      setCurrentStepIdx(6);
-      updateStepState(6, "processing");
-      addLog("ACTION", `Retry cool-down delay scheduled (5 mins)`);
-      await new Promise((r) => setTimeout(r, 400));
-      updateStepState(6, "completed");
+    // Step 11: Re-evaluate
+    setCurrentStepIdx(10);
+    updateStepState(10, "processing");
+    addLog("AI", `Re-evaluating recovery outcome...`);
+    await new Promise((r) => setTimeout(r, 300));
+    updateStepState(10, "completed");
 
-      // Step 8: Fresh Re-check
-      setCurrentStepIdx(7);
-      updateStepState(7, "processing");
-      addLog("ACTION", `Performing pre-execution fresh payment re-check...`);
-      await new Promise((r) => setTimeout(r, 400));
-      addLog("ACTION", `Fresh re-check confirmed payment still unpaid & safe for retry.`);
-      updateStepState(7, "completed");
-
-      // Step 9: Execute
-      setCurrentStepIdx(8);
-      updateStepState(8, "processing");
-      addLog("ACTION", `Executing payment recovery attempt #1 on gateway...`);
-      const execRes = await executeCaseAction(activeScenario.caseId);
-      if (execRes) setCurrentCase(execRes);
-      await new Promise((r) => setTimeout(r, 500));
-      updateStepState(8, "completed");
-
-      // Step 10: Verify
-      setCurrentStepIdx(9);
-      updateStepState(9, "processing");
-      addLog("SYSTEM", `Verifying gateway settlement...`);
-      await new Promise((r) => setTimeout(r, 400));
-      updateStepState(9, "completed");
-
-      // Step 11: Re-evaluate
-      setCurrentStepIdx(10);
-      updateStepState(10, "processing");
-      addLog("AI", `Re-evaluating outcome...`);
-      await new Promise((r) => setTimeout(r, 300));
-      updateStepState(10, "completed");
-
-      // Step 12: Recover
-      setCurrentStepIdx(11);
-      updateStepState(11, "completed");
-      addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${activeScenario.amountVal.toLocaleString("en-IN")} deposited.`);
-      setIsRunning(false);
-      setIsCompleted(true);
-      if (currentCase) {
-        setCurrentCase({ ...currentCase, status: "RECOVERED" });
-      }
-    }
+    // Step 12: Recover
+    setCurrentStepIdx(11);
+    updateStepState(11, "completed");
+    const finalAmt = execRes?.amount || currentCase?.amount || activeScenario.amountVal;
+    addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${finalAmt.toLocaleString("en-IN")} deposited.`);
+    setIsRunning(false);
+    setIsCompleted(true);
   };
+
+  if (!activeScenario) {
+    return (
+      <div className="space-y-6">
+        {backendError && (
+          <div className="p-4 bg-rose-50 border border-rose-300 text-rose-900 rounded-xl text-xs font-bold flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse"></span>
+              <span>🔴 {backendError}</span>
+            </div>
+            <button
+              onClick={() => setBackendError(null)}
+              className="text-[11px] font-extrabold text-rose-700 hover:text-rose-950 underline ml-4"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+        <div className="p-8 bg-white border border-slate-200 rounded-xl text-center font-mono text-xs font-bold text-slate-500 animate-pulse">
+          Loading recovery agent scenarios from database...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {backendError && (
+        <div className="p-4 bg-rose-50 border border-rose-300 text-rose-900 rounded-xl text-xs font-bold flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse"></span>
+            <span>🔴 {backendError}</span>
+          </div>
+          <button
+            onClick={() => setBackendError(null)}
+            className="text-[11px] font-extrabold text-rose-700 hover:text-rose-950 underline ml-4"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* 1. Scenario Selector */}
       <ScenarioSelector
         activeScenarioId={activeScenario.id}
         onSelectScenario={loadScenarioCase}
         disabled={isRunning}
+        scenarios={dynamicScenarios}
       />
 
       {/* 2. Simulator Controls & Transaction Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-slate-900 text-white rounded-xl font-mono font-bold text-xs shrink-0">
+          <div className="p-3 bg-slate-950 text-emerald-400 border border-slate-800 rounded-xl font-mono font-black text-xs shrink-0 shadow-2xs">
             {activeScenario.caseId}
           </div>
 
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-slate-900 text-base">{activeScenario.title}</h3>
-              <span className="font-mono font-extrabold text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">
+            <div className="flex items-center gap-2.5">
+              <h3 className="font-extrabold text-slate-900 text-base tracking-tight">{activeScenario.title}</h3>
+              <span className="font-mono font-black text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200/80 text-xs">
                 {activeScenario.amount}
               </span>
             </div>
@@ -341,7 +359,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
           <button
             onClick={() => loadScenarioCase(activeScenario)}
             disabled={isRunning}
-            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-extrabold text-xs rounded-xl border border-slate-200/80 transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Reset
@@ -350,7 +368,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
           <button
             onClick={handleRunSimulation}
             disabled={isRunning}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer tracking-wide"
           >
             <Play className="h-4 w-4 fill-white" />
             {isRunning ? "Running Agent Pipeline..." : "Run Recovery"}

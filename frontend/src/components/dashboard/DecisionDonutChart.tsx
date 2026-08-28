@@ -64,7 +64,7 @@ export default function DecisionDonutChart({ data }: DecisionDonutProps) {
         {/* Legend */}
         <div className="space-y-2.5">
           {chartData.map((item) => {
-            const pct = Math.round((item.value / total) * 100);
+            const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
             return (
               <div key={item.name} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
                 <div className="flex items-center gap-2.5">

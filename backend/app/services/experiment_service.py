@@ -90,16 +90,29 @@ class ExperimentService:
         return await ExperimentService.get_experiment_by_id(db, exp.id)
 
     @staticmethod
+    def _populate_experiment_metrics(exp: Optional[Experiment]) -> Optional[Experiment]:
+        if not exp:
+            return None
+        if exp.revenue_at_risk > 0:
+            exp.baseline_recovery_rate = round((exp.baseline_recovered / exp.revenue_at_risk) * 100.0, 1)
+            exp.ai_recovery_rate = round((exp.ai_recovered / exp.revenue_at_risk) * 100.0, 1)
+
+        results = getattr(exp, "results", []) or []
+        exp.auto_count = sum(1 for r in results if r.ai_outcome == "RECOVERED")
+        exp.human_count = sum(1 for r in results if r.ai_outcome == "AWAITING_HUMAN_APPROVAL")
+        exp.blocked_count = sum(1 for r in results if r.ai_outcome in ("BLOCKED_SAFETY", "STOPPED"))
+        exp.stopped_count = sum(1 for r in results if r.ai_outcome == "STOPPED")
+        exp.safety_actions_prevented = exp.blocked_count
+        return exp
+
+    @staticmethod
     async def get_experiment_by_id(db: AsyncSession, experiment_id: str) -> Optional[Experiment]:
         query = select(Experiment).where(Experiment.id == experiment_id).options(
             selectinload(Experiment.results)
         )
         res = await db.execute(query)
         exp = res.scalar_one_or_none()
-        if exp and exp.revenue_at_risk > 0:
-            exp.baseline_recovery_rate = round((exp.baseline_recovered / exp.revenue_at_risk) * 100.0, 1)
-            exp.ai_recovery_rate = round((exp.ai_recovered / exp.revenue_at_risk) * 100.0, 1)
-        return exp
+        return ExperimentService._populate_experiment_metrics(exp)
 
     @staticmethod
     async def get_latest_experiment(db: AsyncSession) -> Experiment:
@@ -110,9 +123,8 @@ class ExperimentService:
         exp = res.scalar_one_or_none()
         if not exp:
             exp = await ExperimentService.run_experiment(db)
-        elif exp and exp.revenue_at_risk > 0:
-            exp.baseline_recovery_rate = round((exp.baseline_recovered / exp.revenue_at_risk) * 100.0, 1)
-            exp.ai_recovery_rate = round((exp.ai_recovered / exp.revenue_at_risk) * 100.0, 1)
+        else:
+            exp = ExperimentService._populate_experiment_metrics(exp)
         return exp
 
 experiment_service = ExperimentService()

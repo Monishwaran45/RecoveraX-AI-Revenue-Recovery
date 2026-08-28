@@ -6,10 +6,10 @@ interface RecoveryFunnelProps {
 }
 
 export default function RecoveryFunnel({ metrics }: RecoveryFunnelProps) {
-  const atRisk = metrics?.revenueAtRisk || 5000000;
-  const recoverable = metrics?.recoverableRevenue || 4120000;
-  const gross = metrics?.grossRecovered || 3100000;
-  const incremental = metrics?.incrementalRecovered || 900000;
+  const atRisk = metrics?.revenueAtRisk ?? 0;
+  const recoverable = metrics?.recoverableRevenue ?? 0;
+  const gross = metrics?.grossRecovered ?? 0;
+  const incremental = metrics?.incrementalRecovered ?? 0;
 
   const conv1 = "100%";
   const conv2 = atRisk > 0 ? `${((recoverable / atRisk) * 100).toFixed(1)}%` : "0%";

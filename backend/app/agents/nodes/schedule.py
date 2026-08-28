@@ -1,5 +1,13 @@
+import socket
 from app.agents.state import RecoveryState
 from app.policy.enums import AuditEventType, ActorType, CaseStatus
+
+def _is_redis_ready(host="localhost", port=6379, timeout=0.2) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
 
 def schedule_node(state: RecoveryState) -> RecoveryState:
     """
@@ -13,11 +21,14 @@ def schedule_node(state: RecoveryState) -> RecoveryState:
     
     celery_enqueued = False
     sched_err = None
+
     try:
-        from app.workers.tasks import execute_retry_task
-        if case_id:
-            execute_retry_task.delay(case_id)
+        if case_id and _is_redis_ready():
+            from app.workers.tasks import execute_retry_task
+            execute_retry_task.apply_async(args=[case_id], retry=False)
             celery_enqueued = True
+        else:
+            celery_enqueued = False
     except Exception as e:
         celery_enqueued = False
         sched_err = str(e)

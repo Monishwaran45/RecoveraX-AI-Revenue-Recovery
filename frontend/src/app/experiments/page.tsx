@@ -128,28 +128,37 @@ export default function ExperimentsPage() {
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
           <div>
             <h3 className="font-bold text-slate-900 text-sm mb-2">Buildathon Benchmark Summary</h3>
-            <div className="space-y-3 text-xs">
-              <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                <span className="font-bold text-emerald-950 block">🟢 Automated Recovery (17.2%)</span>
-                <p className="text-emerald-800 text-[11px] mt-0.5">
-                  172 low-risk transactions auto-executed without human intervention.
-                </p>
-              </div>
+            {(() => {
+              const total = experiment.total_cases || experiment.case_count || 1;
+              const autoPct = ((experiment.auto_count / total) * 100).toFixed(1);
+              const humanPct = ((experiment.human_count / total) * 100).toFixed(1);
+              const blockedPct = ((experiment.blocked_count / total) * 100).toFixed(1);
 
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <span className="font-bold text-amber-950 block">🟡 Human Approval Required (81.7%)</span>
-                <p className="text-amber-800 text-[11px] mt-0.5">
-                  817 high-value or medium-risk cases safely routed to HITL approval queue.
-                </p>
-              </div>
+              return (
+                <div className="space-y-3 text-xs">
+                  <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                    <span className="font-bold text-emerald-950 block">🟢 Automated Recovery ({autoPct}%)</span>
+                    <p className="text-emerald-800 text-[11px] mt-0.5">
+                      {experiment.auto_count.toLocaleString()} low-risk transactions auto-executed without human intervention.
+                    </p>
+                  </div>
 
-              <div className="p-3 bg-rose-50 rounded-lg border border-rose-200">
-                <span className="font-bold text-rose-950 block">🔴 Policy Engine Blocked (1.1%)</span>
-                <p className="text-rose-800 text-[11px] mt-0.5">
-                  11 ambiguous-state cases blocked to prevent double-charging customers.
-                </p>
-              </div>
-            </div>
+                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <span className="font-bold text-amber-950 block">🟡 Human Approval Required ({humanPct}%)</span>
+                    <p className="text-amber-800 text-[11px] mt-0.5">
+                      {experiment.human_count.toLocaleString()} high-value or medium-risk cases safely routed to HITL approval queue.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-rose-50 rounded-lg border border-rose-200">
+                    <span className="font-bold text-rose-950 block">🔴 Policy Engine Blocked ({blockedPct}%)</span>
+                    <p className="text-rose-800 text-[11px] mt-0.5">
+                      {experiment.blocked_count.toLocaleString()} ambiguous-state cases blocked to prevent double-charging customers.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 font-medium">

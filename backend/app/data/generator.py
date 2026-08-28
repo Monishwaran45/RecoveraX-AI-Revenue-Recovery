@@ -46,8 +46,22 @@ def generate_synthetic_dataset(seed: int = 42):
     used_case_ids = set()
 
     # Helper function for generating case
-    def create_case(c_id, amount, prob_type, failure_reason, payment_state, poss_debit, fraud, score, risk, action, policy, status, retry_cnt=0):
-        cust = random.choice(customers)
+    def create_case(c_id, amount, prob_type, failure_reason, payment_state, poss_debit, fraud, score, risk, action, policy, status, retry_cnt=0, cust_name=None, cust_email=None):
+        if cust_name:
+            cust = Customer(
+                id=f"CUST-{uuid.uuid4().hex[:8].upper()}",
+                name=cust_name,
+                email=cust_email or f"{cust_name.lower().replace(' ', '.')}@enterprise.in",
+                lifetime_value=round(random.uniform(25000, 250000), 2),
+                successful_payment_count=random.randint(5, 40),
+                failed_payment_count=random.randint(0, 3),
+                average_payment_delay_days=round(random.uniform(0.5, 3.5), 1),
+                created_at=datetime.utcnow() - timedelta(days=90)
+            )
+            customers.append(cust)
+        else:
+            cust = random.choice(customers)
+
         tx_id = f"TX-{uuid.uuid4().hex[:8].upper()}"
         
         if c_id:
@@ -118,7 +132,7 @@ def generate_synthetic_dataset(seed: int = 42):
         rec = Recommendation(
             id=f"REC-{uuid.uuid4().hex[:8]}",
             case_id=case_id,
-            diagnosis="TEMPORARY_FAILURE" if score > 70 else ("AMBIGUOUS_STATE" if payment_state == PaymentState.AMBIGUOUS else "INSUFFICIENT_FUNDS"),
+            diagnosis=failure_reason,
             recovery_score=score,
             recommended_action=action,
             delay_minutes=30,
@@ -151,12 +165,13 @@ def generate_synthetic_dataset(seed: int = 42):
         )
         audit_logs.append(aud)
 
-    # 2. Seed 5 Mandatory Demo Cases (Sum: ₹1,79,000)
-    create_case("CASE-1021", 2000.0, ProblemType.FAILED_PAYMENT, "TEMPORARY_BANK_ERROR", PaymentState.CLEAR, False, False, 87, RiskLevel.LOW, ActionType.RETRY, PolicyDecision.AUTO, CaseStatus.SCHEDULED)
-    create_case("CASE-1032", 8500.0, ProblemType.CHECKOUT_ABANDONMENT, "SESSION_TIMEOUT", PaymentState.CLEAR, False, False, 75, RiskLevel.MEDIUM, ActionType.REMIND, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL)
-    create_case("CASE-1048", 25000.0, ProblemType.FAILED_PAYMENT, "GATEWAY_TIMEOUT_AMBIGUOUS", PaymentState.AMBIGUOUS, True, False, 10, RiskLevel.HIGH, ActionType.STOP, PolicyDecision.BLOCK, CaseStatus.BLOCKED)
-    create_case("CASE-1088", 2000.0, ProblemType.SUBSCRIPTION_FAILURE, "CARD_EXPIRED", PaymentState.CLEAR, False, False, 65, RiskLevel.MEDIUM, ActionType.RETRY, PolicyDecision.HUMAN, CaseStatus.OPEN, retry_cnt=1)
-    create_case("CASE-1102", 75000.0, ProblemType.OVERDUE_INVOICE, "INVOICE_OVERDUE_18_DAYS", PaymentState.CLEAR, False, False, 55, RiskLevel.HIGH, ActionType.ESCALATE, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL)
+    # 2. Seed 6 Mandatory Distinct Demo Cases requested by User
+    create_case("CASE-1001", 15000.0, ProblemType.FAILED_PAYMENT, "TEMPORARY_BANK_ERROR", PaymentState.CLEAR, False, False, 87, RiskLevel.LOW, ActionType.RETRY, PolicyDecision.AUTO, CaseStatus.SCHEDULED, cust_name="Rahul Enterprises", cust_email="rahul@rahulenterprises.in")
+    create_case("CASE-1002", 75000.0, ProblemType.FAILED_PAYMENT, "HIGH_VALUE_RETRY_LIMIT", PaymentState.CLEAR, False, False, 78, RiskLevel.HIGH, ActionType.RETRY, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, cust_name="Sharma Logistics", cust_email="sharma@sharmalogistics.in")
+    create_case("CASE-1003", 25000.0, ProblemType.FAILED_PAYMENT, "POSSIBLE_CUSTOMER_DEBIT", PaymentState.AMBIGUOUS, True, False, 10, RiskLevel.HIGH, ActionType.STOP, PolicyDecision.BLOCK, CaseStatus.BLOCKED, cust_name="Aarav Tech Solutions", cust_email="aarav@aaravtech.in")
+    create_case("CASE-1004", 2499.0, ProblemType.SUBSCRIPTION_FAILURE, "CARD_EXPIRED_MANDATE", PaymentState.CLEAR, False, False, 82, RiskLevel.MEDIUM, ActionType.RETRY, PolicyDecision.AUTO, CaseStatus.SCHEDULED, retry_cnt=1, cust_name="Priya SaaS Services", cust_email="priya@priyasaas.io")
+    create_case("CASE-1005", 8500.0, ProblemType.CHECKOUT_ABANDONMENT, "SESSION_TIMEOUT_REMINDER", PaymentState.CLEAR, False, False, 75, RiskLevel.LOW, ActionType.REMIND, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, cust_name="Vikram Retailers", cust_email="vikram@vikramretail.in")
+    create_case("CASE-1006", 120000.0, ProblemType.OVERDUE_INVOICE, "OVERDUE_INVOICE_15_DAYS", PaymentState.CLEAR, False, False, 65, RiskLevel.HIGH, ActionType.ESCALATE, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, cust_name="Global Trade Corp", cust_email="finance@globaltrade.org")
 
     # Remaining target = ₹48,21,000 for 995 cases (~₹4,845 per case average)
     # 3. Generate 395 Failed Payments (Total ~₹19.5L)
@@ -197,7 +212,7 @@ def generate_synthetic_dataset(seed: int = 42):
     current_total = sum(c.amount_at_risk for c in recovery_cases)
     diff = TARGET_TOTAL - current_total
     
-    non_demo_cases = [c for c in recovery_cases if c.id not in {"CASE-1021", "CASE-1032", "CASE-1048", "CASE-1088", "CASE-1102"}]
+    non_demo_cases = [c for c in recovery_cases if c.id not in {"CASE-1001", "CASE-1002", "CASE-1003", "CASE-1004", "CASE-1005", "CASE-1006"}]
     if non_demo_cases:
         adj = round(diff / len(non_demo_cases), 2)
         for c in non_demo_cases[:-1]:

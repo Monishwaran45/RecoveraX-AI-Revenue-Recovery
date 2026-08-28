@@ -1,9 +1,21 @@
-import { INITIAL_CASES, INITIAL_METRICS } from "./mockData";
 import { RecoveryCase, DashboardMetrics, ModifyActionInput, AuditEvent } from "./types";
 
 class RecoveryStore {
-  private cases: RecoveryCase[] = [...INITIAL_CASES];
-  private metrics: DashboardMetrics = { ...INITIAL_METRICS };
+  private cases: RecoveryCase[] = [];
+  private metrics: DashboardMetrics = {
+    revenueAtRisk: 0,
+    recoverableRevenue: 0,
+    grossRecovered: 0,
+    incrementalRecovered: 0,
+    safetyActionsPrevented: 0,
+    totalCases: 0,
+    recoveryRate: 0,
+    decisionDistribution: {
+      auto: 0,
+      human: 0,
+      blocked: 0,
+    },
+  };
   private listeners: Set<() => void> = new Set();
 
   public subscribe(listener: () => void) {
@@ -26,15 +38,26 @@ class RecoveryStore {
     const autoCasesCount = this.cases.filter((c) => c.policyDecision.type === "AUTO").length;
     const blockedCasesCount = this.cases.filter((c) => c.status === "BLOCKED").length;
 
+    const totalCasesCount = this.cases.length;
+    const revenueAtRisk = this.cases.reduce((sum, c) => sum + c.amount, 0);
+    const recoverableSum = this.cases.filter((c) => c.score >= 70).reduce((sum, c) => sum + c.amount, 0);
+    const baselineSum = recoveredSum * 0.45;
+    const incrementalSum = Math.max(0, recoveredSum - baselineSum);
+    const recoveryRate = revenueAtRisk > 0 ? (recoveredSum / revenueAtRisk) * 100 : 0;
+
     return {
-      ...this.metrics,
-      grossRecovered: INITIAL_METRICS.grossRecovered + recoveredSum,
-      incrementalRecovered: INITIAL_METRICS.incrementalRecovered + recoveredSum,
+      revenueAtRisk,
+      recoverableRevenue: recoverableSum,
+      grossRecovered: recoveredSum,
+      incrementalRecovered: incrementalSum,
+      recoveryRate,
       decisionDistribution: {
-        auto: autoCasesCount + 420,
-        human: pendingApprovalsCount + 278,
-        blocked: blockedCasesCount + 82,
+        auto: autoCasesCount,
+        human: pendingApprovalsCount,
+        blocked: blockedCasesCount,
       },
+      safetyActionsPrevented: blockedCasesCount,
+      totalCases: totalCasesCount,
     };
   }
 

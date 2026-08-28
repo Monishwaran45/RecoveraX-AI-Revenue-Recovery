@@ -83,7 +83,7 @@ export default function DashboardPage() {
           value={`₹${(metrics.revenueAtRisk / 100000).toFixed(1)}L`}
           description="Failed payments & risk events"
           icon={DollarSign}
-          trend={`${metrics.totalCases || 1000} Cases`}
+          trend={`${metrics.totalCases} Cases`}
           trendUp={true}
           iconBgColor="bg-slate-100"
           iconTextColor="text-slate-700"
@@ -93,7 +93,7 @@ export default function DashboardPage() {
           value={`₹${(metrics.grossRecovered / 100000).toFixed(1)}L`}
           description="Successfully retried & deposited"
           icon={CheckCircle2}
-          trend={`+₹${((metrics.grossRecovered || 3100000) / 100000).toFixed(1)}L Gross`}
+          trend={`+₹${(metrics.grossRecovered / 100000).toFixed(1)}L Gross`}
           trendUp={true}
           iconBgColor="bg-emerald-50"
           iconTextColor="text-emerald-600"
@@ -102,10 +102,10 @@ export default function DashboardPage() {
         />
         <MetricCard
           title="Recovery Rate"
-          value={`${metrics.recoveryRate || 62.0}%`}
+          value={`${(metrics.recoveryRate || 0).toFixed(1)}%`}
           description="Gross recovery rate"
           icon={TrendingUp}
-          trend="82.4% Qualified"
+          trend={`${(metrics.recoveryRate || 0).toFixed(1)}% Rate`}
           trendUp={true}
           iconBgColor="bg-blue-50"
           iconTextColor="text-blue-600"
@@ -113,10 +113,10 @@ export default function DashboardPage() {
         />
         <MetricCard
           title="Active Cases"
-          value={`${metrics.totalCases || 1000}`}
+          value={`${metrics.totalCases}`}
           description="Monitored in DB"
           icon={ShieldCheck}
-          trend={`${metrics.safetyActionsPrevented || 11} Blocked`}
+          trend={`${metrics.safetyActionsPrevented} Blocked`}
           trendUp={true}
           iconBgColor="bg-indigo-50"
           iconTextColor="text-indigo-600"
@@ -201,7 +201,7 @@ export default function DashboardPage() {
             onClick={() => router.push("/cases")}
             className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 transition-colors"
           >
-            View All Cases ({metrics.totalCases || 1000})
+            View All Cases ({metrics.totalCases})
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

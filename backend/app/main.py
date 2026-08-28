@@ -32,7 +32,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Health Check
+# Root & Health Checks
+@app.get("/", tags=["system"])
+async def root():
+    return {
+        "status": "healthy",
+        "service": settings.PROJECT_NAME,
+        "docs": "/docs",
+        "health": "/health",
+        "demo_mode": settings.DEMO_MODE,
+        "groq_model": settings.GROQ_MODEL
+    }
+
 @app.get("/health", tags=["system"])
 async def health_check():
     return {
