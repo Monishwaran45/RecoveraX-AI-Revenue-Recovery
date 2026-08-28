@@ -148,7 +148,7 @@ venv\Scripts\python -m pytest --ignore=test_llm.py
 
 ---
 
-## 📊 Measured Batch Recovery Evidence (Track 03 Benchmark)
+## Measured Batch Recovery Evidence (Benchmark)
 
 RecoveraX was evaluated against a **1,000-case synthetic dataset** (Total Revenue at Risk: **₹50,00,000.00**) comparing naive fixed-rule retries against the RecoveraX AI Agent pipeline with deterministic policy guardrails.
 
