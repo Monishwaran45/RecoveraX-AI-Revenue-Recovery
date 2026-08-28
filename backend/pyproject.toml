@@ -1,0 +1,28 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiomysql>=0.3.2",
+    "aiosqlite>=0.20.0",
+    "alembic>=1.13.1",
+    "celery>=5.3.6",
+    "cryptography>=50.0.1",
+    "fastapi>=0.110.0",
+    "httpx>=0.27.0",
+    "langchain>=0.1.12",
+    "langchain-core>=0.1.30",
+    "langchain-groq>=0.1.0",
+    "langgraph>=0.0.26",
+    "psycopg[binary]>=3.1.18",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "pymysql>=1.2.0",
+    "pytest>=8.1.1",
+    "pytest-asyncio>=0.23.6",
+    "redis>=5.0.3",
+    "sqlalchemy>=2.0.28",
+    "uvicorn[standard]>=0.28.0",
+]
