@@ -88,6 +88,55 @@ flowchart TD
 
 ---
 
+## 🔄 LangGraph 12-Node Agent Workflow Pipeline
+
+RecoveraX implements a stateful **12-node Bounded Execution Graph** in LangGraph ([`backend/app/agents/graph.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/agents/graph.py)):
+
+```mermaid
+graph TD
+    Node1["1. load_context"] --> Node2["2. diagnose (Groq LLM)"]
+    Node2 --> Node3["3. calculate_score"]
+    Node3 --> Node4["4. recommend_action"]
+    Node4 --> Node5["5. policy_check (Safety Guardrails)"]
+    
+    Node5 -- AUTO --> Node7["7. schedule"]
+    Node5 -- HUMAN --> Node6["6. human_approval"]
+    Node5 -- BLOCK / STOP --> Node11["11. stop"]
+
+    Node6 --> END1((END - Awaiting Sign-off))
+    
+    Node7 --> Node8["8. recheck (Fresh Pre-Check)"]
+    Node8 --> Node9["9. execute (Retry Dispatch)"]
+    Node9 --> Node10["10. verify (Bank Settlement)"]
+    
+    Node10 -- Verified Success --> END2((END - Recovered))
+    Node10 -- Gateway Failed --> Node12["12. reevaluate"]
+    
+    Node12 -- Max Retries (2) Reached --> Node11
+    Node12 -- Retry Allowed --> Node2
+    
+    Node11 --> END3((END - Hard Blocked))
+```
+
+### Detailed 12-Node Execution Process Table
+
+| Node # | Node Identifier | Subsystem / Engine | Detailed Action & Responsibilities |
+| :--- | :--- | :--- | :--- |
+| **01** | `load_context` | Data Layer | Ingests transaction failure context, customer LTV, past payment history, and gateway error payloads into `RecoveryState`. |
+| **02** | `diagnose` | Groq LLM Engine | Invokes LLM (`groq/compound-mini`) to reason over failure codes and output structured diagnosis (`INSUFFICIENT_FUNDS`, `TEMPORARY_BANK_ERROR`, `CARD_EXPIRED`, etc.). |
+| **03** | `calculate_score` | Recovery Scorer | Deterministically calculates Recovery Score (0–100) and Expected Recovery Value ($EV$) based on customer LTV, recency, and past payment reliability. |
+| **04** | `recommend_action` | Action Recommender | Selects optimal recovery strategy (`RETRY`, `REMIND`, `ESCALATE`, `STOP`) and recommended execution delay. |
+| **05** | `policy_check` | Safety Policy Engine | Evaluates pure Python safety rules (Rules 1–7). Authorizes decision: `AUTO` (safe to auto-retry), `HUMAN` (requires merchant approval), or `BLOCK` / `STOP`. |
+| **06** | `human_approval` | HITL Queue | Routes high-value ($> \text{₹}50\text{k}$) or medium-risk cases to merchant approval queue and pauses execution graph until sign-off. |
+| **07** | `schedule` | Celery Worker Queue | Enqueues automated retry timer task into background worker queue for execution. |
+| **08** | `recheck` | Gateway Pre-Check | Performs mandatory fresh pre-execution API check with card network/bank gateway to verify payment state hasn't cleared externally. |
+| **09** | `execute` | Gateway Simulator | Dispatches automated retry payload attempt to payment network (Card / UPI / Netbanking). |
+| **10** | `verify` | Settlement Engine | Queries bank gateway settlement status to verify debit response (`VERIFIED_SUCCESS` vs `FAILED`). |
+| **11** | `reevaluate` | Loop Controller | Re-evaluates attempt outcome against max retries (max 2 retries). Routes back to `diagnose` for secondary attempt or `stop`. |
+| **12** | `stop` | Audit Logger | Safely halts pipeline execution, records immutable audit trail, and prevents duplicate charges. |
+
+---
+
 ## Repository Structure
 
 ```
