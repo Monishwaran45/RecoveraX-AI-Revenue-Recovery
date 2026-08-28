@@ -101,9 +101,10 @@ class CaseService:
 
         initial_state = {
             "case_id": case.id,
+            "amount_at_risk": case.amount_at_risk,
             "transaction": {
                 "id": tx.id if tx else "TX-000",
-                "amount": tx.amount if tx else case.amount_at_risk,
+                "amount": case.amount_at_risk,
                 "status": tx.status.value if tx else "FAILED",
                 "failure_reason": tx.failure_reason if tx else "BANK_ERROR",
                 "payment_state": tx.payment_state.value if tx else "CLEAR",

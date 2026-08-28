@@ -12,8 +12,8 @@ def policy_check_node(state: RecoveryState) -> RecoveryState:
     """
     tx = state.get("transaction", {})
     
-    # Determine risk level based on configured settings
-    amount = tx.get("amount", 0.0)
+    # Use case-level amount_at_risk as authoritative amount (not raw tx.amount which may differ)
+    amount = state.get("amount_at_risk", tx.get("amount", 0.0))
     score = state.get("recovery_score", 50)
     
     if tx.get("possible_customer_debit") or tx.get("fraud_signal") or tx.get("payment_state") == "AMBIGUOUS" or amount > settings.HUMAN_APPROVAL_AMOUNT:
