@@ -12,7 +12,7 @@ RecoveraX detects revenue at risk, diagnoses root cause failure patterns using *
 
 ---
 
-## Core Product Philosophy
+## Workflow Of The Application
 
 ```
 AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRMS  →  HUMAN CONTROLS RISK
