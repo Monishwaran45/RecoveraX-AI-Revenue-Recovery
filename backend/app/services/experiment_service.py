@@ -92,9 +92,6 @@ class ExperimentService:
     def _populate_experiment_metrics(exp: Optional[Experiment]) -> Optional[Experiment]:
         if not exp:
             return None
-        if exp.revenue_at_risk > 0:
-            exp.baseline_recovery_rate = round((exp.baseline_recovered / exp.revenue_at_risk) * 100.0, 1)
-            exp.ai_recovery_rate = round((exp.ai_recovered / exp.revenue_at_risk) * 100.0, 1)
 
         results = getattr(exp, "results", []) or []
         exp.auto_count = sum(1 for r in results if r.ai_outcome in ("RECOVERED", "AUTO_AUTHORIZED_AWAITING_EXECUTION"))
@@ -103,6 +100,19 @@ class ExperimentService:
         exp.stopped_count = sum(1 for r in results if r.ai_outcome == "STOPPED")
         exp.verified_recovery_count = sum(1 for r in results if r.ai_outcome == "RECOVERED")
         exp.safety_actions_prevented = exp.blocked_count
+
+        calc_ai_rec = sum(r.amount_recovered for r in results if r.ai_outcome == "RECOVERED")
+        calc_base_rec = sum(r.amount_at_risk for r in results if r.baseline_outcome == "RECOVERED")
+
+        if calc_ai_rec > 0 or exp.ai_recovered == 0.0:
+            exp.ai_recovered = calc_ai_rec if calc_ai_rec > 0 else (exp.ai_recovered or 0.0)
+            exp.baseline_recovered = calc_base_rec if calc_base_rec > 0 else (exp.baseline_recovered or 0.0)
+            exp.incremental_recovered = round(max(0.0, exp.ai_recovered - exp.baseline_recovered), 2)
+
+        if exp.revenue_at_risk > 0:
+            exp.baseline_recovery_rate = round((exp.baseline_recovered / exp.revenue_at_risk) * 100.0, 1)
+            exp.ai_recovery_rate = round((exp.ai_recovered / exp.revenue_at_risk) * 100.0, 1)
+
         return exp
 
     @staticmethod

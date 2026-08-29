@@ -8,8 +8,11 @@ export interface ExperimentDetail {
   revenue_at_risk: number;
   ai_recovered: number;
   gross_recovered: number;
+  baseline_recovered: number;
   incremental_recovered: number;
   recovery_rate: number;
+  baseline_recovery_rate: number;
+  ai_recovery_rate: number;
   auto_count: number;
   human_count: number;
   blocked_count: number;
@@ -21,7 +24,9 @@ export interface ExperimentDetail {
 function parseExperimentData(data: any): ExperimentDetail {
   const count = data.case_count ?? data.total_cases ?? 0;
   const gross = data.ai_recovered ?? data.gross_recovered ?? 0;
+  const baseRec = data.baseline_recovered ?? 0;
   const rate = data.ai_recovery_rate ?? data.recovery_rate ?? 0;
+  const baseRate = data.baseline_recovery_rate ?? 0;
   const results = data.results || [];
 
   let autoCount = data.auto_count || 0;
@@ -47,8 +52,11 @@ function parseExperimentData(data: any): ExperimentDetail {
     revenue_at_risk: data.revenue_at_risk ?? 0,
     ai_recovered: gross,
     gross_recovered: gross,
+    baseline_recovered: baseRec,
     incremental_recovered: data.incremental_recovered ?? 0,
     recovery_rate: rate,
+    baseline_recovery_rate: baseRate,
+    ai_recovery_rate: rate,
     auto_count: autoCount,
     human_count: humanCount,
     blocked_count: blockedCount,
