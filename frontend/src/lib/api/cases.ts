@@ -78,6 +78,8 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     policyType = "HUMAN";
   } else if (strUpper.includes("AUTO") || item.status === "SCHEDULED") {
     policyType = "AUTO";
+  } else if (strUpper.includes("STOP") || item.status === "STOPPED") {
+    policyType = "STOP";
   } else {
     policyType = "HUMAN";
   }
@@ -91,8 +93,10 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
   else if (item.status === "BLOCKED") statusVal = "BLOCKED";
   else if (item.status === "SCHEDULED") statusVal = "SCHEDULED";
   else if (item.status === "AWAITING_APPROVAL" || approvalStatus === "PENDING") statusVal = "HUMAN_APPROVAL";
-  else if (item.status === "STOPPED" || approvalStatus === "REJECTED") statusVal = "REJECTED";
+  else if (item.status === "STOPPED") statusVal = "STOPPED";
+  else if (approvalStatus === "REJECTED") statusVal = "REJECTED";
   else if (item.status === "MODIFIED") statusVal = "MODIFIED";
+  else if (item.status === "FAILED") statusVal = "FAILED";
 
   const rawTitleStr = item.title || item.problem_type || rec.diagnosis;
   const problemTitle = formatDynamicTitle(rawTitleStr);
@@ -120,8 +124,8 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     recommendedAction: item.recommended_action || "RETRY",
     risk: riskVal,
     type: caseType,
-    paymentState: item.status === "BLOCKED" ? "AMBIGUOUS" : "CLEARLY_FAILED",
-    possibleDebit: item.status === "BLOCKED",
+    paymentState: item.status === "BLOCKED" ? "AMBIGUOUS" : "UNKNOWN",
+    possibleDebit: Boolean(item.status === "BLOCKED"),
     retryCount: item.retry_count || 0,
     maxRetries: item.max_retries || 2,
     aiRecommendation: {

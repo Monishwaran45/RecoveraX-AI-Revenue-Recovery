@@ -5,6 +5,9 @@ from pydantic import Field
 class Settings(BaseSettings):
     PROJECT_NAME: str = "RecoveraX Engine"
     API_V1_STR: str = ""
+    ENVIRONMENT: str = Field(default="development", alias="ENVIRONMENT")
+    API_AUTH_TOKEN: str = Field(default="", alias="API_AUTH_TOKEN")
+    RATE_LIMIT_PER_MINUTE: int = Field(default=120, alias="RATE_LIMIT_PER_MINUTE")
     
     # Database
     DATABASE_URL: str = Field(
@@ -30,13 +33,16 @@ class Settings(BaseSettings):
     DEMO_RETRY_DELAY_SECONDS: int = Field(default=10, alias="DEMO_RETRY_DELAY_SECONDS")
     
     # Safety & Policy Engine Thresholds
-    MAX_AUTO_RETRY_AMOUNT: float = Field(default=50000.0, alias="MAX_AUTO_RETRY_AMOUNT")
+    MAX_AUTO_RETRY_AMOUNT: float = Field(default=5000.0, alias="MAX_AUTO_RETRY_AMOUNT")
     MAX_RETRIES: int = Field(default=2, alias="MAX_RETRIES")
     MIN_AUTO_RECOVERY_SCORE: int = Field(default=80, alias="MIN_AUTO_RECOVERY_SCORE")
-    HUMAN_APPROVAL_AMOUNT: float = Field(default=50000.0, alias="HUMAN_APPROVAL_AMOUNT")
+    HUMAN_APPROVAL_AMOUNT: float = Field(default=5000.0, alias="HUMAN_APPROVAL_AMOUNT")
     
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"]
+
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.lower() == "production"
     
     model_config = SettingsConfigDict(
         env_file=".env",

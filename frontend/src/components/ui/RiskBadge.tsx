@@ -63,6 +63,13 @@ export function PolicyBadge({ type }: { type: PolicyDecisionType }) {
       </span>
     );
   }
+  if (type === "STOP") {
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase bg-slate-100 text-slate-800 border border-slate-300">
+        STOP
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase bg-rose-100/80 text-rose-950 border border-rose-300/80">
       BLOCK

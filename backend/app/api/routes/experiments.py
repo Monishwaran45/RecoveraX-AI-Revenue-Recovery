@@ -8,7 +8,7 @@ from app.schemas.experiment import ExperimentRead, ExperimentDetailRead, Experim
 router = APIRouter(tags=["experiments"])
 
 @router.post("/experiments/run", response_model=ExperimentDetailRead)
-async def run_experiment(name: Optional[str] = Query("Recovery Outcome Evaluation & Baseline Comparison"), db: AsyncSession = Depends(get_db)):
+async def run_experiment(name: Optional[str] = Query("Recovery Outcome Evaluation & Baseline Comparison", max_length=120), db: AsyncSession = Depends(get_db)):
     return await experiment_service.run_experiment(db, name=name)
 
 @router.get("/experiments/latest", response_model=ExperimentDetailRead)

@@ -15,6 +15,11 @@ from app.services.case_service import CaseService
 
 class ApprovalService:
     @staticmethod
+    def _require_pending_human_review(case: RecoveryCase) -> None:
+        if case.status != CaseStatus.AWAITING_APPROVAL or case.policy_decision != PolicyDecision.HUMAN:
+            raise ValueError("Only cases awaiting human approval can be approved, rejected, or modified.")
+
+    @staticmethod
     async def get_pending_approvals(db: AsyncSession) -> List[ApprovalRequest]:
         query = select(ApprovalRequest).where(
             ApprovalRequest.status == ApprovalStatus.PENDING
@@ -34,6 +39,7 @@ class ApprovalService:
         case = res.scalar_one_or_none()
         if not case:
             return None
+        ApprovalService._require_pending_human_review(case)
 
         # Update or create approval request
         pending_found = False
@@ -61,7 +67,8 @@ class ApprovalService:
 
         case.status = CaseStatus.SCHEDULED
         case.approval_status = "APPROVED"
-        case.policy_decision = PolicyDecision.AUTO
+        # Approval authorizes this specific action; it does not rewrite policy authority.
+        case.policy_decision = PolicyDecision.HUMAN
         
         await audit_service.log_event(
             db=db,
@@ -85,6 +92,7 @@ class ApprovalService:
         case = res.scalar_one_or_none()
         if not case:
             return None
+        ApprovalService._require_pending_human_review(case)
 
         for req in case.approval_requests:
             if req.status == ApprovalStatus.PENDING:
@@ -124,6 +132,7 @@ class ApprovalService:
         case = res.scalar_one_or_none()
         if not case:
             return None
+        ApprovalService._require_pending_human_review(case)
 
         # Fetch transaction for mandatory re-policy evaluation
         tx_query = select(Transaction).where(Transaction.id == case.source_id)
@@ -170,7 +179,7 @@ class ApprovalService:
             )
         else:
             case.status = CaseStatus.SCHEDULED
-            case.policy_decision = PolicyDecision.AUTO
+            case.policy_decision = PolicyDecision.HUMAN
             await audit_service.log_event(
                 db=db,
                 case_id=case.id,

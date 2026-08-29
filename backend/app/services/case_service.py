@@ -141,6 +141,7 @@ class CaseService:
                 "amount": case.amount_at_risk,
                 "status": tx.status.value if tx else "FAILED",
                 "failure_reason": tx.failure_reason if tx else "BANK_ERROR",
+                "failure_profile_id": tx.failure_reason if tx else "TEMPORARY_BANK_ERROR",
                 "payment_state": tx.payment_state.value if tx else "CLEAR",
                 "possible_customer_debit": tx.possible_customer_debit if tx else False,
                 "fraud_signal": tx.fraud_signal if tx else False,
@@ -155,6 +156,7 @@ class CaseService:
             },
             "retry_count": case.retry_count,
             "max_retries": case.max_retries,
+            "enqueue_celery": True,
             "audit_events": []
         }
 

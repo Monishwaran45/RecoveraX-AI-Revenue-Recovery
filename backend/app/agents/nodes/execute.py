@@ -14,15 +14,17 @@ def execute_node(state: RecoveryState) -> RecoveryState:
     action_type = state.get("recommended_action", "RETRY")
     policy_dec = PolicyDecision(state.get("policy_decision", "HUMAN"))
     
-    if policy_dec == PolicyDecision.BLOCK:
+    if policy_dec != PolicyDecision.AUTO:
         state["execution_result"] = "BLOCKED_BY_POLICY"
-        state["workflow_status"] = CaseStatus.BLOCKED.value
+        state["workflow_status"] = (
+            CaseStatus.STOPPED.value if policy_dec == PolicyDecision.STOP else CaseStatus.BLOCKED.value
+        )
         audit_events.append({
             "event_type": AuditEventType.ACTION_BLOCKED.value,
             "actor_type": ActorType.EXECUTOR.value,
             "actor_id": "ACTION_EXECUTOR",
-            "reason": "Execution rejected: policy decision is BLOCK",
-            "metadata": {"blocked": True}
+            "reason": f"Execution rejected: policy decision is {policy_dec.value}",
+            "metadata": {"blocked": True, "policy_decision": policy_dec.value}
         })
         state["audit_events"] = audit_events
         return state

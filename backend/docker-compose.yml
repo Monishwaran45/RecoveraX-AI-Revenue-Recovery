@@ -8,10 +8,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/recovery
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@postgres:5432/recovery
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - GROQ_API_KEY=${GROQ_API_KEY}
-      - GROQ_MODEL=llama-3.3-70b-versatile
+      - API_AUTH_TOKEN=${API_AUTH_TOKEN}
+      - ENVIRONMENT=production
+      - GROQ_MODEL=qwen/qwen3.8-27b
       - DEMO_MODE=false
       - DEMO_RETRY_DELAY_SECONDS=10
       - MAX_AUTO_RETRY_AMOUNT=5000
@@ -27,10 +29,8 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: recovery
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -41,10 +41,9 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping"]
       interval: 5s
       timeout: 5s
       retries: 5

@@ -19,7 +19,10 @@ async def approve_case(
     db: AsyncSession = Depends(get_db)
 ):
     reason = payload.reason if payload else None
-    case = await approval_service.approve_case(db, case_id, reason=reason)
+    try:
+        case = await approval_service.approve_case(db, case_id, reason=reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not case:
         raise HTTPException(status_code=404, detail=f"Case {case_id} not found for approval")
     return case
@@ -31,7 +34,10 @@ async def reject_case(
     db: AsyncSession = Depends(get_db)
 ):
     reason = payload.reason if payload else None
-    case = await approval_service.reject_case(db, case_id, reason=reason)
+    try:
+        case = await approval_service.reject_case(db, case_id, reason=reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not case:
         raise HTTPException(status_code=404, detail=f"Case {case_id} not found for rejection")
     return case
@@ -42,13 +48,13 @@ async def modify_case(
     payload: ApprovalModifyRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    case = await approval_service.modify_case(
-        db=db,
-        case_id=case_id,
-        modified_action=payload.action,
-        modified_delay_minutes=payload.delay_minutes,
-        reason=payload.reason
-    )
+    try:
+        case = await approval_service.modify_case(
+            db=db, case_id=case_id, modified_action=payload.action,
+            modified_delay_minutes=payload.delay_minutes, reason=payload.reason
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not case:
         raise HTTPException(status_code=404, detail=f"Case {case_id} not found for modification")
     return case

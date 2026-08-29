@@ -25,9 +25,21 @@ class ActionService:
         tx_res = await db.execute(tx_query)
         tx = tx_res.scalar_one_or_none()
 
-        status_str = tx.status.value if tx else "FAILED"
-        state_str = tx.payment_state.value if tx else "CLEAR"
-        possible_debit = tx.possible_customer_debit if tx else False
+        if not tx:
+            case.status = CaseStatus.BLOCKED
+            case.policy_decision = PolicyDecision.BLOCK
+            await audit_service.log_event(
+                db=db, case_id=case.id, event_type=AuditEventType.ACTION_BLOCKED,
+                actor_type=ActorType.POLICY, actor_id="GATEWAY_VERIFIER",
+                reason="Gateway re-check failed: source transaction was not found. Action hard-blocked.",
+                metadata_json={"source_id": case.source_id}
+            )
+            await db.commit()
+            return await case_service.get_case_by_id(db, case.id)
+
+        status_str = tx.status.value
+        state_str = tx.payment_state.value
+        possible_debit = tx.possible_customer_debit
 
         if status_str == "SUCCESS":
             recovered_amount = float(tx.amount) if tx else float(case.amount_at_risk)
@@ -90,7 +102,20 @@ class ActionService:
         tx_res = await db.execute(tx_query)
         tx = tx_res.scalar_one_or_none()
 
-        # Never execute a terminal case or a case that reached its retry limit.
+        # A missing source record must never be treated as a retryable failure.
+        if not tx:
+            case.status = CaseStatus.BLOCKED
+            case.policy_decision = PolicyDecision.BLOCK
+            await audit_service.log_event(
+                db=db, case_id=case.id, event_type=AuditEventType.ACTION_BLOCKED,
+                actor_type=ActorType.POLICY, actor_id="DETERMINISTIC_POLICY_ENGINE",
+                reason="Execution blocked: source transaction was not found.",
+                metadata_json={"source_id": case.source_id}
+            )
+            await db.commit()
+            return await case_service.get_case_by_id(db, case.id)
+
+        # Never execute a terminal case or case that reached max retries limit
         if case.retry_count >= case.max_retries or case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED, CaseStatus.STOPPED]:
             if case.retry_count >= case.max_retries and case.status != CaseStatus.RECOVERED:
                 case.status = CaseStatus.STOPPED
@@ -100,10 +125,10 @@ class ActionService:
             return await case_service.get_case_by_id(db, case.id)
 
         policy_eval = policy_engine.evaluate(
-            transaction_status=TransactionStatus(tx.status.value if tx else "FAILED"),
-            payment_state=PaymentState(tx.payment_state.value if tx else "CLEAR"),
-            possible_customer_debit=tx.possible_customer_debit if tx else False,
-            fraud_signal=tx.fraud_signal if tx else False,
+            transaction_status=TransactionStatus(tx.status.value),
+            payment_state=PaymentState(tx.payment_state.value),
+            possible_customer_debit=tx.possible_customer_debit,
+            fraud_signal=tx.fraud_signal,
             retry_count=case.retry_count,
             max_retries=case.max_retries,
             action=case.recommended_action,
@@ -125,6 +150,19 @@ class ActionService:
                 actor_id="ACTION_EXECUTOR",
                 reason=f"Pre-execution policy check BLOCKED action: {policy_eval.reason}",
                 metadata_json={"decision": "BLOCK"}
+            )
+            await db.commit()
+            return await case_service.get_case_by_id(db, case.id)
+
+        if policy_eval.decision == PolicyDecision.STOP:
+            case.status = CaseStatus.STOPPED
+            case.policy_decision = PolicyDecision.STOP
+            case.verification_result = "STOPPED"
+            await audit_service.log_event(
+                db=db, case_id=case.id, event_type=AuditEventType.RECOVERY_STOPPED,
+                actor_type=ActorType.POLICY, actor_id="DETERMINISTIC_POLICY_ENGINE",
+                reason=f"Pre-execution policy stopped action: {policy_eval.reason}",
+                metadata_json={"decision": "STOP"}
             )
             await db.commit()
             return await case_service.get_case_by_id(db, case.id)
@@ -167,16 +205,34 @@ class ActionService:
         await db.commit()
 
         try:
+            # REMIND and ESCALATE are communication/workflow actions, not payment retries.
+            if case.recommended_action != ActionType.RETRY:
+                case.status = CaseStatus.STOPPED
+                case.policy_decision = PolicyDecision.STOP
+                case.verification_result = "NONE"
+                case.amount_recovered = 0.0
+                action_rec.status = "SUCCESS"
+                action_rec.result = f"{case.recommended_action.value} action completed; no payment retry was attempted."
+                await audit_service.log_event(
+                    db=db, case_id=case.id, event_type=AuditEventType.ACTION_EXECUTED,
+                    actor_type=ActorType.EXECUTOR, actor_id="ACTION_EXECUTOR",
+                    reason=action_rec.result,
+                    metadata_json={"action": case.recommended_action.value, "payment_retry": False}
+                )
+                await db.commit()
+                return await case_service.get_case_by_id(db, case.id)
+
             status, p_state, message = payment_simulator.simulate_retry(
-                transaction_id=tx.id if tx else "TX-000",
+                transaction_id=tx.id,
                 amount=case.amount_at_risk,
                 current_retry_count=case.retry_count,
                 policy_decision=case.policy_decision,
-                payment_state=PaymentState(tx.payment_state.value if tx else "CLEAR"),
-                failure_profile_id="TEMPORARY_BANK_ERROR"
+                payment_state=PaymentState(tx.payment_state.value),
+                failure_profile_id=tx.failure_reason or "TEMPORARY_BANK_ERROR"
             )
 
             case.retry_count += 1
+            tx.retry_count = case.retry_count
             action_rec.result = message
 
             if status == TransactionStatus.SUCCESS:
@@ -199,7 +255,10 @@ class ActionService:
                     metadata_json={"amount_recovered": case.amount_at_risk}
                 )
             else:
-                case.status = CaseStatus.FAILED
+                should_stop = case.retry_count >= case.max_retries
+                case.status = CaseStatus.STOPPED if should_stop else CaseStatus.SCHEDULED
+                if should_stop:
+                    case.policy_decision = PolicyDecision.STOP
                 case.verification_result = "VERIFIED_FAILED"
                 case.amount_recovered = 0.0
                 action_rec.status = "FAILED"
@@ -214,6 +273,20 @@ class ActionService:
                     reason=f"Retry attempt failed. Gateway message: {message}",
                     metadata_json={"result": "FAILED"}
                 )
+                if should_stop:
+                    await audit_service.log_event(
+                        db=db, case_id=case.id, event_type=AuditEventType.RECOVERY_STOPPED,
+                        actor_type=ActorType.POLICY, actor_id="DETERMINISTIC_POLICY_ENGINE",
+                        reason=f"Maximum retry limit reached ({case.retry_count}/{case.max_retries}).",
+                        metadata_json={"retry_count": case.retry_count, "max_retries": case.max_retries}
+                    )
+                else:
+                    await audit_service.log_event(
+                        db=db, case_id=case.id, event_type=AuditEventType.RETRY_SCHEDULED,
+                        actor_type=ActorType.SYSTEM, actor_id="RECOVERY_ENGINE",
+                        reason="Retry failed; case re-evaluated and scheduled for one bounded follow-up retry.",
+                        metadata_json={"retry_count": case.retry_count, "max_retries": case.max_retries}
+                    )
         except Exception as e:
             case.status = CaseStatus.BLOCKED
             case.amount_recovered = 0.0

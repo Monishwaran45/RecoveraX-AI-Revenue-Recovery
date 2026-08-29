@@ -12,13 +12,13 @@ An autonomous revenue recovery backend engine with deterministic financial safet
 AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRMS  →  HUMAN CONTROLS RISK
 ```
 
-- **Groq LLM (`llama-3.3-70b-versatile`)**: Diagnoses root causes, recommends actions (`RETRY`, `REMIND`, `ESCALATE`, `STOP`), and explains reasoning over structured context.
-- **Deterministic Policy Engine**: Has **final authority**. Enforces thresholds (`MAX_AUTO_RETRY_AMOUNT=5000`, `MIN_AUTO_RECOVERY_SCORE=80`, `MAX_RETRIES=2`), blocks ambiguous/double-debit states, and fails closed (`BLOCK`).
+- **Groq LLM (`qwen/qwen3.8-27b`)**: Diagnoses root causes, recommends actions (`RETRY`, `REMIND`, `ESCALATE`, `STOP`), and explains reasoning over structured context.
+- **Deterministic Policy Engine**: Has **final authority**. Enforces thresholds (`MAX_AUTO_RETRY_AMOUNT=50000`, `MIN_AUTO_RECOVERY_SCORE=80`, `MAX_RETRIES=2`), blocks ambiguous/double-debit states, and fails closed (`BLOCK`).
 - **Human-in-the-Loop (HITL)**: Escalates medium-risk and high-value transactions for human sign-off (`Approve`, `Reject`, `Modify`). Human modifications re-evaluate policy safety rules before execution.
 
 ---
 
-## LangGraph Workflow Architecture
+## Stateful Cyclic LangGraph Workflow Architecture
 
 ```mermaid
 graph TD
@@ -43,6 +43,8 @@ graph TD
     
     M -->|RECOVERED| N[End - Revenue Deposited]
     M -->|FAILED| O[Re-evaluate & Audit Log]
+    O -->|Retry < Max| G
+    O -->|Retry >= Max| I
 ```
 
 ---
@@ -50,8 +52,8 @@ graph TD
 ## Tech Stack
 
 - **Framework**: FastAPI (Async Python 3.12+)
-- **LLM**: Groq API (`ChatGroq`, `llama-3.3-70b-versatile`) via `langchain-groq`
-- **Orchestration**: LangGraph
+- **LLM**: Groq API (`ChatGroq`, `qwen/qwen3.8-27b`) via `langchain-groq`
+- **Orchestration**: Stateful cyclic LangGraph workflow
 - **Database**: PostgreSQL (SQLAlchemy 2.x, psycopg, Alembic) with SQLite fallback
 - **Task Queue**: Celery + Redis
 - **Testing**: pytest

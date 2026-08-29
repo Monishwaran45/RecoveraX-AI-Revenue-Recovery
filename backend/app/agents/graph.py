@@ -33,6 +33,12 @@ def route_verification_outcome(state: RecoveryState) -> str:
     else:
         return "reevaluate"
 
+def route_recheck_outcome(state: RecoveryState) -> str:
+    """Only execute after a fresh re-check leaves the case safe to retry."""
+    if state.get("policy_decision") in (PolicyDecision.BLOCK.value, PolicyDecision.STOP.value):
+        return "end"
+    return "execute"
+
 def route_reevaluation(state: RecoveryState) -> str:
     status = state.get("workflow_status")
     if status == "STOPPED":
@@ -82,7 +88,11 @@ def build_recovery_graph():
     builder.add_edge("schedule", END)
     
     # Execution & Verification Path
-    builder.add_edge("recheck", "execute")
+    builder.add_conditional_edges(
+        "recheck",
+        route_recheck_outcome,
+        {"execute": "execute", "end": END}
+    )
     builder.add_edge("execute", "verify")
     
     # Verify Conditional Branching

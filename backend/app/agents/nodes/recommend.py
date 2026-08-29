@@ -59,6 +59,8 @@ def recommend_action_node(state: RecoveryState) -> RecoveryState:
         # Enforce action enum validity
         if action_str not in [a.value for a in ActionType]:
             action_str = ActionType.RETRY.value
+            state["forced_human"] = True
+            state["recommendation_invalid"] = True
 
         state["recommended_action"] = action_str
         state["delay_minutes"] = delay_val
@@ -76,6 +78,7 @@ def recommend_action_node(state: RecoveryState) -> RecoveryState:
         state["recommended_action"] = ActionType.RETRY.value
         state["delay_minutes"] = 30
         state["reason"] = "AI recommendation fallback: RETRY action evaluated under safety policy rules."
+        state["forced_human"] = True
         
         audit_events.append({
             "event_type": AuditEventType.LLM_OUTPUT_INVALID.value,

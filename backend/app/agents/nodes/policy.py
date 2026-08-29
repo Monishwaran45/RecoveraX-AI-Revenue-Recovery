@@ -30,6 +30,7 @@ def policy_check_node(state: RecoveryState) -> RecoveryState:
         rec_action = ActionType(rec_action_str)
     except ValueError:
         rec_action = ActionType.RETRY
+        state["forced_human"] = True
 
     eval_result = policy_engine.evaluate(
         transaction_status=TransactionStatus(tx.get("status", "FAILED")),

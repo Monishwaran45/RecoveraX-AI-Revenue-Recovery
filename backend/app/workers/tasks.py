@@ -1,4 +1,3 @@
-import time
 import asyncio
 import logging
 from app.workers.celery_app import celery_app
@@ -37,16 +36,18 @@ async def _run_async_retry(case_id: str):
 def execute_retry_task(case_id: str):
     """
     Celery background worker task for scheduled retries.
-    Sequence: WAIT -> FRESH GATEWAY RE-CHECK -> SAFETY POLICY CHECK -> EXECUTE
+    Celery applies the delay via countdown before this task starts. The worker only
+    performs the fresh re-check, policy check, and execution.
     """
     delay = settings.DEMO_RETRY_DELAY_SECONDS if settings.DEMO_MODE else 1800
-    logger.info(f"[SCHEDULER] Retry task queued for case {case_id}. Waiting {delay} seconds...")
-    time.sleep(delay)
-    logger.info(f"[SCHEDULER] Executing delayed retry task for case {case_id}...")
+    logger.info(f"[SCHEDULER] Executing scheduled retry task for case {case_id}...")
     
     try:
         updated_case = asyncio.run(_run_async_retry(case_id))
         status_val = updated_case.status.value if updated_case else "UNKNOWN"
+        if updated_case and updated_case.status == CaseStatus.SCHEDULED:
+            execute_retry_task.apply_async(args=[case_id], countdown=delay, retry=False)
+            logger.info(f"[SCHEDULER] Re-evaluation scheduled a bounded follow-up retry for {case_id}.")
         return {"status": "SUCCESS", "case_id": case_id, "result_status": status_val, "executed_after": delay}
     except Exception as e:
         logger.error(f"[SCHEDULER] Failed to execute retry task for case {case_id}: {str(e)}", exc_info=True)
