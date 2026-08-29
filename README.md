@@ -1,4 +1,4 @@
-# RecoveraX — Autonomous Revenue Recovery Platform
+# RecoveraX — AI-Revenue-Recovery
 
 > Autonomous AI Revenue Recovery Engine — LangGraph + Groq (`qwen/qwen3.8-27b`) + Deterministic Policy Guardrails + Human-in-the-Loop (HITL) + Celery/Redis + LangSmith Observability.
 
@@ -6,13 +6,13 @@ RecoveraX detects revenue at risk, diagnoses root cause failure patterns using *
 
 ---
 
-## 🛡️ Safety Contract
+## Safety Contract
 
 > **The AI recommends; the deterministic policy engine authorizes; execution is blocked for HUMAN/BLOCK states until the required authorization is satisfied. A case is shown as RECOVERED only after verified payment success.**
 
 ---
 
-## 💡 Core Product Philosophy
+## Core Product Philosophy
 
 ```
 AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRMS  →  HUMAN CONTROLS RISK
@@ -32,7 +32,7 @@ AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRM
 
 ---
 
-## 🤖 Stateful Cyclic LangGraph Workflow Architecture
+## LangGraph Workflow Architecture
 
 RecoveraX implements a stateful **cyclic execution graph** in LangGraph ([`backend/app/agents/graph.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/agents/graph.py)):
 
@@ -81,7 +81,7 @@ graph TD
 
 ---
 
-## 🔍 LangSmith Observability & Tracing Architecture
+## LangSmith Observability & Tracing Architecture
 
 RecoveraX embeds **LangSmith** as a centralized observability and tracing layer ([`backend/app/observability/langsmith.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/observability/langsmith.py)):
 
@@ -110,7 +110,7 @@ flowchart TD
 
 ---
 
-## 🛡️ Deterministic Safety Rules
+## Deterministic Safety Rules
 
 1. **Rule 1 (`MAX_AUTO_RETRY_AMOUNT = ₹50,000`)**: Transactions exceeding threshold require **HUMAN** approval.
 2. **Rule 2 (`MIN_AUTO_RECOVERY_SCORE = 80`)**: Recovery scores < 80 require **HUMAN** approval or **BLOCK**.
@@ -122,7 +122,7 @@ flowchart TD
 
 ---
 
-## ⚡ Quick Start Guide
+## Quick Start Guide
 
 ### 1. Prerequisites
 - **Node.js**: `v18.17+`
