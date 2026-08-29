@@ -130,20 +130,40 @@ flowchart TD
 
 ### 2. Backend Setup (FastAPI + LangGraph)
 
+#### Option A: Fast Setup with `uv` (Recommended)
 ```bash
 cd backend
 
-# Create Virtual Environment
-python -m venv .venv
-.venv\Scripts\activate      # Windows
+# 1. Create virtual environment
+uv venv
+
+# 2. Activate virtual environment
+.venv\Scripts\activate      # Windows (PowerShell)
 # source .venv/bin/activate # Linux/macOS
 
-# Install Dependencies & Setup Env
+# 3. Install dependencies & copy env
+uv pip install -r requirements.txt
+cp .env.example .env
+
+# 4. Run FastAPI Server
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+#### Option B: Standard `pip` Setup
+```bash
+cd backend
+
+# 1. Create & activate virtual environment
+python -m venv .venv
+.venv\Scripts\activate      # Windows (PowerShell)
+# source .venv/bin/activate # Linux/macOS
+
+# 2. Install dependencies & copy env
 pip install -r requirements.txt
 cp .env.example .env
 
-# Run FastAPI Server
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+# 3. Run FastAPI Server
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 - **Backend API**: `http://127.0.0.1:8000`
