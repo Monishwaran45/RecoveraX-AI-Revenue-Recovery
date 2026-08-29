@@ -1,7 +1,160 @@
-# RecoveraX
+# RecoveraX — Autonomous Revenue Recovery Platform
 
-AI Revenue Recovery Engine — LangGraph + Groq + deterministic policy guardrails + HITL + Celery/Redis + LangSmith observability.
+> Autonomous AI Revenue Recovery Engine — LangGraph + Groq (`qwen/qwen3.8-27b`) + Deterministic Policy Guardrails + Human-in-the-Loop (HITL) + Celery/Redis + LangSmith Observability.
 
-## Safety contract
+RecoveraX detects revenue at risk, diagnoses root cause failure patterns using **Groq LLM (`qwen/qwen3.8-27b`)**, calculates deterministic recovery scores, evaluates strict **financial safety guardrails**, routes high-risk or high-value actions to **Human-in-the-Loop (HITL) approval**, executes approved recovery retries, verifies settlement outcomes, and maintains an **immutable audit trail**.
 
-The AI recommends; the deterministic policy engine authorizes; execution is blocked for HUMAN/BLOCK states until the required authorization is satisfied. A case is shown as RECOVERED only after verified payment success.
+---
+
+## 🛡️ Safety Contract
+
+> **The AI recommends; the deterministic policy engine authorizes; execution is blocked for HUMAN/BLOCK states until the required authorization is satisfied. A case is shown as RECOVERED only after verified payment success.**
+
+---
+
+## 💡 Core Product Philosophy
+
+```
+AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRMS  →  HUMAN CONTROLS RISK
+```
+
+### Key Architectural Principles
+1. **Scoped LLM Authority**:
+   - The LLM is **ONLY** responsible for failure diagnosis, reasoning over structured customer payment history, and generating recovery strategy recommendations (`RETRY`, `REMIND`, `ESCALATE`, `STOP`).
+   - The LLM **NEVER**: Executes payments, authorizes financial transfers, overrides safety policies, or calculates monetary totals.
+2. **Deterministic Policy Engine Has Final Authority**:
+   - All authorization decisions (`AUTO`, `HUMAN`, `BLOCK`, `STOP`) are evaluated in pure Python.
+   - Fail-closed security guarantee: Any policy exception or ambiguous state defaults to `BLOCK` or `STOP`, **NEVER** `AUTO`. Human sign-off cannot override a hard safety stop.
+3. **Transparent Recovery Scoring & EV**:
+   - Scores cases 0–100 deterministically based on diagnosis, customer LTV, past payment history, and recency.
+   - Expected Recovery Value ($EV$) calculated in Python:
+     $$EV = \text{amount\_at\_risk} \times \left(\frac{\text{recovery\_score}}{100}\right) - \text{costs}$$
+
+---
+
+## 🤖 Stateful Cyclic LangGraph Workflow Architecture
+
+RecoveraX implements a stateful **cyclic execution graph** in LangGraph ([`backend/app/agents/graph.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/agents/graph.py)):
+
+```mermaid
+graph TD
+    Node1["1. load_context"] --> Node2["2. diagnose (Groq Qwen 3.8 27B)"]
+    Node2 --> Node3["3. calculate_score"]
+    Node3 --> Node4["4. recommend_action"]
+    Node4 --> Node5["5. policy_check (Safety Guardrails)"]
+    
+    Node5 -- AUTO --> Node7["7. schedule"]
+    Node5 -- HUMAN --> Node6["6. human_approval"]
+    Node5 -- BLOCK / STOP --> Node11["11. stop"]
+
+    Node6 --> END1((END - Awaiting Sign-off))
+    
+    Node7 --> Node8["8. recheck (Fresh Pre-Check)"]
+    Node8 --> Node9["9. execute (Retry Dispatch)"]
+    Node9 --> Node10["10. verify (Bank Settlement)"]
+    
+    Node10 -- Verified Success --> END2((END - Recovered))
+    Node10 -- Gateway Failed --> Node12["12. reevaluate"]
+    
+    Node12 -- Max Retries (2) Reached --> Node11
+    Node12 -- Retry Allowed --> Node2
+    
+    Node11 --> END3((END - Hard Blocked / Stopped))
+```
+
+### Execution Process Table
+
+| Node # | Node Identifier | Subsystem / Engine | Detailed Action & Responsibilities |
+| :--- | :--- | :--- | :--- |
+| **01** | `load_context` | Data Layer | Ingests transaction failure context, customer LTV, past payment history, and gateway error payloads into `RecoveryState`. |
+| **02** | `diagnose` | Groq LLM Engine | Invokes LLM (`qwen/qwen3.8-27b`) to reason over failure codes and output structured diagnosis (`INSUFFICIENT_FUNDS`, `TEMPORARY_BANK_ERROR`, `CARD_EXPIRED`, etc.). |
+| **03** | `calculate_score` | Recovery Scorer | Deterministically calculates Recovery Score (0–100) and Expected Recovery Value ($EV$) based on customer LTV, recency, and past payment reliability. |
+| **04** | `recommend_action` | Action Recommender | Selects optimal recovery strategy (`RETRY`, `REMIND`, `ESCALATE`, `STOP`) and recommended execution delay. |
+| **05** | `policy_check` | Safety Policy Engine | Evaluates pure Python safety rules. Authorizes decision: `AUTO` (safe to auto-retry), `HUMAN` (requires merchant approval), or `BLOCK` / `STOP`. |
+| **06** | `human_approval` | HITL Queue | Routes high-value or medium-risk cases to merchant approval queue and pauses execution graph until sign-off. |
+| **07** | `schedule` | Celery Worker Queue | Enqueues automated retry countdown task into background worker queue for execution. |
+| **08** | `recheck` | Gateway Pre-Check | Performs mandatory fresh pre-execution API check with bank gateway to verify payment state hasn't cleared externally. |
+| **09** | `execute` | Gateway Simulator | Dispatches automated retry payload attempt to payment network (Card / UPI / Netbanking). |
+| **10** | `verify` | Settlement Engine | Queries bank gateway settlement status to verify debit response (`VERIFIED_SUCCESS` vs `FAILED`). |
+| **11** | `reevaluate` | Loop Controller | Re-evaluates attempt outcome against max retries (max 2 retries). Routes back to `diagnose` for secondary attempt or `stop`. |
+| **12** | `stop` | Audit Logger | Safely halts pipeline execution, records immutable audit trail, and prevents duplicate charges. |
+
+---
+
+## 🔍 LangSmith Observability & Tracing Architecture
+
+RecoveraX embeds **LangSmith** as a centralized observability and tracing layer ([`backend/app/observability/langsmith.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/observability/langsmith.py)):
+
+```mermaid
+flowchart TD
+    subgraph Execution ["RecoveraX Core Engine"]
+        FastAPI["FastAPI REST Routes"]
+        LangGraph["Stateful Cyclic LangGraph Workflow"]
+        Groq["Groq LLM (qwen/qwen3.8-27b)"]
+        PolicyEngine["Deterministic Safety Policy"]
+        Simulator["Payment Gateway Simulator"]
+    end
+
+    subgraph Observability ["Observability Layer (Passive Only)"]
+        LangSmith["LangSmith Dashboard & Tracing"]
+        Sanitizer["Data Sanitizer (Redacts Credentials)"]
+        TraceLogger["Run Spans, Latency & Error Metrics"]
+    end
+
+    LangGraph -. Traces & Tags .-> Sanitizer
+    Groq -. LLM Token & Latency .-> Sanitizer
+    Simulator -. Outcome State .-> Sanitizer
+    Sanitizer --> LangSmith
+    LangSmith --> TraceLogger
+```
+
+---
+
+## 🛡️ Deterministic Safety Rules
+
+1. **Rule 1 (`MAX_AUTO_RETRY_AMOUNT = ₹50,000`)**: Transactions exceeding threshold require **HUMAN** approval.
+2. **Rule 2 (`MIN_AUTO_RECOVERY_SCORE = 80`)**: Recovery scores < 80 require **HUMAN** approval or **BLOCK**.
+3. **Rule 3 (`AMBIGUOUS_PAYMENT = BLOCK`)**: Ambiguous payment states are **ALWAYS** blocked from auto-retry.
+4. **Rule 4 (`POSSIBLE_CUSTOMER_DEBIT = BLOCK`)**: If customer might already be debited, retry is **BLOCKED**.
+5. **Rule 5 (`FRAUD_SIGNAL = BLOCK`)**: Fraud signals cause an immediate **BLOCK**.
+6. **Rule 6 (`MAX_RETRIES = 2`)**: Maximum 2 retries allowed per case.
+7. **Rule 7 (`PERMANENT_FAILURE = STOP`)**: Closed accounts or invalid details cause hard **STOP**.
+
+---
+
+## ⚡ Quick Start Guide
+
+### 1. Prerequisites
+- **Node.js**: `v18.17+`
+- **Python**: `3.12+`
+
+### 2. Backend Setup (FastAPI + LangGraph)
+
+```bash
+cd backend
+
+# Create Virtual Environment
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+# source .venv/bin/activate # Linux/macOS
+
+# Install Dependencies & Setup Env
+pip install -r requirements.txt
+cp .env.example .env
+
+# Run FastAPI Server
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+- **Backend API**: `http://127.0.0.1:8000`
+- **Interactive Swagger Docs**: `http://127.0.0.1:8000/docs`
+
+### 3. Frontend Setup (Next.js App Router)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+- **Frontend App**: `http://localhost:3000`

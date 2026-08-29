@@ -12,6 +12,8 @@ An autonomous revenue recovery backend engine with deterministic financial safet
 AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRMS  →  HUMAN CONTROLS RISK
 ```
 
+> **Safety contract**: The AI recommends; the deterministic policy engine authorizes; execution is blocked for HUMAN/BLOCK states until the required authorization is satisfied. A case is shown as RECOVERED only after verified payment success.
+
 - **Groq LLM (`qwen/qwen3.8-27b`)**: Diagnoses root causes, recommends actions (`RETRY`, `REMIND`, `ESCALATE`, `STOP`), and explains reasoning over structured context.
 - **Deterministic Policy Engine**: Has **final authority**. Enforces thresholds (`MAX_AUTO_RETRY_AMOUNT=50000`, `MIN_AUTO_RECOVERY_SCORE=80`, `MAX_RETRIES=2`), blocks ambiguous/double-debit states, and fails closed (`BLOCK`).
 - **Human-in-the-Loop (HITL)**: Escalates medium-risk and high-value transactions for human sign-off (`Approve`, `Reject`, `Modify`). Human modifications re-evaluate policy safety rules before execution.
@@ -140,7 +142,7 @@ docker-compose up --build
 
 ---
 
-## Measured Batch Recovery Evidence (Track 03 Benchmark)
+## Measured Batch Recovery Evidence (Batch Benchmark)
 
 | Metric | Baseline Strategy (Naive Retries) | RecoveraX AI Agent Pipeline | Impact / Lift |
 | :--- | :--- | :--- | :--- |

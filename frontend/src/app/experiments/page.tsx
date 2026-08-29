@@ -127,7 +127,7 @@ export default function ExperimentsPage() {
 
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
           <div>
-            <h3 className="font-bold text-slate-900 text-sm mb-2">Buildathon Benchmark Summary</h3>
+            <h3 className="font-bold text-slate-900 text-sm mb-2">Batch Benchmark Summary</h3>
             {(() => {
               const total = experiment.total_cases || experiment.case_count || 1;
               const autoPct = ((experiment.auto_count / total) * 100).toFixed(1);

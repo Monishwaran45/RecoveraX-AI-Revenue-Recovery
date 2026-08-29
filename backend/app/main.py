@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="FastAPI Backend Engine for RecoveraX (Razorpay AI Buildathon — Track 3)",
+    description="FastAPI Backend Engine for RecoveraX (Autonomous Financial Safety & Revenue Recovery Engine)",
     version="1.0.0",
     lifespan=lifespan
 )
