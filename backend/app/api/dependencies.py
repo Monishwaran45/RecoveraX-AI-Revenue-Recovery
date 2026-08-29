@@ -11,6 +11,8 @@ _request_times: dict[str, deque[float]] = defaultdict(deque)
 
 async def require_api_auth(request: Request) -> str:
     """Require a server-side bearer token outside explicitly enabled demo mode."""
+    if not settings.is_production() and not settings.API_AUTH_TOKEN:
+        return "dev-unauthenticated"
     if settings.DEMO_MODE and not settings.is_production():
         return "demo"
     if not settings.API_AUTH_TOKEN:
