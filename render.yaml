@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: recoverax-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: ENVIRONMENT
+        value: production
+      - key: DEMO_MODE
+        value: "true"
+      - key: GROQ_MODEL
+        value: qwen/qwen3.8-27b
+      - key: CORS_ORIGINS
+        value: '["*"]'
