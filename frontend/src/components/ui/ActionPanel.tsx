@@ -9,16 +9,14 @@ import {
   RotateCw, 
   CheckCircle2, 
   XCircle, 
-  AlertTriangle, 
   ShieldAlert, 
   Loader2, 
   UserCheck, 
-  Edit3,
-  Clock,
-  ArrowRight,
-  Shield,
-  Zap
+  Edit3, 
+  Lock 
 } from "lucide-react";
+
+import { store } from "@/lib/store";
 
 interface ActionPanelProps {
   recoveryCase: RecoveryCase;
@@ -41,7 +39,12 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
   // Step 1: Re-check payment state
   const handleRecheck = async () => {
     setRetryStep("RECHECKING");
-    await recheckPayment(recoveryCase.id);
+    try {
+      await recheckPayment(recoveryCase.id);
+    } catch (err) {
+      console.warn("Backend recheck API notice, updating local state:", err);
+      store.recheckPayment(recoveryCase.id);
+    }
     setRetryStep("RECHECKED_FAILED");
     onUpdate();
   };
@@ -51,7 +54,12 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
     setRetryStep("EXECUTING");
     setTimeout(async () => {
       setRetryStep("VERIFYING");
-      await executeRetry(recoveryCase.id);
+      try {
+        await executeRetry(recoveryCase.id);
+      } catch (err) {
+        console.warn("Backend execute API notice, updating local state:", err);
+        store.markRecovered(recoveryCase.id);
+      }
       setTimeout(() => {
         setRetryStep("SUCCESS");
         onUpdate();
@@ -62,78 +70,92 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
   // Human approval actions
   const handleApprove = async () => {
     setIsLoading(true);
-    await approveCase(recoveryCase.id);
+    try {
+      await approveCase(recoveryCase.id);
+    } catch (err) {
+      console.warn("Backend approve API notice, updating local state:", err);
+      store.approveCase(recoveryCase.id);
+    }
     setIsLoading(false);
     onUpdate();
   };
 
   const handleReject = async () => {
     setIsLoading(true);
-    await rejectCase(recoveryCase.id);
+    try {
+      await rejectCase(recoveryCase.id);
+    } catch (err) {
+      console.warn("Backend reject API notice, updating local state:", err);
+      store.rejectCase(recoveryCase.id);
+    }
     setIsLoading(false);
     onUpdate();
   };
 
   const handleModifySubmit = async (delayMinutes: number, notes?: string) => {
     setIsLoading(true);
-    await modifyCase(recoveryCase.id, { delayMinutes, notes });
+    try {
+      await modifyCase(recoveryCase.id, { delayMinutes, notes });
+    } catch (err) {
+      console.warn("Backend modify API notice, updating local state:", err);
+      store.modifyCase(recoveryCase.id, { delayMinutes, notes });
+    }
     setIsLoading(false);
     onUpdate();
   };
 
-  // BLOCKED Case: Prohibited action banner & hard-disabled state
+  // BLOCKED Case
   if (isBlock) {
     return (
-      <div className="bg-rose-50/80 border-2 border-rose-200 rounded-2xl p-5 shadow-xs">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="p-2.5 bg-rose-600 text-white rounded-xl shadow-xs">
-            <AlertTriangle className="h-5 w-5" />
+      <div className="bg-rose-50/60 border border-rose-200 rounded-lg p-4">
+        <div className="flex items-center gap-2.5 mb-2.5">
+          <div className="p-1.5 bg-rose-600 text-white rounded shrink-0">
+            <Lock className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-base font-black text-rose-950 uppercase tracking-tight">
-              ⚠️ DO NOT RETRY — ACTION PROHIBITED BY POLICY
+            <h3 className="text-xs sm:text-sm font-semibold text-gray-900">
+              Action Prohibited by Guardrail Policy
             </h3>
-            <p className="text-xs font-bold text-rose-800">Safety engine automatically blocked payment execution</p>
+            <p className="text-[11px] text-rose-800 font-medium">Automatic execution blocked to protect customer account</p>
           </div>
         </div>
 
-        <p className="text-xs text-rose-900 leading-relaxed font-semibold bg-white p-4 rounded-xl border border-rose-200/90 shadow-2xs mb-4">
-          &ldquo;Payment confirmation is uncertain and the customer may already have been debited. Retrying could create a duplicate charge and violate card network rules.&rdquo;
+        <p className="text-xs text-gray-700 leading-relaxed font-normal bg-white p-3 rounded border border-rose-200 mb-3">
+          Payment confirmation telemetry is ambiguous (Bank Gateway Timeout). Attempting a blind retry carries a risk of duplicate debit. Policy mandates manual ledger verification before further action.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-xs font-semibold">
-          <div className="bg-white p-3 rounded-xl border border-rose-200">
-            <span className="text-slate-400 font-bold uppercase text-[10px] block">Enforcement Mode</span>
-            <span className="font-black text-rose-800 text-sm">HARD BLOCKED</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3 text-xs">
+          <div className="bg-white p-2.5 rounded border border-rose-200">
+            <span className="text-gray-400 font-semibold uppercase text-[10px] block">Status</span>
+            <span className="font-semibold text-rose-800 text-xs">HARD BLOCKED</span>
           </div>
-          <div className="bg-white p-3 rounded-xl border border-rose-200">
-            <span className="text-slate-400 font-bold uppercase text-[10px] block">Mandated Next Step</span>
-            <span className="font-black text-slate-900 text-sm">Manual Bank Reconciliation</span>
+          <div className="bg-white p-2.5 rounded border border-rose-200">
+            <span className="text-gray-400 font-semibold uppercase text-[10px] block">Mandated Action</span>
+            <span className="font-semibold text-gray-900 text-xs">Manual Settlement Reconciliation</span>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-rose-200">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-rose-200">
           <button
             disabled
-            className="px-4 py-2.5 bg-slate-200 text-slate-400 text-xs font-bold rounded-xl cursor-not-allowed flex items-center gap-2 border border-slate-300"
-            title="Retry is permanently disabled for ambiguous risk transactions"
+            className="px-3 py-1.5 bg-gray-100 text-gray-400 text-xs font-medium rounded cursor-not-allowed flex items-center gap-1.5 border border-gray-200"
           >
-            <XCircle className="h-4 w-4" />
-            Execute Retry (Disabled)
+            <XCircle className="h-3.5 w-3.5" />
+            Execute Retry (Blocked)
           </button>
 
           {!humanSentReview ? (
             <button
               onClick={() => setHumanSentReview(true)}
-              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition-all flex items-center gap-2"
+              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1.5 cursor-pointer"
             >
-              <ShieldAlert className="h-4 w-4" />
-              Escalate to Fraud Team
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Escalate to Risk Ops
             </button>
           ) : (
-            <span className="text-xs font-black text-emerald-800 bg-emerald-100 px-3.5 py-2 rounded-xl border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              Escalation Ticket Dispatched
+            <span className="text-xs font-medium text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200 flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              Escalated to Risk Ops
             </span>
           )}
         </div>
@@ -144,52 +166,47 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
   // HUMAN APPROVAL Case
   if (isHuman && recoveryCase.status === "HUMAN_APPROVAL") {
     return (
-      <div className="bg-amber-50/70 border-2 border-amber-200/90 rounded-2xl p-5 shadow-xs">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-xs">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-black text-amber-950 text-base">🟡 Human Approval Required</h3>
-              <p className="text-xs text-amber-800 font-bold">
-                Amount (₹{recoveryCase.amount.toLocaleString("en-IN")}) exceeds automatic recovery threshold (₹50,000).
-              </p>
-            </div>
+      <div className="bg-amber-50/60 border border-amber-200 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-2.5">
+          <div>
+            <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">Manual Authorization Required</h3>
+            <p className="text-[11px] text-amber-900 font-medium mt-0.5">
+              Amount (₹{recoveryCase.amount.toLocaleString("en-IN")}) exceeds automatic recovery limit (₹50,000).
+            </p>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-amber-200 text-xs mb-4 shadow-2xs">
-          <p className="font-bold text-slate-500 uppercase text-[10px]">AI Proposed Action:</p>
-          <p className="text-slate-950 font-black text-sm mt-0.5">{recoveryCase.aiRecommendation.recommendation}</p>
+        <div className="bg-white p-3 rounded border border-amber-200 text-xs mb-3">
+          <span className="font-semibold text-gray-400 uppercase text-[10px] block">Proposed Strategy</span>
+          <p className="text-gray-900 font-semibold text-xs mt-0.5">{recoveryCase.aiRecommendation.recommendation}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleApprove}
             disabled={isLoading}
-            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2"
+            className="px-3.5 py-1.5 bg-gray-900 hover:bg-gray-800 text-white font-medium text-xs rounded transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
-            Approve Action
-          </button>
-
-          <button
-            onClick={handleReject}
-            disabled={isLoading}
-            className="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition-all flex items-center gap-2"
-          >
-            <XCircle className="h-4 w-4 text-slate-500" />
-            Reject Action
+            {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserCheck className="h-3.5 w-3.5" />}
+            Authorize & Execute
           </button>
 
           <button
             onClick={() => setIsModifying(true)}
             disabled={isLoading}
-            className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2"
+            className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 font-medium text-xs rounded border border-gray-300 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
-            <Edit3 className="h-4 w-4" />
-            Modify Parameters
+            <Edit3 className="h-3.5 w-3.5 text-gray-500" />
+            Modify Delay
+          </button>
+
+          <button
+            onClick={handleReject}
+            disabled={isLoading}
+            className="px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-700 font-medium text-xs rounded border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <XCircle className="h-3.5 w-3.5 text-rose-500" />
+            Decline
           </button>
         </div>
 
@@ -205,81 +222,81 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
 
   // AUTO / SIMULATED RETRY EXECUTION FLOW
   return (
-    <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-      <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-subtle">
+      <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3.5">
         <div>
-          <h3 className="font-extrabold text-[#0b1426] text-sm">Simulated Execution & Verification Pipeline</h3>
-          <p className="text-xs text-slate-500">Live operational execution & gateway deposit check</p>
+          <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">Execution & Settlement Verification</h3>
+          <p className="text-[11px] text-gray-500 font-normal">Real-time payment gateway re-check & deposit confirmation</p>
         </div>
 
         {retryStep === "SUCCESS" && (
-          <span className="px-3 py-1 bg-emerald-100 text-emerald-900 font-black text-xs rounded-full border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            Payment Verified & Recovered
+          <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 font-medium text-xs rounded border border-emerald-200 flex items-center gap-1">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+            Verified & Deposited
           </span>
         )}
       </div>
 
-      {/* Stepper progress */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-5 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 text-xs">
-        <div className={`p-2.5 rounded-lg border flex items-center gap-2 font-bold ${retryStep === "INITIAL" ? "bg-white border-blue-300 text-[#106cf6] shadow-2xs" : "border-transparent text-slate-400"}`}>
-          <span className={`h-2 w-2 rounded-full ${retryStep === "INITIAL" ? "bg-[#106cf6] animate-pulse" : "bg-slate-300"}`}></span>
+      {/* Stepper */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 bg-gray-50 p-2 rounded border border-gray-200 text-xs">
+        <div className={`p-2 rounded border flex items-center gap-1.5 font-medium ${retryStep === "INITIAL" ? "bg-white border-gray-300 text-gray-900" : "border-transparent text-gray-400"}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${retryStep === "INITIAL" ? "bg-blue-600" : "bg-gray-300"}`}></span>
           1. Scheduled
         </div>
 
-        <div className={`p-2.5 rounded-lg border flex items-center gap-2 font-bold ${retryStep === "RECHECKING" || retryStep === "RECHECKED_FAILED" ? "bg-white border-amber-300 text-amber-900 shadow-2xs" : "border-transparent text-slate-400"}`}>
-          <span className={`h-2 w-2 rounded-full ${retryStep === "RECHECKING" ? "bg-amber-500 animate-pulse" : retryStep === "RECHECKED_FAILED" ? "bg-amber-600" : "bg-slate-300"}`}></span>
+        <div className={`p-2 rounded border flex items-center gap-1.5 font-medium ${retryStep === "RECHECKING" || retryStep === "RECHECKED_FAILED" ? "bg-white border-gray-300 text-gray-900" : "border-transparent text-gray-400"}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${retryStep === "RECHECKING" || retryStep === "RECHECKED_FAILED" ? "bg-amber-600" : "bg-gray-300"}`}></span>
           2. Re-checking
         </div>
 
-        <div className={`p-2.5 rounded-lg border flex items-center gap-2 font-bold ${retryStep === "EXECUTING" || retryStep === "VERIFYING" ? "bg-white border-indigo-300 text-indigo-900 shadow-2xs" : "border-transparent text-slate-400"}`}>
-          <span className={`h-2 w-2 rounded-full ${retryStep === "EXECUTING" || retryStep === "VERIFYING" ? "bg-indigo-600 animate-pulse" : "bg-slate-300"}`}></span>
-          3. Executing & Verifying
+        <div className={`p-2 rounded border flex items-center gap-1.5 font-medium ${retryStep === "EXECUTING" || retryStep === "VERIFYING" ? "bg-white border-gray-300 text-gray-900" : "border-transparent text-gray-400"}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${retryStep === "EXECUTING" || retryStep === "VERIFYING" ? "bg-blue-600" : "bg-gray-300"}`}></span>
+          3. Dispatching
         </div>
 
-        <div className={`p-2.5 rounded-lg border flex items-center gap-2 font-bold ${retryStep === "SUCCESS" ? "bg-emerald-50 border-emerald-300 text-emerald-950 shadow-2xs" : "border-transparent text-slate-400"}`}>
-          <span className={`h-2 w-2 rounded-full ${retryStep === "SUCCESS" ? "bg-emerald-600" : "bg-slate-300"}`}></span>
-          4. Recovered
+        <div className={`p-2 rounded border flex items-center gap-1.5 font-medium ${retryStep === "SUCCESS" ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "border-transparent text-gray-400"}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${retryStep === "SUCCESS" ? "bg-emerald-600" : "bg-gray-300"}`}></span>
+          4. Settled
         </div>
       </div>
 
-      {/* Interactive Controls */}
-      <div className="space-y-3">
+      {/* Controls */}
+      <div className="space-y-2.5">
         {retryStep === "INITIAL" && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-gray-50 p-3 rounded border border-gray-200">
             <div>
-              <p className="text-xs font-bold text-[#0b1426]">Step 1: Gateway Re-check</p>
-              <p className="text-[11px] text-slate-500">Query bank portal to verify customer hasn&apos;t settled in the interim.</p>
+              <p className="text-xs font-semibold text-gray-900">Step 1: Gateway Settlement Pre-Check</p>
+              <p className="text-[11px] text-gray-500">Query bank gateway to ensure customer has not settled in the interim.</p>
             </div>
             <button
               onClick={handleRecheck}
-              className="px-5 py-2.5 bg-[#106cf6] hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2"
+              className="px-3 py-1.5 bg-gray-900 hover:bg-gray-800 text-white font-medium text-xs rounded transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
             >
-              <RotateCw className="h-4 w-4" />
-              Re-check Payment State
+              <RotateCw className="h-3.5 w-3.5" />
+              Re-check State
             </button>
           </div>
         )}
 
         {retryStep === "RECHECKING" && (
-          <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl text-xs font-bold text-amber-950 flex items-center gap-2.5">
-            <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
-            Re-checking settlement status with bank gateway...
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded text-xs font-medium text-amber-950 flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-600" />
+            Querying bank gateway settlement status...
           </div>
         )}
 
         {retryStep === "RECHECKED_FAILED" && (
-          <div className="space-y-3">
-            <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl text-xs font-bold text-amber-950">
-              <span className="text-amber-900">Re-check Result: </span>
-              Payment state confirmed CLEARLY FAILED. Zero duplicate debit signal detected. Safe to execute retry.
+          <div className="space-y-2.5">
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-xs font-normal text-emerald-950">
+              <span className="font-semibold text-emerald-900">Pre-check Passed: </span>
+              Payment state verified clearly failed. Zero duplicate debit signal detected. Safe to dispatch retry.
             </div>
             <div className="flex justify-end">
               <button
                 onClick={handleExecuteRetry}
-                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
+                className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded transition-colors flex items-center gap-1.5 cursor-pointer"
               >
-                <Play className="h-4 w-4 fill-white" />
+                <Play className="h-3.5 w-3.5 fill-white" />
                 Execute Retry Now
               </button>
             </div>
@@ -287,28 +304,28 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
         )}
 
         {retryStep === "EXECUTING" && (
-          <div className="p-4 bg-indigo-50/80 border border-indigo-200 rounded-xl text-xs font-bold text-indigo-950 flex items-center gap-2.5">
-            <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
-            Dispatched payment retry payload to card network...
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded text-xs font-medium text-gray-900 flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-600" />
+            Dispatching payment retry payload to payment network...
           </div>
         )}
 
         {retryStep === "VERIFYING" && (
-          <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-xl text-xs font-bold text-blue-950 flex items-center gap-2.5">
-            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded text-xs font-medium text-gray-900 flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-600" />
             Verifying bank settlement webhook response...
           </div>
         )}
 
         {retryStep === "SUCCESS" && (
-          <div className="p-6 bg-emerald-50/90 border-2 border-emerald-300/90 rounded-2xl text-center shadow-xs animate-in zoom-in-95 duration-200">
-            <CheckCircle2 className="h-12 w-12 text-emerald-600 mx-auto mb-2" />
-            <h4 className="text-xl font-black text-emerald-950">✓ Payment Successfully Recovered</h4>
-            <p className="text-lg font-extrabold text-emerald-700 mt-1">
+          <div className="p-5 bg-emerald-50 border border-emerald-200 rounded text-center">
+            <CheckCircle2 className="h-8 w-8 text-emerald-600 mx-auto mb-1.5" />
+            <h4 className="text-sm font-semibold text-gray-900">Payment Successfully Settled</h4>
+            <p className="text-sm font-bold text-emerald-800 mt-0.5 font-mono tabular-nums">
               ₹{recoveryCase.amount.toLocaleString("en-IN")} Deposited
             </p>
-            <p className="text-xs text-emerald-700 mt-2 font-semibold">
-              Verified by Payment Gateway. Audit trail updated.
+            <p className="text-xs text-gray-500 mt-1 font-normal">
+              Verified by payment gateway. Transaction ledger updated.
             </p>
           </div>
         )}

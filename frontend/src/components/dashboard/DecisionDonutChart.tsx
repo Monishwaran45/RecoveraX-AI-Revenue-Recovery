@@ -12,37 +12,36 @@ interface DecisionDonutProps {
 
 export default function DecisionDonutChart({ data }: DecisionDonutProps) {
   const chartData = [
-    { name: "AUTO", value: data.auto, color: "#10b981", bg: "bg-emerald-500" },
-    { name: "HUMAN", value: data.human, color: "#f59e0b", bg: "bg-amber-500" },
-    { name: "BLOCKED", value: data.blocked, color: "#ef4444", bg: "bg-rose-500" },
+    { name: "Auto",    value: data.auto,    color: "#059669", bg: "bg-emerald-600" },
+    { name: "Review",  value: data.human,   color: "#d97706", bg: "bg-amber-600" },
+    { name: "Blocked", value: data.blocked, color: "#dc2626", bg: "bg-rose-600" },
   ];
 
   const total = data.auto + data.human + data.blocked;
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-subtle flex flex-col justify-between">
+      <div className="flex items-center justify-between pb-2.5 border-b border-gray-100 mb-2.5">
         <div>
-          <h3 className="font-extrabold text-[#0b1426] text-sm">Decision Distribution</h3>
-          <p className="text-xs text-slate-500">AI and Safety Engine decision split</p>
+          <h3 className="font-semibold text-gray-900 text-xs">Authorization Breakdown</h3>
+          <p className="text-[11px] text-gray-500 font-normal">Policy distribution</p>
         </div>
-        <span className="text-xs font-black text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-          {total} Total Actions
+        <span className="text-[11px] font-mono text-gray-600 bg-gray-50 px-2 py-0.2 rounded border border-gray-200">
+          {total} Actions
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-        {/* Chart container */}
-        <div className="h-44 relative flex items-center justify-center">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-center">
+        <div className="h-32 relative flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={chartData}
                 cx="50%"
                 cy="50%"
-                innerRadius={52}
-                outerRadius={78}
-                paddingAngle={4}
+                innerRadius={42}
+                outerRadius={56}
+                paddingAngle={3}
                 dataKey="value"
               >
                 {chartData.map((entry, index) => (
@@ -51,29 +50,29 @@ export default function DecisionDonutChart({ data }: DecisionDonutProps) {
               </Pie>
               <Tooltip
                 formatter={(val: number) => [`${val} Cases`, "Volume"]}
-                contentStyle={{ backgroundColor: "#ffffff", borderRadius: "10px", borderColor: "#e2e8f0", fontSize: "12px", fontWeight: "700" }}
+                contentStyle={{ backgroundColor: "#111827", borderRadius: "6px", borderColor: "#374151", color: "#f9fafb", fontSize: "11px", fontWeight: "500" }}
+                itemStyle={{ color: "#f9fafb" }}
               />
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-2xl font-black text-[#0b1426]">{total}</span>
-            <span className="text-[10px] uppercase font-bold text-slate-400">Decisions</span>
+            <span className="text-lg font-bold font-mono text-gray-900 tabular-nums">{total}</span>
+            <span className="text-[9px] uppercase font-medium text-gray-400">Total</span>
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="space-y-2.5">
+        <div className="space-y-1.5">
           {chartData.map((item) => {
             const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
             return (
-              <div key={item.name} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
-                <div className="flex items-center gap-2.5">
-                  <span className={`h-3 w-3 rounded-full ${item.bg}`}></span>
-                  <span className="font-extrabold text-[#0b1426]">{item.name}</span>
+              <div key={item.name} className="flex items-center justify-between p-1.5 rounded bg-gray-50 border border-gray-100 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${item.bg}`} />
+                  <span className="font-medium text-gray-800 text-[11px]">{item.name}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-[#0b1426]">{item.value}</span>
-                  <span className="text-slate-400 font-bold text-[11px]">({pct}%)</span>
+                <div className="flex items-center gap-1 font-mono">
+                  <span className="font-semibold text-gray-900 tabular-nums">{item.value}</span>
+                  <span className="text-gray-400 text-[10px] tabular-nums">({pct}%)</span>
                 </div>
               </div>
             );

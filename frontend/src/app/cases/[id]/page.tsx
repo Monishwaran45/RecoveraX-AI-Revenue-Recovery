@@ -14,13 +14,9 @@ import ActionPanel from "@/components/ui/ActionPanel";
 import AuditTimeline from "@/components/ui/AuditTimeline";
 import { 
   ArrowLeft, 
-  CreditCard, 
-  User, 
   FileText,
-  ShieldCheck,
-  Zap,
   Building2,
-  Lock
+  Mail
 } from "lucide-react";
 
 export default function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -31,9 +27,14 @@ export default function CaseDetailPage({ params }: { params: Promise<{ id: strin
 
   const loadCase = async () => {
     setLoading(true);
-    const data = await getCase(unwrappedParams.id);
-    setRecoveryCase(data ? { ...data } : null);
-    setLoading(false);
+    try {
+      const data = await getCase(unwrappedParams.id);
+      setRecoveryCase(data ? { ...data } : null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -47,29 +48,31 @@ export default function CaseDetailPage({ params }: { params: Promise<{ id: strin
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400 text-xs font-semibold">
-        Loading case details for {unwrappedParams.id}...
+      <div className="flex flex-col items-center justify-center h-80 text-gray-400 space-y-2">
+        <div className="h-6 w-6 rounded-full border-2 border-gray-900 border-t-transparent animate-spin" />
+        <p className="text-xs font-mono text-gray-500">
+          Loading case {unwrappedParams.id}...
+        </p>
       </div>
     );
   }
 
   if (!recoveryCase) {
     return (
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-10 text-center space-y-4 shadow-xs">
-        <h2 className="text-xl font-black text-[#0b1426]">Case Not Found</h2>
-        <p className="text-xs text-slate-500 font-medium">Case {unwrappedParams.id} could not be located in the system.</p>
+      <div className="bg-white border border-gray-200 rounded-lg p-8 text-center space-y-3 shadow-subtle">
+        <h2 className="text-sm font-semibold text-gray-900">Case Not Found</h2>
+        <p className="text-xs text-gray-500 font-normal">Case {unwrappedParams.id} could not be located.</p>
         <Link
           href="/cases"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#106cf6] text-white text-xs font-extrabold rounded-xl shadow-xs"
+          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-gray-900 text-white text-xs font-medium rounded hover:bg-gray-800 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Return to Recovery Cases
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Return to Cases
         </Link>
       </div>
     );
   }
 
-  // Get initial letters for customer avatar
   const customerInitials = recoveryCase.customerName
     .split(" ")
     .map((n) => n[0])
@@ -78,123 +81,126 @@ export default function CaseDetailPage({ params }: { params: Promise<{ id: strin
     .toUpperCase();
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Back button & Breadcrumbs */}
+    <div className="space-y-5 pb-10">
+      {/* Back button */}
       <div className="flex items-center justify-between">
         <Link
           href="/cases"
-          className="inline-flex items-center gap-1.5 text-xs font-extrabold text-slate-500 hover:text-[#106cf6] transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Recovery Cases
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to Cases
         </Link>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-mono font-bold">Case ID: {recoveryCase.id}</span>
+          <span className="text-xs text-gray-400 font-mono">Case ID: {recoveryCase.id}</span>
           <StatusBadge status={recoveryCase.status} />
         </div>
       </div>
 
-      {/* Main Case Header Card */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-blue-50 text-[#106cf6] border border-blue-200 flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+      {/* Case Header Card */}
+      <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="h-10 w-10 rounded-md bg-gray-100 text-gray-800 border border-gray-200 flex items-center justify-center font-bold text-xs shrink-0">
             {customerInitials}
           </div>
           <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-2xl font-black text-[#0b1426] font-mono tracking-tight">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-bold text-gray-900 font-mono tracking-tight">
                 {recoveryCase.id}
               </h1>
               <RiskBadge risk={recoveryCase.risk} />
-              <PolicyBadge type={recoveryCase.policyDecision.type} />
+              <PolicyBadge type={recoveryCase.policyDecision?.type} />
             </div>
-            <div className="flex flex-wrap items-center gap-3.5 mt-2 text-xs text-slate-600 font-semibold">
-              <span className="flex items-center gap-1.5 text-[#0b1426] font-bold">
-                <Building2 className="h-4 w-4 text-slate-400" />
+            <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-gray-600 font-medium">
+              <span className="flex items-center gap-1 text-gray-900 font-medium">
+                <Building2 className="h-3.5 w-3.5 text-gray-400" />
                 {recoveryCase.customerName}
               </span>
-              <span className="text-slate-300">•</span>
-              <span className="flex items-center gap-1 text-slate-500">
-                <FileText className="h-4 w-4 text-slate-400" />
-                {recoveryCase.type.replace("_", " ")}
+              <span className="text-gray-300">•</span>
+              <span className="flex items-center gap-1 text-gray-500">
+                <FileText className="h-3.5 w-3.5 text-gray-400" />
+                {recoveryCase.type?.replace("_", " ") || "Payment"}
               </span>
-              <span className="text-slate-300">•</span>
-              <span className="text-slate-500 font-mono">{recoveryCase.customerEmail}</span>
+              <span className="text-gray-300">•</span>
+              <span className="text-gray-500 font-mono flex items-center gap-1">
+                <Mail className="h-3 w-3 text-gray-400" />
+                {recoveryCase.customerEmail}
+              </span>
             </div>
           </div>
         </div>
 
-        <div className="text-left md:text-right bg-slate-50 p-4 rounded-xl border border-slate-100 min-w-48">
-          <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">At-Risk Amount</span>
-          <span className="text-2xl font-black text-[#0b1426]">
-            ₹{recoveryCase.amount.toLocaleString("en-IN")}
+        <div className="text-left md:text-right bg-gray-50 p-3 rounded border border-gray-200 min-w-44">
+          <span className="text-[10px] font-semibold uppercase text-gray-400 block tracking-wider">Amount at Risk</span>
+          <span className="text-xl font-bold text-gray-900 font-mono tabular-nums">
+            ₹{recoveryCase.amount?.toLocaleString("en-IN")}
           </span>
         </div>
       </div>
 
-      {/* Summary Row (4 KPI Cards) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-            Recovery Confidence Score
+      {/* Summary Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-subtle">
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">
+            Confidence Score
           </span>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-[#0b1426]">{recoveryCase.score}</span>
-            <span className="text-xs text-slate-400 font-bold">/ 100</span>
+          <div className="mt-1 flex items-baseline gap-1">
+            <span className="text-xl font-bold text-gray-900 font-mono tabular-nums">{recoveryCase.score}</span>
+            <span className="text-xs text-gray-400">/ 100</span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-0.5 font-semibold">Algorithmic likelihood</p>
+          <p className="text-[11px] text-gray-500 mt-0.5 font-normal">Recovery score</p>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-            Risk Classification
+        <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-subtle">
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">
+            Risk Tier
           </span>
-          <div className="mt-2">
+          <div className="mt-1.5">
             <RiskBadge risk={recoveryCase.risk} />
           </div>
-          <p className="text-[11px] text-slate-500 mt-1 font-semibold">Evaluated risk tier</p>
+          <p className="text-[11px] text-gray-500 mt-1 font-normal">Account classification</p>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+        <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-subtle">
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">
             Retry Sequence
           </span>
-          <div className="mt-1">
-            <span className="text-2xl font-black text-[#0b1426]">
+          <div className="mt-1 font-mono">
+            <span className="text-xl font-bold text-gray-900 tabular-nums">
               {recoveryCase.retryCount}
             </span>
-            <span className="text-xs text-slate-400 font-bold"> / {recoveryCase.maxRetries} Max</span>
+            <span className="text-xs text-gray-400"> / {recoveryCase.maxRetries} Max</span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-0.5 font-semibold">Attempt threshold</p>
+          <p className="text-[11px] text-gray-500 mt-0.5 font-normal">Attempt limit</p>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-            Gateway Payment State
+        <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-subtle">
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">
+            Gateway Telemetry State
           </span>
-          <div className="mt-2">
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black border ${
+          <div className="mt-1.5">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border ${
               recoveryCase.paymentState === "CLEARLY_FAILED"
                 ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                 : recoveryCase.paymentState === "BANK_TIMEOUT"
                 ? "bg-amber-50 text-amber-900 border-amber-200"
                 : "bg-rose-50 text-rose-900 border-rose-200"
             }`}>
-              {recoveryCase.paymentState.replace("_", " ")}
+              {recoveryCase.paymentState?.replace("_", " ") || "CLEAR"}
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1 font-semibold">Bank signal status</p>
+          <p className="text-[11px] text-gray-500 mt-1 font-normal">Bank response state</p>
         </div>
       </div>
 
       {/* Grid: AI Analysis vs Policy Decision */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <AIRecommendationCard data={recoveryCase.aiRecommendation} />
         <PolicyDecisionCard data={recoveryCase.policyDecision} />
       </div>
 
-      {/* Interactive Action Simulation Panel */}
+      {/* Action Simulation Panel */}
       <ActionPanel recoveryCase={recoveryCase} onUpdate={loadCase} />
 
       {/* Audit Timeline */}

@@ -22,3 +22,15 @@ export async function getCaseAuditLogs(caseId: string): Promise<AuditRecord[]> {
   }
   return [];
 }
+
+export async function getAllAuditLogs(limit: number = 200): Promise<AuditRecord[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/audit/logs?limit=${limit}`, { cache: "no-store" });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    console.warn("Audit logs fetch failed", e);
+  }
+  return [];
+}

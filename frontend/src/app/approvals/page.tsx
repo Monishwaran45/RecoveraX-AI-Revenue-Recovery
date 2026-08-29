@@ -15,10 +15,9 @@ import {
   XCircle, 
   Edit3, 
   CheckCircle2, 
-  Sparkles, 
   ArrowRight,
   ShieldAlert,
-  Building2
+  Clock
 } from "lucide-react";
 
 export default function ApprovalsPage() {
@@ -30,9 +29,14 @@ export default function ApprovalsPage() {
 
   const fetchApprovals = async () => {
     setLoading(true);
-    const data = await getApprovalCases();
-    setApprovalList(data);
-    setLoading(false);
+    try {
+      const data = await getApprovalCases();
+      setApprovalList(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -64,173 +68,154 @@ export default function ApprovalsPage() {
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-5 pb-10">
       {/* Header Banner */}
-      <div className="pb-2 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500 text-white rounded-xl shadow-xs">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <h1 className="text-2xl font-black text-[#0b1426] tracking-tight">Human Approval Queue</h1>
-            <span className="px-3 py-0.5 rounded-full text-xs font-black bg-amber-100 text-amber-950 border border-amber-300 shadow-2xs">
-              {approvalList.length} Pending Actions
-            </span>
+      <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-amber-600 text-white rounded shrink-0">
+            <ShieldCheck className="h-4 w-4" />
           </div>
-          <p className="text-xs font-bold text-slate-500 mt-1">
-            Financial operations requiring explicit merchant authorization.
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">Manual Review Queue</h1>
+              <span className="px-2 py-0.2 rounded text-[11px] font-mono font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                {approvalList.length} Pending
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 font-normal mt-0.5">
+              High-exposure transactions requiring operator authorization prior to execution.
+            </p>
+          </div>
         </div>
 
-        <div className="bg-amber-50/80 border border-amber-200/90 rounded-xl px-4 py-2.5 text-xs text-amber-950 flex items-center gap-2.5 shadow-2xs">
-          <ShieldAlert className="h-4 w-4 text-amber-700 shrink-0" />
-          <span className="font-semibold">
-            <strong>Mandatory Safety Rule:</strong> High-value retries exceeding ₹50,000 auto-limit require merchant sign-off.
+        <div className="bg-amber-50 border border-amber-200 rounded px-3 py-1.5 text-xs text-amber-950 flex items-center gap-2 self-start sm:self-auto">
+          <ShieldAlert className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+          <span className="font-normal text-[11px]">
+            <strong>Policy Limit:</strong> Transactions &gt; ₹50,000 require manual sign-off.
           </span>
         </div>
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-slate-400 text-xs font-semibold">Loading approval queue...</div>
+        <div className="p-10 text-center text-gray-400 text-xs font-mono">Loading review queue...</div>
       ) : approvalList.length === 0 ? (
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-12 text-center space-y-4 shadow-xs">
-          <div className="h-14 w-14 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto shadow-2xs">
-            <CheckCircle2 className="h-7 w-7" />
+        <div className="bg-white border border-gray-200 rounded-lg p-10 text-center space-y-2 shadow-subtle">
+          <div className="h-10 w-10 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="h-5 w-5" />
           </div>
-          <h2 className="text-lg font-black text-[#0b1426]">Human Approval Queue Clear!</h2>
-          <p className="text-xs text-slate-500 font-semibold max-w-sm mx-auto">
-            All pending high-risk or threshold-exceeding recovery actions have been reviewed and resolved.
+          <h2 className="text-sm font-semibold text-gray-900">Review Queue Cleared</h2>
+          <p className="text-xs text-gray-500 font-normal max-w-sm mx-auto">
+            All pending high-risk or threshold-exceeding transactions have been resolved.
           </p>
           <button
             onClick={() => router.push("/cases")}
-            className="mt-2 px-5 py-2.5 bg-[#106cf6] text-white font-extrabold text-xs rounded-xl shadow-xs hover:bg-blue-700 transition-all inline-flex items-center gap-1.5"
+            className="mt-2 px-3.5 py-1.5 bg-gray-900 hover:bg-gray-800 text-white font-medium text-xs rounded transition-colors inline-flex items-center gap-1.5 cursor-pointer"
           >
-            Browse All Recovery Cases
-            <ArrowRight className="h-4 w-4" />
+            <span>Browse All Cases</span>
+            <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {approvalList.map((c) => (
             <div
               key={c.id}
-              className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all relative overflow-hidden"
+              className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 shadow-subtle hover:border-gray-300 transition-colors relative"
             >
-              <div className="absolute top-0 left-0 right-0 h-1 bg-[#106cf6]"></div>
-
               {/* Card Top Info */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-100">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2.5">
                   <span
                     onClick={() => router.push(`/cases/${c.id}`)}
-                    className="font-mono font-black text-[#106cf6] text-sm hover:underline cursor-pointer"
+                    className="font-mono font-semibold text-blue-600 text-xs hover:underline cursor-pointer"
                   >
                     {c.id}
                   </span>
-                  <h3 className="font-extrabold text-[#0b1426] text-base">{c.customerName}</h3>
+                  <span className="text-gray-300">·</span>
+                  <h3 className="font-semibold text-gray-900 text-xs">{c.customerName}</h3>
                   <RiskBadge risk={c.risk} />
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <RecoveryScoreBadge score={c.score} />
-                  <span className="text-xl font-black text-[#0b1426]">
+                  <span className="text-base font-bold text-gray-900 font-mono tabular-nums">
                     ₹{c.amount.toLocaleString("en-IN")}
                   </span>
                 </div>
               </div>
 
-              {/* Grid: AI Analysis vs Policy Reason */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-                {/* AI Rec */}
-                <div className="bg-blue-50/60 p-4 rounded-xl border border-blue-100/90 space-y-2.5">
-                  <div className="flex items-center gap-2 text-blue-950 font-extrabold text-xs">
-                    <Sparkles className="h-4 w-4 text-[#106cf6]" />
-                    <span>AI Diagnosis & Strategy</span>
-                  </div>
-                  <p className="text-xs font-black text-blue-950">{c.aiRecommendation.recommendation}</p>
-
-                  <div className="pt-2 border-t border-blue-100 text-[11px] space-y-1">
-                    <span className="font-bold text-slate-500 uppercase text-[10px] block">Supporting Evidence:</span>
-                    <ul className="space-y-1">
-                      {c.aiRecommendation.evidence.slice(0, 4).map((ev) => (
-                        <li key={ev.id} className="flex items-center gap-1.5 text-slate-700 font-semibold">
-                          <span className="text-emerald-600 font-bold">•</span>
-                          <span>{ev.text}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              {/* Strategy & Reason */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-3 text-xs">
+                <div className="p-2.5 bg-gray-50 border border-gray-200 rounded space-y-0.5">
+                  <span className="text-[10px] uppercase font-semibold text-gray-500 block tracking-wider">
+                    Recommended Recovery Plan
+                  </span>
+                  <p className="font-medium text-gray-900 text-xs">
+                    {c.aiRecommendation?.recommendation || "Scheduled Retry"}
+                  </p>
+                  <p className="text-[11px] text-gray-600 font-normal leading-relaxed">
+                    {c.aiRecommendation?.diagnosis || "Payment failure root cause evaluated."}
+                  </p>
                 </div>
 
-                {/* Policy Reason */}
-                <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-100/90 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 text-amber-950 font-extrabold text-xs mb-1.5">
-                      <ShieldAlert className="h-4 w-4 text-amber-700" />
-                      <span>Policy Escalation Reason</span>
-                    </div>
-                    <p className="text-xs text-amber-950 font-semibold leading-relaxed bg-white p-3 rounded-xl border border-amber-200/90 shadow-2xs">
-                      {c.policyDecision.reason}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 text-[11px] text-slate-500 font-medium italic">
-                    Requires merchant authorization before dispatching retry.
-                  </div>
+                <div className="p-2.5 bg-amber-50/50 border border-amber-200 rounded space-y-0.5">
+                  <span className="text-[10px] uppercase font-semibold text-amber-900 block tracking-wider">
+                    Policy Routing Reason
+                  </span>
+                  <p className="font-medium text-amber-950 text-xs leading-relaxed">
+                    {c.policyDecision?.reason || "High exposure transaction requires manual operator sign-off."}
+                  </p>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  onClick={() => router.push(`/cases/${c.id}`)}
-                  className="text-xs font-extrabold text-[#106cf6] hover:text-blue-800 flex items-center gap-1 transition-colors"
-                >
-                  Inspect Case Details
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
+              <div className="pt-2.5 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2.5">
+                <span className="text-[11px] text-gray-500 font-normal flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-gray-400" />
+                  Scheduled delay: <span className="font-mono text-gray-700">{c.scheduledDelayMinutes || 30} mins</span>
+                </span>
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleApprove(c.id)}
                     disabled={actionLoadingId === c.id}
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
-                  >
-                    <UserCheck className="h-4 w-4" />
-                    Approve
-                  </button>
-
-                  <button
-                    onClick={() => handleReject(c.id)}
-                    disabled={actionLoadingId === c.id}
-                    className="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition-all flex items-center gap-1.5"
-                  >
-                    <XCircle className="h-4 w-4 text-slate-500" />
-                    Reject
-                  </button>
-
-                  <button
                     onClick={() => setModifyingCase(c)}
-                    disabled={actionLoadingId === c.id}
-                    className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                    className="px-3 py-1 bg-white hover:bg-gray-50 text-gray-700 font-medium text-xs rounded border border-gray-300 transition-colors flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                   >
-                    <Edit3 className="h-4 w-4" />
+                    <Edit3 className="h-3 w-3" />
                     Modify
+                  </button>
+
+                  <button
+                    disabled={actionLoadingId === c.id}
+                    onClick={() => handleReject(c.id)}
+                    className="px-3 py-1 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 font-medium text-xs rounded transition-colors flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                  >
+                    <XCircle className="h-3 w-3" />
+                    Decline
+                  </button>
+
+                  <button
+                    disabled={actionLoadingId === c.id}
+                    onClick={() => handleApprove(c.id)}
+                    className="px-3.5 py-1 bg-gray-900 hover:bg-gray-800 text-white font-medium text-xs rounded transition-colors flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                  >
+                    <UserCheck className="h-3 w-3" />
+                    {actionLoadingId === c.id ? "Authorizing..." : "Authorize"}
                   </button>
                 </div>
               </div>
             </div>
           ))}
-
-          {modifyingCase && (
-            <ModifyActionModal
-              recoveryCase={modifyingCase}
-              isOpen={true}
-              onClose={() => setModifyingCase(null)}
-              onSubmit={handleModifySubmit}
-            />
-          )}
         </div>
+      )}
+
+      {/* Modify Action Modal */}
+      {modifyingCase && (
+        <ModifyActionModal
+          caseData={modifyingCase}
+          onClose={() => setModifyingCase(null)}
+          onSubmit={handleModifySubmit}
+        />
       )}
     </div>
   );

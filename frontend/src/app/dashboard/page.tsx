@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import MetricCard from "@/components/ui/MetricCard";
 import RecoveryFunnel from "@/components/dashboard/RecoveryFunnel";
 import DecisionDonutChart from "@/components/dashboard/DecisionDonutChart";
+import RecoveryTrendChart from "@/components/dashboard/RecoveryTrendChart";
 import SimulatorPanel from "@/components/simulator/SimulatorPanel";
 import { RiskBadge, StatusBadge, PolicyBadge } from "@/components/ui/RiskBadge";
 import RecoveryScoreBadge from "@/components/ui/RecoveryScoreBadge";
@@ -13,15 +14,14 @@ import { getCases } from "@/lib/api/cases";
 import { store } from "@/lib/store";
 import { DashboardMetrics, RecoveryCase } from "@/lib/types";
 import {
-  AlertTriangle,
+  ShieldAlert,
   TrendingUp,
-  ShieldCheck,
+  CreditCard,
   DollarSign,
   CheckCircle2,
   ArrowRight,
-  Zap,
   Play,
-  Layers,
+  ArrowUpRight,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -30,10 +30,14 @@ export default function DashboardPage() {
   const [cases, setCases] = useState<RecoveryCase[]>([]);
 
   const loadData = async () => {
-    const m = await getDashboardMetrics();
-    const c = await getCases();
-    setMetrics(m);
-    setCases(c.slice(0, 7));
+    try {
+      const m = await getDashboardMetrics();
+      const c = await getCases();
+      setMetrics(m);
+      setCases(c.slice(0, 7));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   useEffect(() => {
@@ -43,184 +47,177 @@ export default function DashboardPage() {
 
   if (!metrics) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400 text-xs font-semibold font-mono">
-        Loading live database metrics...
+      <div className="flex flex-col items-center justify-center h-80 text-gray-400 space-y-2">
+        <div className="h-6 w-6 rounded-full border-2 border-gray-900 border-t-transparent animate-spin" />
+        <p className="text-xs font-mono text-gray-500">Loading portfolio metrics...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* 1. Product Headline & Value Proposition Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            RECOVERAX
-          </h1>
-          <p className="text-sm font-semibold text-slate-500 mt-1">
-            Recover revenue automatically. Keep financial risk under control.
-          </p>
-        </div>
-
-        {/* Safety Pipeline Philosophy Callout */}
-        <div className="bg-slate-900 text-slate-100 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm border border-slate-800">
-          <Layers className="h-4 w-4 text-blue-400 shrink-0" />
-          <div className="text-xs font-medium">
-            <span className="text-slate-400 font-semibold uppercase text-[10px] block">
-              Pipeline of Control
-            </span>
-            <span className="font-bold text-white">
-              AI Recommends → Policy Authorizes → Human Controls Risk
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Business Impact KPIs (4 Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="Revenue at Risk"
-          value={`₹${(metrics.revenueAtRisk / 100000).toFixed(1)}L`}
-          description="Failed payments & risk events"
-          icon={DollarSign}
-          trend={`${metrics.totalCases} Cases`}
-          trendUp={true}
-          iconBgColor="bg-slate-100"
-          iconTextColor="text-slate-700"
-        />
-        <MetricCard
-          title="Revenue Recovered"
-          value={`₹${(metrics.grossRecovered / 100000).toFixed(1)}L`}
-          description="Successfully retried & deposited"
-          icon={CheckCircle2}
-          trend={`+₹${(metrics.grossRecovered / 100000).toFixed(1)}L Gross`}
-          trendUp={true}
-          iconBgColor="bg-emerald-50"
-          iconTextColor="text-emerald-600"
-          valueColor="text-emerald-900"
-          subtextClass="text-emerald-700"
-        />
-        <MetricCard
-          title="Recovery Rate"
-          value={`${(metrics.recoveryRate || 0).toFixed(1)}%`}
-          description="Gross recovery rate"
-          icon={TrendingUp}
-          trend={`${(metrics.recoveryRate || 0).toFixed(1)}% Rate`}
-          trendUp={true}
-          iconBgColor="bg-blue-50"
-          iconTextColor="text-blue-600"
-          valueColor="text-blue-900"
-        />
-        <MetricCard
-          title="Active Cases"
-          value={`${metrics.totalCases}`}
-          description="Monitored in DB"
-          icon={ShieldCheck}
-          trend={`${metrics.safetyActionsPrevented} Blocked`}
-          trendUp={true}
-          iconBgColor="bg-indigo-50"
-          iconTextColor="text-indigo-600"
-        />
-      </div>
-
-      {/* 3. RECOVERY SIMULATOR — PRIMARY FEATURE ON OVERVIEW */}
-      <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+    <div className="space-y-6 pb-10">
+      {/* ── 1. Recovery Simulator Sandbox ── */}
+      <section className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-subtle">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-600 text-white rounded-xl shadow-xs">
-              <Play className="h-5 w-5 fill-white" />
+            <div className="p-1.5 bg-gray-900 text-white rounded shrink-0">
+              <Play className="h-3.5 w-3.5 fill-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-                Live Agent Recovery Simulator
-              </h2>
-              <p className="text-xs text-slate-500 font-medium">
-                Run a real recovery scenario and watch the AI agent make and execute decisions.
+              <h1 className="text-xs sm:text-sm font-semibold text-gray-900">
+                Recovery Agent Simulator
+              </h1>
+              <p className="text-[11px] text-gray-500 font-normal">
+                Test failure diagnostics, policy routing, and multi-step recovery workflows
               </p>
             </div>
           </div>
-
           <button
             onClick={() => router.push("/simulator")}
-            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+            className="px-3 py-1 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium rounded border border-gray-300 transition-colors flex items-center gap-1 cursor-pointer"
           >
-            Open Full Simulator
-            <ArrowRight className="h-3.5 w-3.5" />
+            <span>Full Simulator</span>
+            <ArrowUpRight className="h-3 w-3 text-gray-400" />
           </button>
         </div>
+        <div className="p-4 sm:p-5">
+          <SimulatorPanel isCompact={false} />
+        </div>
+      </section>
 
-        <SimulatorPanel isCompact={true} />
-      </div>
-
-      {/* 4. RECOVERY PIPELINE FUNNEL */}
-      <RecoveryFunnel metrics={metrics} />
-
-      {/* 5. AI DECISION DISTRIBUTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <DecisionDonutChart data={metrics.decisionDistribution} />
+      {/* ── 2. Metric Cards ── */}
+      <section>
+        <div className="flex items-center justify-between mb-2.5">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+            Portfolio Health
+          </h2>
+          <span className="text-[11px] text-gray-400 font-mono">Live Metrics</span>
         </div>
 
-        {/* Safety Guardrail Callout Card */}
-        <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <MetricCard
+            title="Revenue at Risk"
+            value={`₹${(metrics.revenueAtRisk / 100000).toFixed(1)}L`}
+            description="Total failed payment volume"
+            icon={DollarSign}
+            trend={`${metrics.totalCases} Incidents`}
+            trendUp={true}
+            iconBgColor="bg-gray-50 border-gray-200"
+            iconTextColor="text-gray-700"
+          />
+          <MetricCard
+            title="Gross Recovered"
+            value={`₹${(metrics.grossRecovered / 100000).toFixed(1)}L`}
+            description="Verified bank settlements"
+            icon={CheckCircle2}
+            trend={`+₹${(metrics.grossRecovered / 100000).toFixed(1)}L`}
+            trendUp={true}
+            iconBgColor="bg-emerald-50 border-emerald-200"
+            iconTextColor="text-emerald-700"
+          />
+          <MetricCard
+            title="Recovery Rate"
+            value={`${(metrics.recoveryRate || 0).toFixed(1)}%`}
+            description="Successful resolution rate"
+            icon={TrendingUp}
+            trend={`${(metrics.recoveryRate || 0).toFixed(1)}%`}
+            trendUp={true}
+            iconBgColor="bg-blue-50 border-blue-200"
+            iconTextColor="text-blue-700"
+          />
+          <MetricCard
+            title="Safety Blocks"
+            value={`${metrics.safetyActionsPrevented}`}
+            description="Zero false duplicate debits"
+            icon={CreditCard}
+            trend={`${metrics.safetyActionsPrevented} Blocked`}
+            trendUp={true}
+            iconBgColor="bg-rose-50 border-rose-200"
+            iconTextColor="text-rose-700"
+          />
+        </div>
+      </section>
+
+      {/* ── 3. Pipeline Conversion, Money Recovered Trend & Policy Breakdown ── */}
+      <section className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <RecoveryTrendChart />
+          </div>
           <div>
-            <div className="flex items-center gap-2.5 mb-3">
-              <div className="p-2 bg-rose-600 text-white rounded-lg">
-                <AlertTriangle className="h-5 w-5" />
+            <DecisionDonutChart data={metrics.decisionDistribution} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <RecoveryFunnel metrics={metrics} />
+          </div>
+
+          <div className="bg-rose-50/50 border border-rose-200 rounded-lg p-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="p-1 bg-rose-600 text-white rounded">
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-xs">
+                    {metrics.safetyActionsPrevented} Duplicate Debits Prevented
+                  </h3>
+                  <span className="text-[10px] text-rose-800 font-medium">
+                    Zero customer double-charge guarantee
+                  </span>
+                </div>
               </div>
-              <h3 className="font-bold text-rose-950 text-base">
-                ⚠️ {metrics.safetyActionsPrevented} Unsafe Actions Prevented
-              </h3>
+              <p className="text-[11px] text-gray-600 leading-relaxed bg-white p-2.5 rounded border border-rose-200/60 mt-2">
+                Ambiguous payment states, timeouts, and unverified bank responses were safely blocked by deterministic guardrails.
+              </p>
             </div>
-            <p className="text-xs text-rose-900 font-medium leading-relaxed bg-white/90 p-3.5 rounded-lg border border-rose-200">
-              &ldquo;Ambiguous payment states, duplicate-charge risks, and policy limit violations were blocked by the Policy Engine or escalated to human approval.&rdquo;
-            </p>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-rose-200/80 flex items-center justify-between">
-            <span className="text-[11px] font-bold text-rose-800">Zero False Executions</span>
-            <button
-              onClick={() => router.push("/cases?status=Blocked")}
-              className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
-            >
-              View Blocked Cases
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+            <div className="mt-3 pt-2.5 border-t border-rose-200/60 flex items-center justify-between">
+              <span className="text-[10px] font-mono font-medium text-rose-800">Policy Active</span>
+              <button
+                onClick={() => router.push("/cases?status=Blocked")}
+                className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span>View Blocked</span>
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 6. Recent Recovery Cases Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+      {/* ── 4. Recent Payment Incidents Table ── */}
+      <section className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-subtle">
+        <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
           <div>
-            <h3 className="font-bold text-slate-900 text-base">Recent Recovery Cases</h3>
-            <p className="text-xs text-slate-500">Live operational stream of revenue-risk events from database</p>
+            <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">Recent Recovery Cases</h3>
+            <p className="text-[11px] text-gray-500 font-normal">Latest payment failure incident feed</p>
           </div>
           <button
             onClick={() => router.push("/cases")}
-            className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 transition-colors"
+            className="text-xs font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1 transition-colors cursor-pointer"
           >
-            View All Cases ({metrics.totalCases})
-            <ArrowRight className="h-4 w-4" />
+            <span>View All ({metrics.totalCases})</span>
+            <ArrowRight className="h-3 w-3" />
           </button>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                <th className="py-3.5 px-4">Case ID</th>
-                <th className="py-3.5 px-4">Customer</th>
-                <th className="py-3.5 px-4">Amount</th>
-                <th className="py-3.5 px-4">Score</th>
-                <th className="py-3.5 px-4">Risk</th>
-                <th className="py-3.5 px-4">AI Recommendation</th>
-                <th className="py-3.5 px-4">Policy</th>
-                <th className="py-3.5 px-4">Status</th>
+              <tr className="bg-gray-50 text-[10px] font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                <th className="py-2.5 px-4">Case ID</th>
+                <th className="py-2.5 px-4">Customer</th>
+                <th className="py-2.5 px-4">Amount</th>
+                <th className="py-2.5 px-4">Score</th>
+                <th className="py-2.5 px-4">Risk Tier</th>
+                <th className="py-2.5 px-4">Strategy</th>
+                <th className="py-2.5 px-4">Policy</th>
+                <th className="py-2.5 px-4">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs font-medium">
+            <tbody className="divide-y divide-gray-100 text-xs">
               {cases.map((c) => {
                 const initials = c.customerName
                   .split(" ")
@@ -233,33 +230,35 @@ export default function DashboardPage() {
                   <tr
                     key={c.id}
                     onClick={() => router.push(`/cases/${c.id}`)}
-                    className="hover:bg-slate-50/80 cursor-pointer transition-colors"
+                    className="hover:bg-gray-50/80 cursor-pointer transition-colors"
                   >
-                    <td className="py-3.5 px-4 font-mono font-bold text-blue-600">{c.id}</td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">
+                    <td className="py-3 px-4 font-mono font-semibold text-blue-600 hover:underline">
+                      {c.id}
+                    </td>
+                    <td className="py-3 px-4 font-medium text-gray-900">
                       <div className="flex items-center gap-2">
-                        <span className="h-6 w-6 rounded-md bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center border border-slate-200">
+                        <span className="h-5 w-5 rounded bg-gray-100 text-gray-700 font-semibold text-[9px] flex items-center justify-center border border-gray-200 shrink-0">
                           {initials}
                         </span>
-                        <span>{c.customerName}</span>
+                        <span className="truncate max-w-[140px]">{c.customerName}</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900 font-mono tabular-nums">
-                      ₹{c.amount.toLocaleString("en-IN")}
+                    <td className="py-3 px-4 font-semibold text-gray-900 font-mono tabular-nums">
+                      ₹{c.amount?.toLocaleString("en-IN")}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       <RecoveryScoreBadge score={c.score} />
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       <RiskBadge risk={c.risk} />
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700 max-w-xs truncate font-medium">
-                      {c.aiRecommendation.recommendation}
+                    <td className="py-3 px-4 text-gray-600 max-w-xs truncate font-normal">
+                      {c.aiRecommendation?.recommendation || "Retry"}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <PolicyBadge type={c.policyDecision.type} />
+                    <td className="py-3 px-4">
+                      <PolicyBadge type={c.policyDecision?.type} />
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       <StatusBadge status={c.status} />
                     </td>
                   </tr>
@@ -268,7 +267,7 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

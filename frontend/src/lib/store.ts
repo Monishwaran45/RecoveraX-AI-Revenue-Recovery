@@ -261,6 +261,35 @@ class RecoveryStore {
     this.notify();
     return target;
   }
+
+  public addAuditLog(
+    caseId: string,
+    title: string,
+    description: string,
+    category: "AI" | "POLICY" | "ACTION" | "HUMAN" | "SYSTEM" = "SYSTEM",
+    badgeText?: string
+  ) {
+    const target = this.getCaseById(caseId);
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+
+    const newEvent: AuditEvent = {
+      id: `sim-audit-${Date.now()}-${Math.random()}`,
+      timestamp: timeStr,
+      title,
+      description,
+      category,
+      badgeText,
+    };
+
+    if (target) {
+      if (!target.auditTimeline) target.auditTimeline = [];
+      target.auditTimeline.unshift(newEvent);
+      target.updatedAt = new Date().toISOString();
+    }
+
+    this.notify();
+  }
 }
 
 export const store = new RecoveryStore();

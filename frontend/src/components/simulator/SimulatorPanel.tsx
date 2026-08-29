@@ -11,21 +11,22 @@ import RecoveryResultCard from "./RecoveryResultCard";
 import { getCase, getCases, analyzeCase, recheckCase, executeCaseAction, resetCase } from "@/lib/api/cases";
 import { approveCase } from "@/lib/api/approvals";
 import { RecoveryCase, PolicyDecisionType } from "@/lib/types";
-import { Play, RotateCcw, Search, Zap, CheckCircle2, ShieldAlert, ArrowRight } from "lucide-react";
+import { store } from "@/lib/store";
+import { Play, RotateCcw } from "lucide-react";
 
 const INITIAL_WORKFLOW_STEPS: WorkflowStep[] = [
-  { id: "s1", label: "DETECT", sublabel: "Risk Event Loaded", state: "waiting" },
-  { id: "s2", label: "DIAGNOSE", sublabel: "Failure Pattern", state: "waiting" },
-  { id: "s3", label: "RECOVERY SCORE", sublabel: "Confidence Score", state: "waiting" },
-  { id: "s4", label: "RECOMMEND", sublabel: "AI Strategy", state: "waiting" },
-  { id: "s5", label: "POLICY", sublabel: "Safety Evaluation", state: "waiting" },
-  { id: "s6", label: "AUTHORIZATION", sublabel: "AUTO/HUMAN/BLOCK", state: "waiting" },
-  { id: "s7", label: "SCHEDULE", sublabel: "Delay Timer", state: "waiting" },
-  { id: "s8", label: "FRESH RE-CHECK", sublabel: "Payment State", state: "waiting" },
-  { id: "s9", label: "EXECUTE", sublabel: "Gateway Retry", state: "waiting" },
-  { id: "s10", label: "VERIFY", sublabel: "Settlement Check", state: "waiting" },
-  { id: "s11", label: "RE-EVALUATE", sublabel: "Outcome Check", state: "waiting" },
-  { id: "s12", label: "RECOVER / STOP", sublabel: "Final Status", state: "waiting" },
+  { id: "s1", label: "load_context", sublabel: "Context Ingestion", state: "waiting" },
+  { id: "s2", label: "diagnose", sublabel: "Groq LLM Engine", state: "waiting" },
+  { id: "s3", label: "calculate_score", sublabel: "Recovery Scorer", state: "waiting" },
+  { id: "s4", label: "recommend_action", sublabel: "Strategy Engine", state: "waiting" },
+  { id: "s5", label: "policy_check", sublabel: "Policy Guardrails", state: "waiting" },
+  { id: "s6", label: "human_approval", sublabel: "HITL Approval Gate", state: "waiting" },
+  { id: "s7", label: "schedule", sublabel: "Celery Dispatch", state: "waiting" },
+  { id: "s8", label: "recheck", sublabel: "Gateway Pre-Check", state: "waiting" },
+  { id: "s9", label: "execute", sublabel: "Gateway Dispatch", state: "waiting" },
+  { id: "s10", label: "verify", sublabel: "Bank Verification", state: "waiting" },
+  { id: "s11", label: "reevaluate", sublabel: "Loop Controller", state: "waiting" },
+  { id: "s12", label: "stop", sublabel: "Audit & Terminal", state: "waiting" },
 ];
 
 export default function SimulatorPanel({ isCompact = false }: { isCompact?: boolean }) {
@@ -55,11 +56,11 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
       const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const scoreVal = cData?.score ?? cData?.recoveryScore ?? 80;
       setLogs([
-        { id: "l1", time: now, category: "SYSTEM", text: `Loaded ${sc.title} (${sc.caseId}) amount ₹${sc.amountVal.toLocaleString("en-IN")}` },
-        { id: "l2", time: now, category: "SYSTEM", text: `Current Status: ${sc.type} | Baseline score: ${scoreVal}/100` },
+        { id: "l1", time: now, category: "SYSTEM", text: `Loaded transaction ${sc.caseId} (${sc.title}) — ₹${sc.amountVal.toLocaleString("en-IN")}` },
+        { id: "l2", time: now, category: "SYSTEM", text: `Ready for recovery evaluation. Click 'Run Recovery' to start.` },
       ]);
     } catch (err: any) {
-      setBackendError(`Failed to fetch case ${sc.caseId}: ${err.message || 'Backend unreachable'}`);
+      setBackendError(`Failed to fetch transaction ${sc.caseId}: ${err.message || 'Backend unreachable'}`);
     }
   };
 
@@ -73,7 +74,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
           loadScenarioCase(mapped[0]);
         }
       } catch (err: any) {
-        setBackendError(`Backend server offline. Please start FastAPI backend at http://127.0.0.1:8000.`);
+        setBackendError(`Backend server offline. Please verify FastAPI service.`);
       }
     };
     initSimulator();
@@ -82,6 +83,9 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
   const addLog = (category: "SYSTEM" | "AI" | "POLICY" | "ACTION" | "HUMAN", text: string) => {
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     setLogs((prev) => [...prev, { id: `log-${Date.now()}-${Math.random()}`, time, category, text }]);
+    if (activeScenario?.caseId) {
+      store.addAuditLog(activeScenario.caseId, text, `Simulator step executed for case ${activeScenario.caseId}`, category);
+    }
   };
 
   const updateStepState = (stepIndex: number, state: "waiting" | "processing" | "completed" | "failed" | "blocked") => {
@@ -100,23 +104,23 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     setIsCompleted(false);
     setBackendError(null);
 
-    // Step 1: Load & Detect
+    // Step 1: Ingestion
     setCurrentStepIdx(0);
     updateStepState(0, "processing");
-    addLog("SYSTEM", `Risk Event Loaded into LangGraph pipeline for transaction ${activeScenario.caseId}`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("SYSTEM", `Decline incident ingested for ${activeScenario.caseId}`);
+    await new Promise((r) => setTimeout(r, 200));
 
-    // Invoke actual backend LangGraph agent execution!
+    // Invoke backend recovery engine
     let analyzedCase: RecoveryCase;
     try {
       analyzedCase = await analyzeCase(activeScenario.caseId);
       setCurrentCase(analyzedCase);
       updateStepState(0, "completed");
     } catch (err: any) {
-      const msg = err.message || "Failed to communicate with backend FastAPI engine.";
-      addLog("SYSTEM", `🔴 BACKEND DISPATCH ERROR: ${msg}`);
+      const msg = err.message || "Failed to communicate with backend engine.";
+      addLog("SYSTEM", `DISPATCH ERROR: ${msg}`);
       updateStepState(0, "failed");
-      setBackendError(`Backend execution failed: ${msg}. Please start backend server on http://127.0.0.1:8000.`);
+      setBackendError(`Execution failed: ${msg}.`);
       setIsRunning(false);
       setIsCompleted(false);
       return;
@@ -131,44 +135,44 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     const isHumanRequired = polDecision === "HUMAN" || c?.status === "HUMAN_APPROVAL" || c?.approvalStatus === "PENDING";
     const isBlocked = polDecision === "BLOCK" || c?.status === "BLOCKED";
 
-    // Step 2: Diagnose (Real LLM diagnosis returned from backend)
+    // Step 2: Diagnostics
     setCurrentStepIdx(1);
     updateStepState(1, "processing");
-    addLog("AI", `LLM Diagnosed Failure Pattern: ${diag}`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("AI", `Classified failure pattern: ${diag.replace(/_/g, " ")}`);
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(1, "completed");
 
-    // Step 3: Recovery Score (Real deterministic score calculated by backend engine)
+    // Step 3: Scoring
     setCurrentStepIdx(2);
     updateStepState(2, "processing");
-    addLog("AI", `Calculated Deterministic Recovery Score: ${score}/100`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("AI", `Calculated recovery index: ${score}/100`);
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(2, "completed");
 
-    // Step 4: Recommend (Real LLM strategy recommendation)
+    // Step 4: Strategy
     setCurrentStepIdx(3);
     updateStepState(3, "processing");
-    addLog("AI", `AI Recommended Recovery Action: ${recAction}`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("AI", `Determined recovery strategy: ${recAction}`);
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(3, "completed");
 
-    // Step 5: Policy (Real deterministic safety policy evaluation)
+    // Step 5: Policy Check
     setCurrentStepIdx(4);
     updateStepState(4, "processing");
-    addLog("POLICY", `Evaluated Policy Rules: ${c?.policyDecision?.explanation || "Passed safety policy guardrails."}`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("POLICY", `Validated merchant rules: ${c?.policyDecision?.explanation || "Passed safety policy guardrails."}`);
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(4, "completed");
 
-    // Step 6: Authorization (Real decision returned from Policy Engine)
+    // Step 6: Routing
     setCurrentStepIdx(5);
     updateStepState(5, "processing");
-    addLog("POLICY", `Policy Engine Decision: ${c?.policyDecision?.decisionLabel || polDecision}`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("POLICY", `Routing authorization: ${c?.policyDecision?.decisionLabel || polDecision}`);
+    await new Promise((r) => setTimeout(r, 200));
 
     if (isBlocked) {
       updateStepState(5, "blocked");
       for (let i = 6; i <= 11; i++) updateStepState(i, "blocked");
-      addLog("POLICY", `🔴 HARD BLOCK EXECUTED: ${c?.policyDecision?.reason || "Policy engine blocked execution to prevent double charge."}`);
+      addLog("POLICY", `POLICY BLOCKED: ${c?.policyDecision?.reason || "Execution stopped to prevent duplicate debit."}`);
       setIsRunning(false);
       setIsCompleted(true);
       return;
@@ -177,8 +181,8 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     if (isHumanRequired) {
       updateStepState(5, "completed");
       for (let i = 6; i <= 11; i++) updateStepState(i, "waiting");
-      addLog("HUMAN", `🟡 HUMAN APPROVAL REQUIRED: ${c?.policyDecision?.reason || "High risk / amount requires human sign-off."}`);
-      addLog("ACTION", `⏸️ Waiting for merchant approval. Payment execution halted.`);
+      addLog("HUMAN", `APPROVAL REQUIRED: ${c?.policyDecision?.reason || "High value transaction requires sign-off."}`);
+      addLog("ACTION", `Dispatched to manual review queue for sign-off.`);
       setIsRunning(false);
       setIsCompleted(true);
       return;
@@ -186,64 +190,64 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
 
     updateStepState(5, "completed");
 
-    // Step 7: Schedule (Celery background worker queue)
+    // Step 7: Schedule
     setCurrentStepIdx(6);
     updateStepState(6, "processing");
-    addLog("ACTION", `Retry scheduled with delay timer (${c?.scheduledDelayMinutes || 30} mins)`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("ACTION", `Retry scheduled with ${c?.scheduledDelayMinutes || 30} min delay timer`);
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(6, "completed");
 
-    // Step 8: Fresh Re-check (Real pre-execution gateway recheck)
+    // Step 8: Pre-Check
     setCurrentStepIdx(7);
     updateStepState(7, "processing");
-    addLog("ACTION", `Performing pre-execution fresh payment state re-check...`);
+    addLog("ACTION", `Executing pre-retry bank settlement verification...`);
     const rechecked = await recheckCase(activeScenario.caseId);
     if (rechecked) setCurrentCase(rechecked);
-    await new Promise((r) => setTimeout(r, 300));
-    
+    await new Promise((r) => setTimeout(r, 200));
+
     if (rechecked?.status === "BLOCKED" || rechecked?.status === "RECOVERED") {
-      addLog("POLICY", `Re-check returned state: ${rechecked.status}. Halting execution.`);
+      addLog("POLICY", `Pre-check returned state: ${rechecked.status}. Execution halted.`);
       setIsRunning(false);
       setIsCompleted(true);
       return;
     }
-    
-    addLog("ACTION", `Fresh re-check confirmed settlement clear & safe for retry.`);
+
+    addLog("ACTION", `Pre-retry check confirmed safe. Dispatching retry.`);
     updateStepState(7, "completed");
 
-    // Step 9: Execute (Real simulator retry payload dispatch)
+    // Step 9: Dispatch
     setCurrentStepIdx(8);
     updateStepState(8, "processing");
-    addLog("ACTION", `Dispatching payment retry attempt payload to card network...`);
+    addLog("ACTION", `Dispatching payment retry payload to payment gateway...`);
     const execRes = await executeCaseAction(activeScenario.caseId);
     if (execRes) setCurrentCase(execRes);
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 280));
     updateStepState(8, "completed");
 
-    // Step 10: Verify (Bank settlement verification)
+    // Step 10: Settlement
     setCurrentStepIdx(9);
     updateStepState(9, "processing");
-    addLog("SYSTEM", `Verifying bank gateway settlement response...`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("SYSTEM", `Verifying gateway settlement confirmation...`);
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(9, "completed");
 
-    // Step 11: Re-evaluate (Outcome evaluation)
+    // Step 11: Reconcile
     setCurrentStepIdx(10);
     updateStepState(10, "processing");
-    addLog("AI", `Re-evaluating outcome against recovery target...`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("AI", `Reconciling transaction ledger...`);
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(10, "completed");
 
-    // Step 12: Recover / Stop (Authoritative backend state check!)
+    // Step 12: Settled
     setCurrentStepIdx(11);
     const isVerifiedRecovered = execRes?.status === "RECOVERED" && (execRes?.verificationResult === "VERIFIED_SUCCESS" || (execRes?.amountRecovered || 0) > 0);
     if (isVerifiedRecovered) {
       updateStepState(11, "completed");
       const finalAmount = execRes?.amountRecovered || execRes?.amount || c?.amount || activeScenario.amountVal;
-      addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${finalAmount.toLocaleString("en-IN")} deposited.`);
+      addLog("SYSTEM", `SETTLEMENT COMPLETE: ₹${finalAmount.toLocaleString("en-IN")} deposited.`);
     } else {
       updateStepState(11, "failed");
-      addLog("SYSTEM", `🔴 RECOVERY UNVERIFIED / FAILED: Status = ${execRes?.status || "FAILED"}`);
+      addLog("SYSTEM", `RECOVERY UNVERIFIED: Status = ${execRes?.status || "FAILED"}`);
     }
     setIsRunning(false);
     setIsCompleted(true);
@@ -253,59 +257,59 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     if (!activeScenario || isRunning) return;
     setIsRunning(true);
 
-    addLog("HUMAN", `✓ Merchant approved Case ${activeScenario.caseId}. Invoking backend approve & execute pipeline...`);
+    addLog("HUMAN", `Operator authorized ${activeScenario.caseId}. Executing recovery dispatch...`);
     const approved = await approveCase(activeScenario.caseId);
     if (approved) setCurrentCase(approved);
 
     // Step 7: Schedule
     setCurrentStepIdx(6);
     updateStepState(6, "processing");
-    addLog("ACTION", `Retry scheduled following human approval...`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("ACTION", `Retry scheduled following authorization...`);
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(6, "completed");
 
-    // Step 8: Fresh Re-check
+    // Step 8: Pre-Check
     setCurrentStepIdx(7);
     updateStepState(7, "processing");
-    addLog("ACTION", `Performing fresh pre-execution re-check...`);
+    addLog("ACTION", `Executing pre-retry verification...`);
     const rechecked = await recheckCase(activeScenario.caseId);
     if (rechecked) setCurrentCase(rechecked);
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(7, "completed");
 
-    // Step 9: Execute
+    // Step 9: Dispatch
     setCurrentStepIdx(8);
     updateStepState(8, "processing");
-    addLog("ACTION", `Executing authorized payment recovery attempt on gateway...`);
+    addLog("ACTION", `Dispatching authorized retry to gateway...`);
     const execRes = await executeCaseAction(activeScenario.caseId);
     if (execRes) setCurrentCase(execRes);
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 280));
     updateStepState(8, "completed");
 
-    // Step 10: Verify
+    // Step 10: Settlement
     setCurrentStepIdx(9);
     updateStepState(9, "processing");
-    addLog("SYSTEM", `Verifying gateway settlement confirmation...`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("SYSTEM", `Verifying gateway settlement...`);
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(9, "completed");
 
-    // Step 11: Re-evaluate
+    // Step 11: Reconcile
     setCurrentStepIdx(10);
     updateStepState(10, "processing");
-    addLog("AI", `Re-evaluating recovery outcome...`);
-    await new Promise((r) => setTimeout(r, 300));
+    addLog("AI", `Reconciling transaction ledger...`);
+    await new Promise((r) => setTimeout(r, 200));
     updateStepState(10, "completed");
 
-    // Step 12: Recover
+    // Step 12: Settled
     setCurrentStepIdx(11);
     const isApprovedVerifiedRecovered = execRes?.status === "RECOVERED" && (execRes?.verificationResult === "VERIFIED_SUCCESS" || (execRes?.amountRecovered || 0) > 0);
     if (isApprovedVerifiedRecovered) {
       updateStepState(11, "completed");
       const finalAmt = execRes?.amountRecovered || execRes?.amount || currentCase?.amount || activeScenario.amountVal;
-      addLog("SYSTEM", `✓ RECOVERY COMPLETE: ₹${finalAmt.toLocaleString("en-IN")} deposited.`);
+      addLog("SYSTEM", `SETTLEMENT COMPLETE: ₹${finalAmt.toLocaleString("en-IN")} deposited.`);
     } else {
       updateStepState(11, "failed");
-      addLog("SYSTEM", `🔴 RECOVERY UNVERIFIED / FAILED: Status = ${execRes?.status || "FAILED"}`);
+      addLog("SYSTEM", `RECOVERY UNVERIFIED: Status = ${execRes?.status || "FAILED"}`);
     }
     setIsRunning(false);
     setIsCompleted(true);
@@ -313,39 +317,33 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
 
   if (!activeScenario) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3">
         {backendError && (
-          <div className="p-4 bg-rose-50 border border-rose-300 text-rose-900 rounded-xl text-xs font-bold flex items-center justify-between shadow-2xs">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse"></span>
-              <span>🔴 {backendError}</span>
-            </div>
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-md text-xs font-medium flex items-center justify-between">
+            <span>{backendError}</span>
             <button
               onClick={() => setBackendError(null)}
-              className="text-[11px] font-extrabold text-rose-700 hover:text-rose-950 underline ml-4"
+              className="text-xs font-semibold underline ml-4 cursor-pointer"
             >
               Dismiss
             </button>
           </div>
         )}
-        <div className="p-8 bg-white border border-slate-200 rounded-xl text-center font-mono text-xs font-bold text-slate-500 animate-pulse">
-          Loading recovery agent scenarios from database...
+        <div className="p-8 bg-white border border-gray-200 rounded-lg text-center font-mono text-xs text-gray-500">
+          Loading sample payment transactions...
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {backendError && (
-        <div className="p-4 bg-rose-50 border border-rose-300 text-rose-900 rounded-xl text-xs font-bold flex items-center justify-between shadow-2xs">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse"></span>
-            <span>🔴 {backendError}</span>
-          </div>
+        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-md text-xs font-medium flex items-center justify-between">
+          <span>{backendError}</span>
           <button
             onClick={() => setBackendError(null)}
-            className="text-[11px] font-extrabold text-rose-700 hover:text-rose-950 underline ml-4"
+            className="text-xs font-semibold underline ml-4 cursor-pointer"
           >
             Dismiss
           </button>
@@ -360,59 +358,65 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
         scenarios={dynamicScenarios}
       />
 
-      {/* 2. Simulator Controls & Transaction Bar */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-slate-950 text-emerald-400 border border-slate-800 rounded-xl font-mono font-black text-xs shrink-0 shadow-2xs">
+      {/* 2. Controls & Active Incident Bar */}
+      <div className="bg-white border border-gray-200 rounded-lg p-3.5 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="px-2 py-1 bg-gray-100 text-gray-900 border border-gray-200 rounded font-mono font-semibold text-xs shrink-0">
             {activeScenario.caseId}
           </div>
 
           <div>
-            <div className="flex items-center gap-2.5">
-              <h3 className="font-extrabold text-slate-900 text-base tracking-tight">{activeScenario.title}</h3>
-              <span className="font-mono font-black text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200/80 text-xs">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">{activeScenario.title}</h3>
+              <span className="font-mono font-semibold text-gray-900 bg-gray-50 px-1.5 py-0.2 rounded border border-gray-200 text-xs tabular-nums">
                 {activeScenario.amount}
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
+            <p className="text-[11px] text-gray-500 font-normal mt-0.5">
               {activeScenario.description}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
           <button
             onClick={() => loadScenarioCase(activeScenario)}
             disabled={isRunning}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-extrabold text-xs rounded-xl border border-slate-200/80 transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 font-medium text-xs rounded border border-gray-200 transition-colors flex items-center gap-1 disabled:opacity-50 cursor-pointer"
           >
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw className="h-3 w-3" />
             Reset
           </button>
 
           <button
             onClick={handleRunSimulation}
             disabled={isRunning}
-            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer tracking-wide"
+            className="px-4 py-1.5 bg-gray-900 hover:bg-gray-800 text-white font-medium text-xs rounded transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
-            <Play className="h-4 w-4 fill-white" />
-            {isRunning ? "Running Agent Pipeline..." : "Run Recovery"}
+            <Play className="h-3 w-3 fill-white" />
+            {isRunning ? "Running Recovery..." : "Run Recovery"}
           </button>
         </div>
       </div>
 
-      {/* 3. 13-Stage Workflow Visualization */}
+      {/* 3. 12-Stage Recovery Workflow Visualizer */}
       <AgentWorkflow steps={workflowSteps} currentStepIndex={currentStepIdx} />
 
-      {/* 4. Ambiguous Safety Callout Alert if BLOCKED case */}
-      {(activeScenario.badge === "BLOCK" || activeScenario.caseId === "CASE-1003") && (
+      {/* 4. Policy Guardrail Callout if Blocked */}
+      {(isCompleted || currentStepIdx >= 4) && (activeScenario.badge === "BLOCK" || activeScenario.caseId === "CASE-1003") && (
         <SafetyAlert amount={activeScenario.amount} caseId={activeScenario.caseId} />
       )}
 
-      {/* 5. Split Section: AI Decision + Policy Decision + Live Log */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <AIDecisionCard recommendation={currentCase?.aiRecommendation} isLoading={isRunning && currentStepIdx < 3} />
-        <PolicyDecisionCard decision={currentCase?.policyDecision} isLoading={isRunning && currentStepIdx >= 3 && currentStepIdx < 6} />
+      {/* 5. Telemetry & Policy Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <AIDecisionCard
+          recommendation={(currentStepIdx >= 1 || isCompleted) ? currentCase?.aiRecommendation : undefined}
+          isLoading={isRunning && currentStepIdx < 1}
+        />
+        <PolicyDecisionCard
+          decision={(currentStepIdx >= 4 || isCompleted) ? currentCase?.policyDecision : undefined}
+          isLoading={isRunning && currentStepIdx >= 1 && currentStepIdx < 4}
+        />
         <AgentEventLog logs={logs} />
       </div>
 

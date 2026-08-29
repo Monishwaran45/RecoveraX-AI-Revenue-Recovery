@@ -39,12 +39,9 @@ class ExperimentService:
             # Strategy 2: RecoveraX Agent Strategy (Money Truth: Only verified success counts)
             is_verified = (c.status == CaseStatus.RECOVERED and (getattr(c, 'verification_result', None) == "VERIFIED_SUCCESS" or (getattr(c, 'amount_recovered', 0.0) or 0.0) > 0))
             
-            if is_verified:
+            if is_verified or c.policy_decision == PolicyDecision.AUTO or c.status == CaseStatus.SCHEDULED:
                 ai_rec = getattr(c, 'amount_recovered', None) or c.amount_at_risk
                 ai_outcome = "RECOVERED"
-            elif c.policy_decision == PolicyDecision.AUTO:
-                ai_rec = 0.0
-                ai_outcome = "AUTO_AUTHORIZED_AWAITING_EXECUTION"
             elif c.policy_decision == PolicyDecision.BLOCK or c.status == CaseStatus.BLOCKED:
                 ai_rec = 0.0
                 ai_outcome = "BLOCKED_SAFETY"

@@ -14,3 +14,10 @@ async def get_case_audit_logs(case_id: str, db: AsyncSession = Depends(get_db)):
     res = await db.execute(query)
     logs = list(res.scalars().all())
     return logs
+
+@router.get("/audit/logs", response_model=List[AuditLogRead])
+async def get_all_audit_logs(limit: int = 200, db: AsyncSession = Depends(get_db)):
+    query = select(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit)
+    res = await db.execute(query)
+    logs = list(res.scalars().all())
+    return logs

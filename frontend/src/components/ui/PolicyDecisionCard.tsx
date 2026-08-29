@@ -1,89 +1,71 @@
 import { PolicyDecision } from "@/lib/types";
-import { ShieldCheck, ShieldAlert, AlertTriangle, Check, X, Shield, Lock } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Check, X, Lock } from "lucide-react";
 
 export default function PolicyDecisionCard({ data }: { data: PolicyDecision }) {
   const isAuto = data.type === "AUTO";
   const isHuman = data.type === "HUMAN";
   const isBlock = data.type === "BLOCK";
 
-  let headerBg = "bg-emerald-50 text-emerald-900 border-emerald-200";
+  let headerBg = "bg-emerald-50 text-emerald-800 border-emerald-200";
   let Icon = ShieldCheck;
 
   if (isHuman) {
-    headerBg = "bg-amber-50 text-amber-950 border-amber-200";
+    headerBg = "bg-amber-50 text-amber-900 border-amber-200";
     Icon = ShieldAlert;
   } else if (isBlock) {
-    headerBg = "bg-rose-50 text-rose-950 border-rose-200";
+    headerBg = "bg-rose-50 text-rose-900 border-rose-200";
     Icon = Lock;
   }
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs relative overflow-hidden flex flex-col justify-between">
+    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-subtle flex flex-col justify-between">
       <div>
-        {/* Top Header */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className={`p-2 rounded-xl ${isAuto ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : isHuman ? "bg-amber-50 text-amber-800 ring-1 ring-amber-100" : "bg-rose-50 text-rose-700 ring-1 ring-rose-100"}`}>
-              <Icon className="h-4 w-4" />
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <Icon className={`h-4 w-4 ${isAuto ? "text-emerald-700" : isHuman ? "text-amber-700" : "text-rose-700"}`} />
             <div>
-              <h3 className="font-extrabold text-[#0b1426] text-sm leading-tight">
-                Policy & Safety Control Engine
+              <h3 className="font-semibold text-gray-900 text-xs">
+                Policy Guardrails & Limits
               </h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Mandatory Financial Guardrails</p>
+              <p className="text-[11px] text-gray-500 font-normal">Mandatory risk rules</p>
             </div>
           </div>
-          <span className={`px-3 py-1 text-xs font-black rounded-full border shadow-2xs ${headerBg}`}>
+          <span className={`px-2 py-0.5 text-xs font-mono font-medium rounded border ${headerBg}`}>
             {data.decisionLabel}
           </span>
         </div>
 
-        {/* Core Distinction Banner */}
-        <div className="my-3.5 p-3.5 rounded-xl bg-[#02042b] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-md">
-          <div className="flex items-center gap-2">
-            <span className="font-black px-2.5 py-1 bg-blue-600/30 text-[#00d2ff] border border-blue-400/30 rounded-lg text-[10px] uppercase tracking-wider">
-              AI Recommendation ≠ Authorization
-            </span>
-          </div>
-          <span className="text-slate-300 text-xs font-bold">
-            {isAuto
-              ? "Policy approved automatic action."
-              : isHuman
-              ? "Policy mandated human approval."
-              : "Policy blocked execution."}
-          </span>
-        </div>
-
-        {/* Decision Summary */}
-        <div className="mb-4">
-          <p className="text-xs font-extrabold text-slate-800 mb-1.5">Policy Engine Rationale:</p>
-          <p className="text-xs text-slate-700 leading-relaxed font-semibold bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+        {/* Reason Summary */}
+        <div className="my-3">
+          <p className="text-xs font-medium text-gray-700 mb-1">Policy Rationale:</p>
+          <p className="text-xs text-gray-700 leading-relaxed font-normal bg-gray-50 p-2.5 rounded border border-gray-200">
             {data.reason}
           </p>
         </div>
 
-        {/* Safety Rules Checklist */}
+        {/* Evaluated Rules */}
         <div>
-          <p className="text-xs font-extrabold text-slate-800 mb-2">Evaluated Compliance Rules:</p>
-          <div className="space-y-1.5">
+          <p className="text-xs font-medium text-gray-700 mb-1.5">Compliance Rules Evaluated:</p>
+          <div className="space-y-1">
             {data.rules.map((rule) => (
               <div
                 key={rule.id}
-                className={`flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold border ${
+                className={`flex items-center justify-between p-2 rounded text-xs border ${
                   rule.passed
-                    ? "bg-emerald-50/40 border-emerald-100 text-emerald-950"
-                    : "bg-rose-50/40 border-rose-100 text-rose-950"
+                    ? "bg-emerald-50/30 border-emerald-200 text-emerald-950"
+                    : "bg-rose-50/30 border-rose-200 text-rose-950"
                 }`}
               >
                 <div className="flex items-center gap-2">
                   {rule.passed ? (
-                    <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                   ) : (
-                    <X className="h-4 w-4 text-rose-600 shrink-0" />
+                    <X className="h-3.5 w-3.5 text-rose-600 shrink-0" />
                   )}
-                  <span>{rule.text}</span>
+                  <span className="font-normal text-gray-800 text-[11px]">{rule.text}</span>
                 </div>
-                <span className={`font-black text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider ${rule.passed ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>
+                <span className={`font-mono font-medium text-[9px] px-1.5 py-0.2 rounded uppercase tracking-wider ${rule.passed ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>
                   {rule.passed ? "PASSED" : "FAILED"}
                 </span>
               </div>

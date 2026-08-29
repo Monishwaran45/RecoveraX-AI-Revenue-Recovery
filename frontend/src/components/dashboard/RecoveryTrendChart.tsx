@@ -28,39 +28,37 @@ export default function RecoveryTrendChart({ trendData }: RecoveryTrendChartProp
   const data = trendData && trendData.length > 0 ? trendData : fallbackTrend;
 
   return (
-    <div className="bg-[#161D20] border border-[#2A3338] rounded-xl p-5">
-      <div className="flex items-center justify-between pb-3 border-b border-[#2A3338] mb-4">
+    <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 shadow-subtle">
+      <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-[#1D2528] text-[#45D8A4] rounded-lg border border-[#2A3338]">
-            <TrendingUp className="h-4 w-4" />
-          </div>
+          <TrendingUp className="h-4 w-4 text-gray-700" />
           <div>
-            <h3 className="font-bold text-[#E8EDEE] text-sm">7-Day Recovery Trend</h3>
-            <p className="text-xs text-[#8DA0A6]">Daily auto-recovered payment volume vs attempted risk</p>
+            <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">Money Recovered Trend</h3>
+            <p className="text-[11px] text-gray-500 font-normal">7-Day cumulative verified bank settlements</p>
           </div>
         </div>
       </div>
 
-      <div className="h-56 w-full pt-2">
+      <div className="h-52 w-full pt-1">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
-              <linearGradient id="mintGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#45D8A4" stopOpacity={0.35} />
-                <stop offset="95%" stopColor="#45D8A4" stopOpacity={0.0} />
+              <linearGradient id="classicGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
+                <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
               </linearGradient>
             </defs>
 
             <XAxis
               dataKey="day"
-              stroke="#8DA0A6"
-              fontSize={11}
+              stroke="#9ca3af"
+              fontSize={10}
               tickLine={false}
-              axisLine={{ stroke: "#2A3338" }}
+              axisLine={{ stroke: "#e5e7eb" }}
             />
             <YAxis
-              stroke="#8DA0A6"
-              fontSize={11}
+              stroke="#9ca3af"
+              fontSize={10}
               tickLine={false}
               axisLine={false}
               tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
@@ -69,22 +67,23 @@ export default function RecoveryTrendChart({ trendData }: RecoveryTrendChartProp
             <Tooltip
               formatter={(val: number) => [`₹${val.toLocaleString("en-IN")}`, "Volume"]}
               contentStyle={{
-                backgroundColor: "#0F1416",
-                borderRadius: "8px",
-                borderColor: "#2A3338",
-                color: "#E8EDEE",
-                fontSize: "12px",
-                fontFamily: "IBM Plex Mono",
+                backgroundColor: "#111827",
+                borderRadius: "6px",
+                borderColor: "#374151",
+                color: "#f9fafb",
+                fontSize: "11px",
+                fontFamily: "JetBrains Mono",
               }}
+              itemStyle={{ color: "#f9fafb" }}
             />
 
             <Area
               type="monotone"
               dataKey="recovered"
-              stroke="#45D8A4"
+              stroke="#2563eb"
               strokeWidth={2}
               fillOpacity={1}
-              fill="url(#mintGradient)"
+              fill="url(#classicGradient)"
             />
           </AreaChart>
         </ResponsiveContainer>

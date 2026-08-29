@@ -1,6 +1,6 @@
 "use client";
 
-import { Brain, CheckCircle2, AlertCircle, Sparkles, Activity } from "lucide-react";
+import { Activity, CheckCircle2, AlertCircle, FileSearch } from "lucide-react";
 import { AIRecommendation } from "@/lib/types";
 
 interface AIDecisionCardProps {
@@ -11,81 +11,110 @@ interface AIDecisionCardProps {
 export default function AIDecisionCard({ recommendation, isLoading }: AIDecisionCardProps) {
   if (isLoading) {
     return (
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col items-center justify-center min-h-[360px] text-slate-400 text-xs font-mono font-medium animate-pulse">
-        <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl mb-3 shadow-2xs">
-          <Brain className="h-6 w-6 animate-spin text-blue-600" />
-        </div>
-        <span>AI Diagnostic Engine evaluating patterns...</span>
+      <div className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center min-h-[320px] text-gray-400 text-xs">
+        <Activity className="h-4 w-4 animate-spin text-gray-600 mb-2" />
+        <span className="text-gray-500 font-medium">Evaluating failure telemetry...</span>
       </div>
     );
   }
 
-  const score = recommendation?.score || 85;
+  if (!recommendation) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-subtle flex flex-col justify-between min-h-[320px]">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between pb-2.5 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <FileSearch className="h-4 w-4 text-gray-400" />
+              <div>
+                <h3 className="font-semibold text-gray-900 text-xs">Failure Diagnostics</h3>
+                <p className="text-[11px] text-gray-500 font-normal">Root-cause classification</p>
+              </div>
+            </div>
+            <span className="font-mono text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+              --/100
+            </span>
+          </div>
+          <div className="flex flex-col items-center justify-center min-h-[210px] text-center p-4 bg-gray-50/50 rounded-lg border border-dashed border-gray-200">
+            <FileSearch className="h-6 w-6 text-gray-300 mb-2" />
+            <p className="font-medium text-xs text-gray-700">Awaiting AI Diagnosis</p>
+            <p className="text-[11px] text-gray-400 mt-1 max-w-[200px]">
+              Click &quot;Run Recovery&quot; to execute LLM failure analysis and calculate recovery index.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const score = recommendation.score ?? 85;
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between min-h-[360px]">
-      <div className="space-y-4">
+    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-subtle flex flex-col justify-between min-h-[320px]">
+      <div className="space-y-3">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl shadow-xs">
-              <Brain className="h-4 w-4" />
-            </div>
+        <div className="flex items-center justify-between pb-2.5 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <FileSearch className="h-4 w-4 text-gray-700" />
             <div>
-              <h3 className="font-extrabold text-slate-900 text-sm tracking-tight">AI Diagnostic Engine</h3>
-              <p className="text-[11px] font-semibold text-slate-400">Probabilistic pattern evaluation</p>
+              <h3 className="font-semibold text-gray-900 text-xs">Failure Diagnostics</h3>
+              <p className="text-[11px] text-gray-500 font-normal">Root-cause classification</p>
             </div>
           </div>
-          <span className="font-mono text-xs font-black text-blue-700 bg-blue-50/80 px-3 py-1 rounded-full border border-blue-200/80 shadow-2xs">
+          <span className="font-mono text-xs font-semibold text-gray-800 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
             {score}/100 Score
           </span>
         </div>
 
-        {/* Diagnosis & Probability Grid */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100">
-            <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider block mb-0.5">Diagnosis</span>
-            <span className="font-extrabold text-slate-900 text-xs font-mono truncate block">
-              {recommendation?.diagnosis || "INSUFFICIENT_FUNDS"}
+        {/* Diagnosis & Likelihood */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="p-2.5 bg-gray-50 rounded border border-gray-200">
+            <span className="text-gray-500 uppercase text-[9px] font-semibold tracking-wider block mb-0.5">
+              Classification
+            </span>
+            <span className="font-medium text-gray-900 text-xs font-mono truncate block">
+              {recommendation?.diagnosis?.replace(/_/g, " ") || "INSUFFICIENT FUNDS"}
             </span>
           </div>
-          <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100">
-            <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider block mb-0.5">Recovery Probability</span>
-            <span className="font-extrabold text-emerald-700 text-xs font-mono block">{score}% Confidence</span>
+          <div className="p-2.5 bg-emerald-50/50 rounded border border-emerald-200">
+            <span className="text-emerald-800 uppercase text-[9px] font-semibold tracking-wider block mb-0.5">
+              Estimated Likelihood
+            </span>
+            <span className="font-medium text-emerald-800 text-xs font-mono block">
+              {score}% Confidence
+            </span>
           </div>
         </div>
 
-        {/* Recommended Strategy Box */}
-        <div className="p-3.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/40 border border-blue-100 rounded-xl text-xs space-y-1.5">
+        {/* Recommended Action */}
+        <div className="p-3 bg-gray-50 border border-gray-200 rounded text-xs space-y-1">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-blue-950 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-              Recommended Action
+            <span className="font-medium text-gray-900 text-xs">
+              Recovery Action Plan
             </span>
-            <span className="font-mono font-black px-2.5 py-0.5 bg-blue-600 text-white rounded-md text-[10px] tracking-wider shadow-2xs">
+            <span className="font-mono font-medium px-1.5 py-0.2 bg-gray-900 text-white rounded text-[10px]">
               {recommendation?.badgeText || "RETRY"}
             </span>
           </div>
-          <p className="text-blue-900 text-[11px] font-medium leading-relaxed">
-            {recommendation?.recommendation || "High recovery score indicates payer may resolve funds; retry recommended."}
+          <p className="text-gray-600 text-[11px] font-normal leading-relaxed">
+            {recommendation?.recommendation || "High recovery score indicates temporary decline; scheduled retry recommended."}
           </p>
         </div>
 
-        {/* Evidence Signals Evaluated */}
+        {/* Diagnostic Signals */}
         {recommendation?.evidence && (
-          <div className="space-y-2 pt-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Evidence Signals Evaluated
+          <div className="space-y-1 pt-0.5">
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">
+              Evaluated Telemetry Factors
             </span>
-            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+            <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
               {recommendation.evidence.map((e) => (
-                <div key={e.id} className="flex items-start gap-2 text-xs font-medium text-slate-700">
+                <div key={e.id} className="flex items-start gap-1.5 text-xs text-gray-700">
                   {e.isPositive ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
                   ) : (
-                    <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
                   )}
-                  <span className="leading-tight text-slate-800 text-[11px] font-semibold">{e.text}</span>
+                  <span className="leading-snug text-gray-700 text-[11px] font-normal">{e.text}</span>
                 </div>
               ))}
             </div>
