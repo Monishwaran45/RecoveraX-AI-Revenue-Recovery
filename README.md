@@ -162,19 +162,22 @@ RecoveraX includes a specialized **Mandate Presentation Window Sequencer** ([`ba
 
 ## Hinglish Voice Recovery & Promise-to-Pay Tracker
 
-### 1. Hinglish Voice Recovery (Sarvam AI Integration)
-- **Sarvam AI Text-to-Speech Engine**: Generates natural, respectful Hinglish audio scripts using Sarvam AI (`bulbul:v3`, speaker: `priya`, `target_language_code="hi-IN"`).
+### 1. Hinglish Voice Recovery / AI-Generated Voice Intervention (Sarvam AI Integration)
+- **Sarvam AI Text-to-Speech Engine**: Generates natural, respectful Hinglish audio intervention payloads using Sarvam AI (`bulbul:v3`, speaker: `priya`, `target_language_code="hi-IN"`).
 - **Environment & MOCK/REAL Mode**: Reads `SARVAM_API_KEY` from `.env`. When configured, executes live audio synthesis (`mode: "REAL"`). When omitted, runs in **MOCK/DEMO mode** (`mode: "MOCK"`) with Web Speech browser audio playback fallback.
-- **Safety Policy Enforcement**: Voice recovery interactions are governed by the deterministic safety policy engine. Prohibited on `BLOCKED` or `AMBIGUOUS` cases to prevent misleading or unsafe communications.
+- **Payload Status (`SYNTHESIZED`)**: Synthesizes structured base64 WAV audio payloads ready for PSTN/IVR telephony dispatch systems (Exotel, Twilio, Vapi, Retell AI).
+- **Safety Policy Enforcement**: Voice intervention synthesis is governed by the deterministic safety policy engine. Prohibited on `BLOCKED` or `AMBIGUOUS` cases to prevent misleading or unsafe communications.
 - **API Endpoint**: `POST /api/v1/cases/{case_id}/voice-call`
 
 ### 2. Promise-to-Pay (P2P) Tracker
 - **P2P Lifecycle**: Full commitment tracking state machine: `PROMISED` ➔ `P2P_KEPT` or `P2P_BROKEN`.
 - **Authoritative Settlement Verification**: P2P commitments are verified against verified bank settlement webhooks. A promise is marked as `P2P_KEPT` only upon confirmed bank deposit. Unverified retries do not count.
-- **API Endpoints**:
-  - `POST /api/v1/cases/{case_id}/p2p`: Record customer commitment date & amount.
+- **API Endpoints (Full Commitment Management)**:
+  - `POST /api/v1/cases/{case_id}/p2p`: Record customer commitment date, amount & notes.
   - `GET /api/v1/cases/{case_id}/p2p`: Retrieve case P2P commitment history.
-  - `POST /api/v1/cases/{case_id}/p2p/verify`: Reconcile P2P state against bank gateway ledger.
+  - `PUT /api/v1/cases/{case_id}/p2p/{promise_id}`: Edit / update commitment date, amount & notes.
+  - `DELETE /api/v1/cases/{case_id}/p2p`: Remove / cancel active commitment.
+  - `POST /api/v1/cases/{case_id}/p2p/verify`: Reconcile P2P state against bank gateway deposit ledger.
 
 ---
 
