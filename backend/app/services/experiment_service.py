@@ -9,6 +9,9 @@ from app.models.experiment_result import ExperimentResult
 from app.models.recovery_case import RecoveryCase
 from app.policy.enums import CaseStatus, PolicyDecision
 
+def _val(x):
+    return getattr(x, "value", x) if x is not None else ""
+
 class ExperimentService:
     @staticmethod
     async def run_experiment(db: AsyncSession, name: str = "Recovery Outcome Evaluation & Baseline Comparison") -> Experiment:
@@ -26,8 +29,14 @@ class ExperimentService:
         results = []
 
         for c in cases:
+            prob_type = _val(c.problem_type)
+            pol_dec = _val(c.policy_decision)
+            status_val = _val(c.status)
+            v_res = getattr(c, 'verification_result', None) or "NONE"
+            amt_rec = getattr(c, 'amount_recovered', 0.0) or 0.0
+
             # Strategy 1: Naive Fixed Rule Baseline Strategy (Immediate blind retry without risk scoring or safety checks)
-            if c.problem_type.value == "FAILED_PAYMENT" and c.amount_at_risk <= 5000 and c.recovery_score >= 85 and c.policy_decision == PolicyDecision.AUTO:
+            if prob_type == "FAILED_PAYMENT" and c.amount_at_risk <= 5000 and c.recovery_score >= 85 and pol_dec == "AUTO":
                 base_recovered = c.amount_at_risk
                 base_outcome = "RECOVERED"
             else:
@@ -37,15 +46,15 @@ class ExperimentService:
             baseline_recovered += base_recovered
 
             # Strategy 2: RecoveraX Agent Strategy (Money Truth: Only verified success counts)
-            is_verified = (c.status == CaseStatus.RECOVERED and (getattr(c, 'verification_result', None) == "VERIFIED_SUCCESS" or (getattr(c, 'amount_recovered', 0.0) or 0.0) > 0))
+            is_verified = (status_val == "RECOVERED" and (v_res == "VERIFIED_SUCCESS" or amt_rec > 0))
             
-            if is_verified or c.policy_decision == PolicyDecision.AUTO or c.status == CaseStatus.SCHEDULED:
-                ai_rec = getattr(c, 'amount_recovered', None) or c.amount_at_risk
+            if is_verified or pol_dec == "AUTO" or status_val == "SCHEDULED":
+                ai_rec = amt_rec if amt_rec > 0 else c.amount_at_risk
                 ai_outcome = "RECOVERED"
-            elif c.policy_decision == PolicyDecision.BLOCK or c.status == CaseStatus.BLOCKED:
+            elif pol_dec == "BLOCK" or status_val == "BLOCKED":
                 ai_rec = 0.0
                 ai_outcome = "BLOCKED_SAFETY"
-            elif c.policy_decision == PolicyDecision.HUMAN or c.status == CaseStatus.AWAITING_APPROVAL:
+            elif pol_dec == "HUMAN" or status_val in ("AWAITING_APPROVAL", "HUMAN_APPROVAL"):
                 ai_rec = 0.0
                 ai_outcome = "AWAITING_HUMAN_APPROVAL"
             else:
