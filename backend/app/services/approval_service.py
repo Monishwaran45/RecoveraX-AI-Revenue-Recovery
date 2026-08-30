@@ -72,6 +72,7 @@ class ApprovalService:
         # Approval authorizes this specific action; it does not rewrite policy authority.
         case.policy_decision = PolicyDecision.HUMAN
         
+        action_val = case.recommended_action.value if hasattr(case.recommended_action, "value") else str(case.recommended_action)
         await audit_service.log_event(
             db=db,
             case_id=case.id,
@@ -79,7 +80,7 @@ class ApprovalService:
             actor_type=ActorType.HUMAN,
             actor_id="HUMAN_OPERATOR",
             reason=reason or "Human operator approved recovery retry",
-            metadata_json={"action": case.recommended_action.value}
+            metadata_json={"action": action_val}
         )
 
         await db.commit()
@@ -106,6 +107,7 @@ class ApprovalService:
         case.status = CaseStatus.STOPPED
         case.policy_decision = PolicyDecision.STOP
 
+        action_val = case.recommended_action.value if hasattr(case.recommended_action, "value") else str(case.recommended_action)
         await audit_service.log_event(
             db=db,
             case_id=case.id,
@@ -113,7 +115,7 @@ class ApprovalService:
             actor_type=ActorType.HUMAN,
             actor_id="HUMAN_OPERATOR",
             reason=reason or "Human operator rejected recovery action",
-            metadata_json={"action": case.recommended_action.value}
+            metadata_json={"action": action_val}
         )
 
         await db.commit()
@@ -141,6 +143,8 @@ class ApprovalService:
         tx_res = await db.execute(tx_query)
         tx = tx_res.scalar_one_or_none()
 
+        mod_action_str = modified_action.value if hasattr(modified_action, "value") else str(modified_action)
+
         # IMPORTANT REQUIREMENT: Human-modified actions MUST pass through policy_check again
         policy_eval = policy_engine.evaluate(
             transaction_status=TransactionStatus(tx.status.value if tx else "FAILED"),
@@ -162,7 +166,7 @@ class ApprovalService:
                 req.human_decision = "MODIFY"
                 req.modified_action = modified_action
                 req.modified_delay_minutes = modified_delay_minutes
-                req.reason = reason or f"Human operator modified action to {modified_action.value}"
+                req.reason = reason or f"Human operator modified action to {mod_action_str}"
                 req.resolved_at = datetime.utcnow()
 
         case.recommended_action = modified_action
@@ -176,7 +180,7 @@ class ApprovalService:
                 event_type=AuditEventType.ACTION_BLOCKED,
                 actor_type=ActorType.POLICY,
                 actor_id="DETERMINISTIC_POLICY_ENGINE",
-                reason=f"Human-modified action {modified_action.value} failed re-policy check: {policy_eval.reason}",
+                reason=f"Human-modified action {mod_action_str} failed re-policy check: {policy_eval.reason}",
                 metadata_json={"decision": "BLOCK"}
             )
         else:
@@ -188,8 +192,8 @@ class ApprovalService:
                 event_type=AuditEventType.HUMAN_MODIFIED,
                 actor_type=ActorType.HUMAN,
                 actor_id="HUMAN_OPERATOR",
-                reason=reason or f"Human operator modified action to {modified_action.value}",
-                metadata_json={"modified_action": modified_action.value, "delay_minutes": modified_delay_minutes}
+                reason=reason or f"Human operator modified action to {mod_action_str}",
+                metadata_json={"modified_action": mod_action_str, "delay_minutes": modified_delay_minutes}
             )
 
         await db.commit()
