@@ -83,34 +83,39 @@ class VoiceService:
             custom_intent=custom_intent
         )
 
-        # Synthesize Audio via Sarvam AI Client
-        voice_result = synthesize_hinglish_audio(script)
-
-        # Log VOICE_CALL_DISPATCHED
+        # Log VOICE_SCRIPT_GENERATED
         await audit_service.log_event(
             db=db,
             case_id=case.id,
-            event_type=AuditEventType.VOICE_CALL_DISPATCHED.value,
+            event_type=AuditEventType.VOICE_SCRIPT_GENERATED.value,
             actor_type=ActorType.AI.value,
-            actor_id="SARVAM_AI_VOICE_ENGINE",
-            reason=f"Sarvam AI Voice intervention audio payload synthesized in {voice_result['mode']} mode.",
+            actor_id="GROQ_TEMPLATE_ENGINE",
+            reason=f"Hinglish recovery conversation script generated for customer {cust_name}.",
             metadata_json={
+                "customer_name": cust_name,
+                "amount": amt,
+                "problem_type": prob_type
+            }
+        )
+
+        # Synthesize Audio via Sarvam AI Client
+        voice_result = synthesize_hinglish_audio(script)
+
+        # Log VOICE_AUDIO_GENERATED (Synthesis complete & payload ready for telephony dispatch)
+        await audit_service.log_event(
+            db=db,
+            case_id=case.id,
+            event_type=AuditEventType.VOICE_AUDIO_GENERATED.value,
+            actor_type=ActorType.SYSTEM.value,
+            actor_id="SARVAM_AI_VOICE_ENGINE",
+            reason=f"Sarvam AI Hinglish voice intervention audio payload synthesized in {voice_result['mode']} mode (Speaker: priya, bulbul:v3). Payload ready for PSTN telephony layer.",
+            metadata_json={
+                "status": voice_result["status"],
                 "mode": voice_result["mode"],
                 "provider": voice_result["provider"],
                 "language_code": voice_result.get("language_code", "hi-IN"),
                 "speaker": voice_result.get("speaker", "priya")
             }
-        )
-
-        # Log VOICE_CALL_COMPLETED (Synthesis complete & payload ready for telephony dispatch)
-        await audit_service.log_event(
-            db=db,
-            case_id=case.id,
-            event_type=AuditEventType.VOICE_CALL_COMPLETED.value,
-            actor_type=ActorType.SYSTEM.value,
-            actor_id="SARVAM_AI_VOICE_ENGINE",
-            reason=f"Hinglish AI voice intervention audio payload synthesized ({voice_result['mode']} mode) & ready for telephony dispatch.",
-            metadata_json={"status": voice_result["status"], "mode": voice_result["mode"]}
         )
 
         await db.commit()
