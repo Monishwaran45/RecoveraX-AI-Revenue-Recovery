@@ -380,7 +380,7 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
             <PhoneCall className="h-4 w-4 text-purple-600" />
             <div>
               <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">Sarvam AI Hinglish Voice Recovery</h3>
-              <p className="text-[11px] text-gray-500">Automated Indian language voice collection agent</p>
+              <p className="text-[11px] text-gray-500">AI-generated voice intervention agent</p>
             </div>
           </div>
 
@@ -390,7 +390,7 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
             className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             {voiceLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mic className="h-3.5 w-3.5" />}
-            Trigger Voice Call
+            Synthesize Voice Intervention
           </button>
         </div>
 
@@ -405,7 +405,7 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
             <div className="flex items-center justify-between">
               <span className="font-semibold text-purple-900 flex items-center gap-1.5">
                 <Volume2 className="h-3.5 w-3.5 text-purple-600" />
-                Hinglish Voice Call Payload
+                Hinglish Voice Intervention Payload
               </span>
               <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded uppercase ${voiceResult.voice_mode === "REAL" ? "bg-emerald-600 text-white" : "bg-purple-600 text-white"}`}>
                 MODE: {voiceResult.voice_mode}
@@ -446,13 +446,13 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
             <div className="flex items-center justify-between text-[10px] text-purple-900 pt-1">
               <span>Engine: {voiceResult.provider}</span>
               <span className="font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                Call Status: {voiceResult.status}
+                Intervention Payload: {voiceResult.status}
               </span>
             </div>
           </div>
         ) : (
           <p className="text-xs text-gray-500 font-normal leading-relaxed">
-            Click &quot;Trigger Voice Call&quot; to synthesize a personalized Hinglish voice reminder using Sarvam AI (<code className="text-[10px] font-mono text-purple-700">bulbul:v1</code>).
+            Click &quot;Synthesize Voice Intervention&quot; to generate a personalized Hinglish voice script and audio payload using Sarvam AI (<code className="text-[10px] font-mono text-purple-700">bulbul:v3</code>).
           </p>
         )}
       </div>

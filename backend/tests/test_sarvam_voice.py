@@ -22,7 +22,7 @@ async def test_sarvam_mock_mode():
     with patch("app.config.settings.SARVAM_API_KEY", ""):
         res = synthesize_hinglish_audio(script)
         assert res["mode"] == "MOCK"
-        assert res["status"] in ["COMPLETED", "FALLBACK_MOCK"]
+        assert res["status"] in ["COMPLETED", "SYNTHESIZED", "FALLBACK_MOCK"]
         assert res["audio_available"] is True
         assert res["script"] == script
 
@@ -45,7 +45,7 @@ async def test_sarvam_voice_service_dispatch():
 
         res = await voice_service.dispatch_voice_call(db=session, case_id=test_case.id)
         assert res["case_id"] == test_case.id
-        assert res["status"] == "COMPLETED"
+        assert res["status"] in ["COMPLETED", "SYNTHESIZED"]
         assert res["voice_mode"] in ["MOCK", "REAL"]
         assert "Namaste" in res["script"]
 

@@ -58,8 +58,8 @@ def synthesize_hinglish_audio(script: str) -> Dict[str, Any]:
             "audio_available": True,
             "audio_url": "mock://sarvam-voice-hinglish.mp3",
             "audio_b64": base64.b64encode(script.encode("utf-8")).decode("utf-8"),
-            "status": "COMPLETED",
-            "message": "Sarvam AI Voice script generated in MOCK mode. Configure SARVAM_API_KEY for live TTS audio."
+            "status": "SYNTHESIZED",
+            "message": "Sarvam AI Voice intervention script generated in MOCK mode. Configure SARVAM_API_KEY for live TTS audio."
         }
 
     # Live API call to Sarvam AI TTS
@@ -89,12 +89,12 @@ def synthesize_hinglish_audio(script: str) -> Dict[str, Any]:
                     "provider": "Sarvam AI (Live TTS Engine)",
                     "script": script,
                     "language_code": "hi-IN",
-                    "speaker": "anushka",
+                    "speaker": "priya",
                     "audio_available": bool(audio_base64),
                     "audio_b64": audio_base64,
-                    "audio_url": "data:audio/wav;base64," + audio_base64 if audio_base64 else None,
-                    "status": "COMPLETED",
-                    "message": "Sarvam AI Hinglish voice audio synthesized successfully."
+                    "audio_url": f"data:audio/wav;base64,{audio_base64}" if audio_base64 else None,
+                    "status": "SYNTHESIZED",
+                    "message": "Sarvam AI Hinglish voice intervention audio synthesized successfully."
                 }
             else:
                 logger.warning(f"Sarvam AI API returned HTTP {resp.status_code}: {resp.text}. Falling back to MOCK mode.")
@@ -106,7 +106,7 @@ def synthesize_hinglish_audio(script: str) -> Dict[str, Any]:
                     "audio_available": True,
                     "audio_url": "mock://sarvam-voice-hinglish.mp3",
                     "status": "FALLBACK_MOCK",
-                    "message": f"Sarvam API call returned status {resp.status_code}. Fallback to mock representation."
+                    "message": f"Sarvam API call returned status {resp.status_code}. Fallback to mock voice representation."
                 }
     except Exception as e:
         logger.error(f"Sarvam AI TTS API request failed: {str(e)}. Operating in fallback mode.", exc_info=True)
