@@ -22,9 +22,24 @@ from app.policy.enums import PolicyDecision, CaseStatus, RiskLevel, ActionType
 def ensure_columns_exist():
     try:
         inspector = inspect(sync_engine)
-        if "recovery_cases" in inspector.get_table_names():
-            columns = [col["name"] for col in inspector.get_columns("recovery_cases")]
-            with sync_engine.begin() as conn:
+        table_names = inspector.get_table_names()
+        
+        with sync_engine.begin() as conn:
+            if "audit_logs" in table_names:
+                try:
+                    conn.execute(text("ALTER TABLE audit_logs MODIFY COLUMN event_type VARCHAR(64) NOT NULL"))
+                    conn.execute(text("ALTER TABLE audit_logs MODIFY COLUMN actor_type VARCHAR(64) NOT NULL"))
+                except Exception:
+                    pass
+
+            if "actions" in table_names:
+                try:
+                    conn.execute(text("ALTER TABLE actions MODIFY COLUMN action_type VARCHAR(64) NOT NULL"))
+                except Exception:
+                    pass
+
+            if "recovery_cases" in table_names:
+                columns = [col["name"] for col in inspector.get_columns("recovery_cases")]
                 if "verification_result" not in columns:
                     logger.info("Migrating schema: Adding verification_result to recovery_cases table")
                     conn.execute(text("ALTER TABLE recovery_cases ADD COLUMN verification_result VARCHAR(64) DEFAULT 'NONE'"))
@@ -34,6 +49,15 @@ def ensure_columns_exist():
                 if "approval_status" not in columns:
                     logger.info("Migrating schema: Adding approval_status to recovery_cases table")
                     conn.execute(text("ALTER TABLE recovery_cases ADD COLUMN approval_status VARCHAR(32) DEFAULT 'NOT_REQUIRED'"))
+
+                try:
+                    conn.execute(text("ALTER TABLE recovery_cases MODIFY COLUMN problem_type VARCHAR(64)"))
+                    conn.execute(text("ALTER TABLE recovery_cases MODIFY COLUMN risk_level VARCHAR(64)"))
+                    conn.execute(text("ALTER TABLE recovery_cases MODIFY COLUMN recommended_action VARCHAR(64)"))
+                    conn.execute(text("ALTER TABLE recovery_cases MODIFY COLUMN policy_decision VARCHAR(64)"))
+                    conn.execute(text("ALTER TABLE recovery_cases MODIFY COLUMN status VARCHAR(64)"))
+                except Exception:
+                    pass
     except Exception as e:
         logger.warning(f"Column migration check non-fatal exception: {e}")
 

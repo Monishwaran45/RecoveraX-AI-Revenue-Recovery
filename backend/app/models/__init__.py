@@ -9,6 +9,7 @@ from app.models.approval import ApprovalRequest
 from app.models.audit import AuditLog
 from app.models.experiment import Experiment
 from app.models.experiment_result import ExperimentResult
+from app.models.promise_to_pay import PromiseToPay
 
 __all__ = [
     "Customer",
@@ -22,4 +23,5 @@ __all__ = [
     "AuditLog",
     "Experiment",
     "ExperimentResult",
+    "PromiseToPay",
 ]

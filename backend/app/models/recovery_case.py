@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from app.models.action import ActionModel
     from app.models.approval import ApprovalRequest
     from app.models.audit import AuditLog
+    from app.models.promise_to_pay import PromiseToPay
 
 class RecoveryCase(Base):
     __tablename__ = "recovery_cases"
@@ -20,12 +21,12 @@ class RecoveryCase(Base):
     source_id: Mapped[str] = mapped_column(String(64), nullable=False)
     customer_id: Mapped[str] = mapped_column(String(64), ForeignKey("customers.id"), nullable=False)
     amount_at_risk: Mapped[float] = mapped_column(Float, nullable=False)
-    problem_type: Mapped[ProblemType] = mapped_column(SQLEnum(ProblemType), nullable=False)
+    problem_type: Mapped[str] = mapped_column(String(64), nullable=False)
     recovery_score: Mapped[int] = mapped_column(Integer, default=50)
-    risk_level: Mapped[RiskLevel] = mapped_column(SQLEnum(RiskLevel), default=RiskLevel.MEDIUM)
-    recommended_action: Mapped[ActionType] = mapped_column(SQLEnum(ActionType), default=ActionType.RETRY)
-    policy_decision: Mapped[PolicyDecision] = mapped_column(SQLEnum(PolicyDecision), default=PolicyDecision.HUMAN)
-    status: Mapped[CaseStatus] = mapped_column(SQLEnum(CaseStatus), default=CaseStatus.OPEN)
+    risk_level: Mapped[str] = mapped_column(String(64), default="MEDIUM")
+    recommended_action: Mapped[str] = mapped_column(String(64), default="RETRY")
+    policy_decision: Mapped[str] = mapped_column(String(64), default="HUMAN")
+    status: Mapped[str] = mapped_column(String(64), default="OPEN")
     verification_result: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, default="NONE")
     amount_recovered: Mapped[float] = mapped_column(Float, default=0.0)
     approval_status: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, default="NOT_REQUIRED")
@@ -39,3 +40,4 @@ class RecoveryCase(Base):
     actions: Mapped[List["ActionModel"]] = relationship("ActionModel", back_populates="recovery_case")
     approval_requests: Mapped[List["ApprovalRequest"]] = relationship("ApprovalRequest", back_populates="recovery_case")
     audit_logs: Mapped[List["AuditLog"]] = relationship("AuditLog", back_populates="recovery_case")
+    promises: Mapped[List["PromiseToPay"]] = relationship("PromiseToPay", back_populates="recovery_case")

@@ -95,11 +95,23 @@ class CaseService:
             state = "SCHEDULED"
 
         from app.schemas.recovery_case import CaseOutcomeSchema
+        from app.policy.mandate_sequencer import MandateSequencer
         c.outcome = CaseOutcomeSchema(
             state=state,
             amount_recovered=amt_rec if state == "RECOVERED" else 0.0,
             verification_result=v_res if state == "RECOVERED" else ("BLOCKED" if state == "BLOCKED" else ("VERIFIED_FAILED" if state == "FAILED" else "NONE"))
         )
+
+        if c.problem_type == ProblemType.SUBSCRIPTION_FAILURE or getattr(c, 'is_mandate', False):
+            c.is_mandate = True
+            plan = MandateSequencer.calculate_presentation_window("NACH", "INSUFFICIENT_FUNDS", c.retry_count)
+            c.mandate_sequence_plan = {
+                "target_batch_cycle": plan.target_batch_cycle,
+                "salary_window_aligned": plan.salary_window_aligned,
+                "bounce_fee_protection_applied": plan.bounce_fee_protection_applied,
+                "mandate_retry_reason": plan.mandate_retry_reason,
+                "recommended_delay_minutes": plan.recommended_delay_minutes
+            }
 
     @staticmethod
     async def get_case_by_id(db: AsyncSession, case_id: str) -> Optional[RecoveryCase]:
@@ -133,6 +145,9 @@ class CaseService:
         cust_res = await db.execute(cust_query)
         cust = cust_res.scalar_one_or_none()
 
+        # Determine if mandate payment
+        pm_str = tx.payment_method if (tx and tx.payment_method) else ("NACH" if case.problem_type == ProblemType.SUBSCRIPTION_FAILURE else "CARD")
+
         initial_state = {
             "case_id": case.id,
             "amount_at_risk": case.amount_at_risk,
@@ -140,6 +155,7 @@ class CaseService:
                 "id": tx.id if tx else "TX-000",
                 "amount": case.amount_at_risk,
                 "status": tx.status.value if tx else "FAILED",
+                "payment_method": pm_str,
                 "failure_reason": tx.failure_reason if tx else "BANK_ERROR",
                 "failure_profile_id": tx.failure_reason if tx else "TEMPORARY_BANK_ERROR",
                 "payment_state": tx.payment_state.value if tx else "CLEAR",
@@ -180,6 +196,10 @@ class CaseService:
             )
         }
         final_state = recovery_graph.invoke(initial_state, config=config)
+
+        # Attach mandate plan metadata to case object
+        case.is_mandate = final_state.get("is_mandate", False)
+        case.mandate_sequence_plan = final_state.get("mandate_sequence_plan")
 
         # Update case model fields from final state
         case.recovery_score = final_state.get("recovery_score", case.recovery_score)

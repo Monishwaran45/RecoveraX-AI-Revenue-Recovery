@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = Field(default="", alias="GROQ_API_KEY")
     GROQ_MODEL: str = Field(default="qwen/qwen3.8-27b", alias="GROQ_MODEL")
     
+    # Sarvam AI (Hinglish Voice Recovery)
+    SARVAM_API_KEY: str = Field(default="", alias="SARVAM_API_KEY")
+    
     # LangSmith Observability & Tracing
     LANGSMITH_TRACING: bool = Field(default=False, alias="LANGSMITH_TRACING")
     LANGSMITH_API_KEY: str = Field(default="", alias="LANGSMITH_API_KEY")

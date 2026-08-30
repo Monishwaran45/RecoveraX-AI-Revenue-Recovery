@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.data.seed import seed_database_if_empty
-from app.api.routes import dashboard, cases, approvals, actions, audit, experiments
+from app.api.routes import dashboard, cases, approvals, actions, audit, experiments, voice, promises
 
 from app.observability import configure_langsmith
 from app.api.dependencies import require_api_auth, enforce_rate_limit
@@ -78,6 +78,8 @@ app.include_router(approvals.router, prefix=settings.API_V1_STR, dependencies=pr
 app.include_router(actions.router, prefix=settings.API_V1_STR, dependencies=protected)
 app.include_router(audit.router, prefix=settings.API_V1_STR, dependencies=protected)
 app.include_router(experiments.router, prefix=settings.API_V1_STR, dependencies=protected)
+app.include_router(voice.router, prefix=settings.API_V1_STR, dependencies=protected)
+app.include_router(promises.router, prefix=settings.API_V1_STR, dependencies=protected)
 
 if __name__ == "__main__":
     import uvicorn

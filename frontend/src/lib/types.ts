@@ -71,6 +71,29 @@ export interface RecoveryCase {
   approvalStatus?: string;
   outcome?: CaseOutcome;
   scheduledDelayMinutes: number;
+  isMandate?: boolean;
+  mandatePlan?: {
+    targetBatchCycle: string;
+    salaryWindowAligned: boolean;
+    bounceFeeProtectionApplied: boolean;
+    mandateRetryReason: string;
+    recommendedDelayMinutes: number;
+  };
+  p2pStatus?: "PROMISED" | "P2P_KEPT" | "P2P_BROKEN" | "NONE";
+  p2pRecord?: {
+    id: string;
+    promisedAmount: number;
+    promisedDate: string;
+    status: "PROMISED" | "P2P_KEPT" | "P2P_BROKEN" | "EXPIRED";
+    notes?: string;
+  };
+  voiceCallResult?: {
+    voice_mode: "REAL" | "MOCK" | "BLOCKED";
+    provider: string;
+    script: string;
+    audio_url?: string;
+    status: string;
+  };
   auditTimeline: AuditEvent[];
   createdAt: string;
   updatedAt: string;

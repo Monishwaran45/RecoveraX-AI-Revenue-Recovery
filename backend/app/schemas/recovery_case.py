@@ -24,6 +24,8 @@ class RecoveryCaseBase(BaseModel):
     approval_status: Optional[str] = "NOT_REQUIRED"
     retry_count: int = 0
     max_retries: int = 2
+    is_mandate: Optional[bool] = False
+    mandate_sequence_plan: Optional[dict] = None
 
 class CaseOutcomeSchema(BaseModel):
     state: str

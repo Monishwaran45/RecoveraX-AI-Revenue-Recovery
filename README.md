@@ -143,6 +143,38 @@ flowchart TD
 5. **Rule 5 (`FRAUD_SIGNAL = BLOCK`)**: Fraud signals cause an immediate **BLOCK**.
 6. **Rule 6 (`MAX_RETRIES = 2`)**: Maximum 2 retries allowed per case.
 7. **Rule 7 (`PERMANENT_FAILURE = STOP`)**: Closed accounts or invalid details cause hard **STOP**.
+8. **Rule 11 (`MANDATE_COOLOFF_PROTECTION`)**: Auto-debit mandate retries (`NACH`, `E_MANDATE`, `UPI_AUTOPAY`) enforce a **48-hour minimum cool-off guardrail** to prevent bank dishonor/bounce fee penalties (₹250–₹500/bounce).
+
+---
+
+## Mandate & E-Mandate Retry Sequencer
+
+RecoveraX includes a specialized **Mandate Presentation Window Sequencer** ([`backend/app/policy/mandate_sequencer.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/policy/mandate_sequencer.py)) tailored for Indian recurring auto-debit networks (`NACH`, `E_MANDATE`, `UPI_AUTOPAY`):
+
+1. **NPCI Clearing Batch Cycle Alignment**:
+   - Automatically aligns retry schedules with NPCI clearing windows: **Morning Batch (09:00 AM IST)** and **Evening Batch (17:00 PM IST)**.
+2. **Salary & Liquidity Window Matching**:
+   - For `INSUFFICIENT_FUNDS` failures, maps retry presentation to customer salary credit days (1st, 5th, 7th, 10th, 25th of the month) when bank balances reload.
+3. **100% Dishonor Fee Protection Guardrail**:
+   - Enforces a minimum 48-hour cool-off before 2nd mandate re-presentation, eliminating bank bounce fee charges for merchants and customers.
+
+---
+
+## Track 3 Capabilities: Hinglish Voice Recovery & Promise-to-Pay Tracker
+
+### 1. Hinglish Voice Recovery (Sarvam AI Integration)
+- **Sarvam AI Text-to-Speech Engine**: Generates natural, respectful Hinglish audio scripts using Sarvam AI (`bulbul:v3`, speaker: `priya`, `target_language_code="hi-IN"`).
+- **Environment & MOCK/REAL Mode**: Reads `SARVAM_API_KEY` from `.env`. When configured, executes live audio synthesis (`mode: "REAL"`). When omitted, runs in **MOCK/DEMO mode** (`mode: "MOCK"`) with Web Speech browser audio playback fallback.
+- **Safety Policy Enforcement**: Voice recovery interactions are governed by the deterministic safety policy engine. Prohibited on `BLOCKED` or `AMBIGUOUS` cases to prevent misleading or unsafe communications.
+- **API Endpoint**: `POST /api/v1/cases/{case_id}/voice-call`
+
+### 2. Promise-to-Pay (P2P) Tracker
+- **P2P Lifecycle**: Full commitment tracking state machine: `PROMISED` ➔ `P2P_KEPT` or `P2P_BROKEN`.
+- **Authoritative Settlement Verification**: P2P commitments are verified against verified bank settlement webhooks. A promise is marked as `P2P_KEPT` only upon confirmed bank deposit. Unverified retries do not count.
+- **API Endpoints**:
+  - `POST /api/v1/cases/{case_id}/p2p`: Record customer commitment date & amount.
+  - `GET /api/v1/cases/{case_id}/p2p`: Retrieve case P2P commitment history.
+  - `POST /api/v1/cases/{case_id}/p2p/verify`: Reconcile P2P state against bank gateway ledger.
 
 ---
 

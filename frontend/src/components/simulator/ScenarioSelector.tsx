@@ -61,7 +61,7 @@ export function mapCaseToScenario(c: any, index: number): Scenario {
     title,
     amount: `₹${(c.amount || 0).toLocaleString("en-IN")}`,
     amountVal: c.amount || 0,
-    type: `${c.customerName || "Customer"} (${c.risk || "MEDIUM"} Risk)`,
+    type: `${c.customerName || "Customer"}${c.type === "SUBSCRIPTION" || c.isMandate ? " • NACH Mandate" : ""} (${c.risk || "MEDIUM"} Risk)`,
     badge,
     badgeBg,
     badgeText,

@@ -41,13 +41,27 @@ def schedule_node(state: RecoveryState) -> RecoveryState:
             "metadata": {"error": sched_err}
         })
     else:
+        mandate_plan = state.get("mandate_sequence_plan", {})
+        metadata = {
+            "delay_minutes": delay,
+            "delay_seconds": delay_seconds,
+            "case_id": case_id,
+            "celery_enqueued": celery_enqueued,
+            "is_mandate": state.get("is_mandate", False)
+        }
+        if mandate_plan:
+            metadata["mandate_plan"] = mandate_plan
+
+        reason_msg = f"Retry scheduled with {delay_seconds} seconds delay ({delay // 60}h)"
+        if state.get("is_mandate"):
+            reason_msg = f"Mandate retry scheduled for {mandate_plan.get('target_batch_cycle', 'NPCI Batch')}: {delay_seconds}s delay"
+
         audit_events.append({
             "event_type": AuditEventType.RETRY_SCHEDULED.value,
             "actor_type": ActorType.SYSTEM.value,
             "actor_id": "SCHEDULER",
-            "reason": f"Retry scheduled with {delay_seconds} seconds delay"
-                      + ("; Celery task enqueued" if celery_enqueued else "; awaiting external scheduler dispatch"),
-            "metadata": {"delay_minutes": delay, "delay_seconds": delay_seconds, "case_id": case_id, "celery_enqueued": celery_enqueued}
+            "reason": reason_msg + ("; Celery task enqueued" if celery_enqueued else "; awaiting external scheduler dispatch"),
+            "metadata": metadata
         })
         state["workflow_status"] = CaseStatus.SCHEDULED.value
 

@@ -31,6 +31,7 @@ class PolicyEngine:
         diagnosis: str,
         max_auto_retry_amount: float = None,
         min_auto_recovery_score: int = None,
+        payment_method: str = "CARD",
     ) -> PolicyEvaluation:
         try:
             max_amt = max_auto_retry_amount if max_auto_retry_amount is not None else self.max_auto_retry_amount
@@ -49,6 +50,7 @@ class PolicyEngine:
                 diagnosis=diagnosis,
                 max_auto_retry_amount=max_amt,
                 min_auto_recovery_score=min_score,
+                payment_method=payment_method,
             )
         except Exception as e:
             logger.error(f"Policy Engine exception encountered: {str(e)}. Failing closed to BLOCK.", exc_info=True)

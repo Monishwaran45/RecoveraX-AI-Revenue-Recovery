@@ -46,6 +46,7 @@ def policy_check_node(state: RecoveryState) -> RecoveryState:
         diagnosis=state.get("diagnosis", "TEMPORARY_FAILURE"),
         max_auto_retry_amount=settings.MAX_AUTO_RETRY_AMOUNT,
         min_auto_recovery_score=settings.MIN_AUTO_RECOVERY_SCORE,
+        payment_method=tx.get("payment_method", "CARD"),
     )
     
     if (state.get("forced_human") or state.get("diagnosis_confidence", 1.0) == 0.0) and eval_result.decision != PolicyDecision.BLOCK:

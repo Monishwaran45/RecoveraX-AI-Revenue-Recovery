@@ -29,6 +29,7 @@ def evaluate_policy_rules(
     diagnosis: str,
     max_auto_retry_amount: float = 50000.0,
     min_auto_recovery_score: int = 80,
+    payment_method: str = "CARD",
 ) -> PolicyEvaluation:
     rules_evaluated = []
 
@@ -140,7 +141,16 @@ def evaluate_policy_rules(
         rules_evaluated.append({"rule": r.rule_name, "decision": r.decision.value, "reason": r.reason})
         return PolicyEvaluation(decision=r.decision, reason=r.reason, rules_evaluated=rules_evaluated)
 
-    # Rule 11: AUTO qualification
+    # Rule 11: Mandate dishonor fee protection guardrail
+    is_mandate = (payment_method or "").strip().upper() in {"NACH", "E_MANDATE", "EMANDATE", "UPI_AUTOPAY", "AUTODEBIT", "DIRECT_DEBIT"}
+    if is_mandate:
+        rules_evaluated.append({
+            "rule": "MANDATE_COOLOFF_PROTECTION",
+            "decision": "PASSED",
+            "reason": f"Mandate payment {payment_method}: 48h cool-off guardrail active to prevent dishonor bounce fees."
+        })
+
+    # Rule 12: AUTO qualification
     if (
         amount <= max_auto_retry_amount
         and recovery_score >= min_auto_recovery_score
@@ -164,3 +174,4 @@ def evaluate_policy_rules(
     )
     rules_evaluated.append({"rule": r.rule_name, "decision": r.decision.value, "reason": r.reason})
     return PolicyEvaluation(decision=r.decision, reason=r.reason, rules_evaluated=rules_evaluated)
+

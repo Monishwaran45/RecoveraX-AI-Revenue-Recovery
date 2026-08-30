@@ -110,6 +110,31 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
           )}
         </div>
       </div>
+
+      {/* Mandate Sequencer Banner */}
+      {caseData.isMandate && (
+        <div className="mt-4 pt-3.5 border-t border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs bg-white/5 p-3 rounded border border-white/10">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 bg-blue-500 text-white font-mono text-[10px] rounded font-bold uppercase">
+                {caseData.mandatePlan?.targetBatchCycle || "NPCI_MORNING_BATCH_0900_IST"}
+              </span>
+              <span className="font-semibold text-blue-200 text-xs">
+                NPCI Mandate Retry Sequencer Active
+              </span>
+            </div>
+            <p className="text-gray-300 text-[11px] font-normal mt-1 leading-relaxed">
+              {caseData.mandatePlan?.mandateRetryReason || "Mandate retry presentation window aligned to NPCI clearing batch with 48h dishonor cool-off guardrail."}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 text-[10px] shrink-0">
+            <span className="px-2 py-1 bg-white/10 text-emerald-300 border border-emerald-500/30 rounded font-medium">
+              Dishonor Protection Active (48h)
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

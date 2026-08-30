@@ -153,6 +153,20 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     approvalStatus,
     outcome: outcomeObj,
     scheduledDelayMinutes: rec.delay_minutes || 30,
+    isMandate: Boolean(item.is_mandate || item.transaction?.payment_method === "NACH" || item.payment_method === "NACH"),
+    mandatePlan: item.mandate_sequence_plan ? {
+      targetBatchCycle: item.mandate_sequence_plan.target_batch_cycle,
+      salaryWindowAligned: item.mandate_sequence_plan.salary_window_aligned,
+      bounceFeeProtectionApplied: item.mandate_sequence_plan.bounce_fee_protection_applied,
+      mandateRetryReason: item.mandate_sequence_plan.mandate_retry_reason,
+      recommendedDelayMinutes: item.mandate_sequence_plan.recommended_delay_minutes
+    } : (item.transaction?.payment_method === "NACH" || item.payment_method === "NACH" ? {
+      targetBatchCycle: "NPCI_MORNING_BATCH_0900_IST",
+      salaryWindowAligned: true,
+      bounceFeeProtectionApplied: true,
+      mandateRetryReason: "Mandate presentation window calculated for NACH: aligned to NPCI_MORNING_BATCH_0900_IST after 48h cool-off. Bounce fee protection active.",
+      recommendedDelayMinutes: 2880
+    } : undefined),
     auditTimeline: Array.isArray(item.audit_logs) && item.audit_logs.length > 0
       ? item.audit_logs.map((log: any) => ({
           id: log.id,

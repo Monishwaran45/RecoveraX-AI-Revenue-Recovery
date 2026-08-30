@@ -39,6 +39,10 @@ class RecoveryState(TypedDict, total=False):
     retry_count: int
     max_retries: int
     
+    # Mandate Retry Sequencer Metadata
+    is_mandate: Optional[bool]
+    mandate_sequence_plan: Optional[Dict[str, Any]]
+    
     # Execution & Verification
     execution_result: Optional[str]
     verification_result: Optional[str]
