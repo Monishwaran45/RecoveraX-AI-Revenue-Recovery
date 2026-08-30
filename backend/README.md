@@ -121,7 +121,7 @@ docker-compose up --build
 
 ---
 
-## Track 3 Capabilities: Mandate Sequencer, Hinglish Voice Intervention & P2P Tracker
+## Capabilities: Mandate Sequencer, Hinglish Voice Intervention & P2P Tracker
 
 ### 1. Mandate Retry Sequencer (NPCI & Salary Window Matching)
 - **NPCI Batch Schedule Alignment**: Automatically aligns NACH auto-debit retries with NPCI clearing windows (**Morning Batch 09:00 AM IST** & **Evening Batch 17:00 PM IST**).
