@@ -26,7 +26,7 @@ export default function CaseDetailPage({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(true);
 
   const loadCase = async () => {
-    setLoading(true);
+    if (!recoveryCase) setLoading(true);
     try {
       const data = await getCase(unwrappedParams.id);
       setRecoveryCase(data ? { ...data } : null);

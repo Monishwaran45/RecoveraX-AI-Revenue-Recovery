@@ -13,6 +13,9 @@ from app.services.audit_service import audit_service
 
 from app.observability import get_recovery_trace_tags, get_recovery_trace_metadata
 
+def _val(x):
+    return getattr(x, "value", x) if x is not None else ""
+
 class CaseService:
     @staticmethod
     async def get_cases(
@@ -154,11 +157,11 @@ class CaseService:
             "transaction": {
                 "id": tx.id if tx else "TX-000",
                 "amount": case.amount_at_risk,
-                "status": tx.status.value if tx else "FAILED",
+                "status": _val(tx.status) if tx else "FAILED",
                 "payment_method": pm_str,
                 "failure_reason": tx.failure_reason if tx else "BANK_ERROR",
                 "failure_profile_id": tx.failure_reason if tx else "TEMPORARY_BANK_ERROR",
-                "payment_state": tx.payment_state.value if tx else "CLEAR",
+                "payment_state": _val(tx.payment_state) if tx else "CLEAR",
                 "possible_customer_debit": tx.possible_customer_debit if tx else False,
                 "fraud_signal": tx.fraud_signal if tx else False,
                 "retry_count": case.retry_count,
@@ -179,18 +182,18 @@ class CaseService:
         # Run LangGraph pipeline with LangSmith tracing metadata
         config = {
             "run_name": f"RecoveraX Recovery Case [{case.id}]",
-            "tags": get_recovery_trace_tags(case.problem_type.value, case.policy_decision.value, case.status.value),
+            "tags": get_recovery_trace_tags(_val(case.problem_type), _val(case.policy_decision), _val(case.status)),
             "metadata": get_recovery_trace_metadata(
                 case_id=case.id,
                 transaction_id=case.source_id,
                 customer_id=case.customer_id,
                 amount_at_risk=case.amount_at_risk,
-                problem_type=case.problem_type.value,
-                risk_level=case.risk_level.value,
+                problem_type=_val(case.problem_type),
+                risk_level=_val(case.risk_level),
                 recovery_score=case.recovery_score,
-                recommended_action=case.recommended_action.value,
-                policy_decision=case.policy_decision.value,
-                status=case.status.value,
+                recommended_action=_val(case.recommended_action),
+                policy_decision=_val(case.policy_decision),
+                status=_val(case.status),
                 retry_count=case.retry_count,
                 max_retries=case.max_retries,
             )
@@ -203,9 +206,9 @@ class CaseService:
 
         # Update case model fields from final state
         case.recovery_score = final_state.get("recovery_score", case.recovery_score)
-        case.risk_level = RiskLevel(final_state.get("risk_level", case.risk_level.value))
-        case.recommended_action = ActionType(final_state.get("recommended_action", case.recommended_action.value))
-        case.policy_decision = PolicyDecision(final_state.get("policy_decision", case.policy_decision.value))
+        case.risk_level = RiskLevel(_val(final_state.get("risk_level", _val(case.risk_level))))
+        case.recommended_action = ActionType(_val(final_state.get("recommended_action", _val(case.recommended_action))))
+        case.policy_decision = PolicyDecision(_val(final_state.get("policy_decision", _val(case.policy_decision))))
         
         status_str = final_state.get("workflow_status")
         if status_str and hasattr(CaseStatus, status_str):

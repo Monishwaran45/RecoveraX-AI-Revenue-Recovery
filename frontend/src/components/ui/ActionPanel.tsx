@@ -151,8 +151,10 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
       console.warn("Backend recheck API notice, updating local state:", err);
       store.recheckPayment(recoveryCase.id);
     }
-    setRetryStep("RECHECKED_FAILED");
-    onUpdate();
+    setTimeout(() => {
+      setRetryStep("RECHECKED_FAILED");
+      onUpdate();
+    }, 500);
   };
 
   // Step 2: Execute Retry
@@ -386,21 +388,59 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
             </div>
           )}
 
+          {retryStep === "RECHECKING" && (
+            <div className="flex items-center justify-between bg-amber-50/80 p-3 rounded border border-amber-200">
+              <div className="text-xs">
+                <span className="font-semibold text-amber-900 flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-600" />
+                  Querying Gateway Telemetry...
+                </span>
+                <span className="text-[11px] text-amber-700">Verifying bank settlement state & checking dishonor risk...</span>
+              </div>
+              <button
+                disabled
+                className="px-3.5 py-1.5 bg-gray-400 text-white font-medium text-xs rounded flex items-center gap-1.5 cursor-not-allowed opacity-75"
+              >
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Checking...
+              </button>
+            </div>
+          )}
+
           {retryStep === "RECHECKED_FAILED" && (
             <div className="space-y-2.5">
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-xs font-normal text-emerald-950">
-                <span className="font-semibold text-emerald-900">Pre-check Passed: </span>
-                Payment state verified clearly failed. Safe to dispatch retry.
-              </div>
-              <div className="flex justify-end">
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-xs font-normal text-emerald-950 flex items-center justify-between">
+                <div>
+                  <span className="font-semibold text-emerald-900 block">Pre-check Passed: Telemetry Verified</span>
+                  <span className="text-[11px] text-emerald-700">Payment state verified clearly failed. Safe to dispatch retry now.</span>
+                </div>
                 <button
                   onClick={handleExecuteRetry}
-                  className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ml-3"
                 >
                   <Play className="h-3.5 w-3.5 fill-white" />
                   Execute Retry Now
                 </button>
               </div>
+            </div>
+          )}
+
+          {(retryStep === "EXECUTING" || retryStep === "VERIFYING") && (
+            <div className="flex items-center justify-between bg-blue-50/80 p-3 rounded border border-blue-200">
+              <div className="text-xs">
+                <span className="font-semibold text-blue-900 flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                  {retryStep === "EXECUTING" ? "Dispatching Retry Payload..." : "Verifying Bank Deposit Settlement..."}
+                </span>
+                <span className="text-[11px] text-blue-700">Executing deterministic retry via bank gateway protocol...</span>
+              </div>
+              <button
+                disabled
+                className="px-3.5 py-1.5 bg-blue-600 text-white font-medium text-xs rounded flex items-center gap-1.5 cursor-not-allowed opacity-75"
+              >
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Processing...
+              </button>
             </div>
           )}
 

@@ -7,7 +7,7 @@
 
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.data.seed import seed_database_if_empty
@@ -57,6 +57,10 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 # Root & Health Checks
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)
+
 @app.get("/", tags=["system"])
 async def root():
     return {
