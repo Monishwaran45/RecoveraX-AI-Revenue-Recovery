@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.is_production() and (settings.DEMO_MODE or not settings.API_AUTH_TOKEN):
-        raise RuntimeError("Production requires DEMO_MODE=false and a non-empty API_AUTH_TOKEN")
+    if settings.is_production() and not settings.DEMO_MODE and not settings.API_AUTH_TOKEN:
+        raise RuntimeError("Non-demo production requires a non-empty API_AUTH_TOKEN")
     logger.info("Initializing RecoveraX Backend Services...")
     configure_langsmith()
     seed_database_if_empty()

@@ -6,8 +6,10 @@
 # ==============================================================================
 
 import os
+import json
+from typing import Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "RecoveraX Engine"
@@ -49,7 +51,26 @@ class Settings(BaseSettings):
     HUMAN_APPROVAL_AMOUNT: float = Field(default=5000.0, alias="HUMAN_APPROVAL_AMOUNT")
     
     # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: Any = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return ["*"]
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return [str(item) for item in parsed]
+                except Exception:
+                    pass
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return [str(item) for item in v]
+        return ["*"]
 
     def is_production(self) -> bool:
         return self.ENVIRONMENT.lower() == "production"
