@@ -89,14 +89,14 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
   const approvalStatus = item.approval_status || (item.status === "AWAITING_APPROVAL" ? "PENDING" : "NOT_REQUIRED");
 
   let statusVal: CaseStatus = "OPEN";
-  if (item.status === "RECOVERED" && (verificationResult === "VERIFIED_SUCCESS" || amountRecovered > 0)) statusVal = "RECOVERED";
+  if (item.status === "RECOVERED" || verificationResult === "VERIFIED_SUCCESS" || amountRecovered > 0) statusVal = "RECOVERED";
   else if (item.status === "BLOCKED") statusVal = "BLOCKED";
   else if (item.status === "SCHEDULED") statusVal = "SCHEDULED";
-  else if (item.status === "AWAITING_APPROVAL" || approvalStatus === "PENDING") statusVal = "HUMAN_APPROVAL";
   else if (item.status === "STOPPED") statusVal = "STOPPED";
-  else if (approvalStatus === "REJECTED") statusVal = "REJECTED";
+  else if (item.status === "REJECTED" || approvalStatus === "REJECTED") statusVal = "REJECTED";
   else if (item.status === "MODIFIED") statusVal = "MODIFIED";
   else if (item.status === "FAILED") statusVal = "FAILED";
+  else if (item.status === "AWAITING_APPROVAL" || approvalStatus === "PENDING") statusVal = "HUMAN_APPROVAL";
 
   const rawTitleStr = item.title || item.problem_type || rec.diagnosis;
   const problemTitle = formatDynamicTitle(rawTitleStr);
