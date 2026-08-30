@@ -46,25 +46,43 @@ export default function ApprovalsPage() {
 
   const handleApprove = async (id: string) => {
     setActionLoadingId(id);
-    await approveCase(id);
-    setActionLoadingId(null);
-    fetchApprovals();
+    try {
+      await approveCase(id);
+    } catch (e) {
+      console.warn("API approve warning, updating local store state:", e);
+      store.approveCase(id);
+    } finally {
+      setActionLoadingId(null);
+      fetchApprovals();
+    }
   };
 
   const handleReject = async (id: string) => {
     setActionLoadingId(id);
-    await rejectCase(id);
-    setActionLoadingId(null);
-    fetchApprovals();
+    try {
+      await rejectCase(id);
+    } catch (e) {
+      console.warn("API reject warning, updating local store state:", e);
+      store.rejectCase(id);
+    } finally {
+      setActionLoadingId(null);
+      fetchApprovals();
+    }
   };
 
   const handleModifySubmit = async (delayMinutes: number, notes?: string) => {
     if (!modifyingCase) return;
     setActionLoadingId(modifyingCase.id);
-    await modifyCase(modifyingCase.id, { delayMinutes, notes });
-    setActionLoadingId(null);
-    setModifyingCase(null);
-    fetchApprovals();
+    try {
+      await modifyCase(modifyingCase.id, { delayMinutes, notes });
+    } catch (e) {
+      console.warn("API modify warning, updating local store state:", e);
+      store.modifyCase(modifyingCase.id, { delayMinutes, notes });
+    } finally {
+      setActionLoadingId(null);
+      setModifyingCase(null);
+      fetchApprovals();
+    }
   };
 
   return (
