@@ -1,0 +1,66 @@
+name: Nightly Test Suite & Verification
+
+on:
+  schedule:
+    # Runs tests every day at 4am UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    name: Backend Pytest & Safety Verification
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Execute Backend Tests
+        env:
+          DEMO_MODE: "true"
+          ENVIRONMENT: "development"
+        run: |
+          pytest -v
+
+  frontend-build:
+    name: Frontend Next.js Build & Verification
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Frontend Dependencies
+        run: npm ci || npm install
+
+      - name: Build Next.js Application
+        run: npm run build

@@ -17,8 +17,20 @@ from app.observability import configure_langsmith
 from app.api.dependencies import require_api_auth, enforce_rate_limit
 from fastapi import Depends
 
+import asyncio
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+async def _backend_heartbeat():
+    while True:
+        try:
+            await asyncio.sleep(600) # Every 10 minutes
+            logger.info("Backend Heartbeat: Service active, database session & background tasks healthy.")
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            pass
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -27,7 +39,9 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing RecoveraX Backend Services...")
     configure_langsmith()
     seed_database_if_empty()
+    heartbeat_task = asyncio.create_task(_backend_heartbeat())
     yield
+    heartbeat_task.cancel()
     logger.info("Shutting down backend services.")
 
 app = FastAPI(

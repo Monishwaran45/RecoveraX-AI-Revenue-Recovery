@@ -1,0 +1,30 @@
+name: Backend Keep-Alive (Prevent Backend Sleep)
+
+on:
+  schedule:
+    # Runs every 14 minutes to keep cloud backend instances active 24/7 (preventing Render/free-tier sleep)
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  keepalive:
+    name: Health Check Ping
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend Health Endpoint
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          TARGET_URL="${BACKEND_URL:-https://recoverax-backend.onrender.com}"
+          echo "Pinging backend health endpoint at ${TARGET_URL}/health ..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${TARGET_URL}/health" || echo "000")
+          echo "Backend returned HTTP Status: ${HTTP_STATUS}"
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "✅ Backend is active and healthy."
+          else
+            echo "⚠️ Health check returned non-200 status (${HTTP_STATUS}), retrying..."
+            curl -s -f "${TARGET_URL}/health" || echo "Ping completed."
+          fi
