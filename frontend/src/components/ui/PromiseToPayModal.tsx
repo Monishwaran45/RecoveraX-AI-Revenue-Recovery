@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react";
 import { X, Calendar, DollarSign, FileText, Loader2, CheckCircle2 } from "lucide-react";
 
+import { PromiseToPayRecord } from "@/lib/api/promises";
+
 interface PromiseToPayModalProps {
   caseId: string;
   defaultAmount: number;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (promisedAmount: number, promisedDate: string, notes?: string) => Promise<void>;
+  initialRecord?: PromiseToPayRecord | null;
 }
 
 export default function PromiseToPayModal({
@@ -17,6 +20,7 @@ export default function PromiseToPayModal({
   isOpen,
   onClose,
   onSubmit,
+  initialRecord,
 }: PromiseToPayModalProps) {
   const [amount, setAmount] = useState<number>(defaultAmount || 0);
   const [date, setDate] = useState<string>(() => {
@@ -30,13 +34,20 @@ export default function PromiseToPayModal({
 
   useEffect(() => {
     if (isOpen) {
-      setAmount(defaultAmount || 0);
-      const d = new Date();
-      d.setDate(d.getDate() + 3);
-      setDate(d.toISOString().split("T")[0]);
+      if (initialRecord) {
+        setAmount(initialRecord.promised_amount || defaultAmount || 0);
+        setDate(initialRecord.promised_date ? initialRecord.promised_date.split("T")[0] : new Date().toISOString().split("T")[0]);
+        setNotes(initialRecord.notes || "");
+      } else {
+        setAmount(defaultAmount || 0);
+        const d = new Date();
+        d.setDate(d.getDate() + 3);
+        setDate(d.toISOString().split("T")[0]);
+        setNotes("");
+      }
       setErrorMsg(null);
     }
-  }, [isOpen, defaultAmount]);
+  }, [isOpen, defaultAmount, initialRecord]);
 
   if (!isOpen) return null;
 
@@ -70,7 +81,9 @@ export default function PromiseToPayModal({
         <div className="px-5 py-4 bg-gray-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-emerald-400" />
-            <h3 className="font-semibold text-sm">Log Promise-to-Pay (P2P) Commitment</h3>
+            <h3 className="font-semibold text-sm">
+              {initialRecord ? "Edit Promise-to-Pay (P2P) Commitment" : "Log Promise-to-Pay (P2P) Commitment"}
+            </h3>
           </div>
           <button
             onClick={onClose}
@@ -150,7 +163,7 @@ export default function PromiseToPayModal({
               className="px-4 py-1.5 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
-              Save P2P Commitment
+              {initialRecord ? "Update P2P Commitment" : "Save P2P Commitment"}
             </button>
           </div>
         </form>

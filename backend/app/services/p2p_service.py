@@ -160,4 +160,86 @@ class P2PService:
         await db.refresh(promise)
         return promise
 
+    @staticmethod
+    async def update_promise(
+        db: AsyncSession,
+        case_id: str,
+        promise_id: str,
+        promised_amount: float,
+        promised_date: datetime,
+        notes: Optional[str] = None
+    ) -> PromiseToPay:
+        if promised_amount <= 0:
+            raise ValueError("Promised amount must be greater than zero.")
+
+        query = select(PromiseToPay).where(PromiseToPay.case_id == case_id, PromiseToPay.id == promise_id)
+        res = await db.execute(query)
+        promise = res.scalar_one_or_none()
+        if not promise:
+            # Fallback to latest promise for case
+            latest_query = select(PromiseToPay).where(PromiseToPay.case_id == case_id).order_by(desc(PromiseToPay.created_at))
+            latest_res = await db.execute(latest_query)
+            promise = latest_res.scalars().first()
+
+        if not promise:
+            raise ValueError(f"Promise-to-pay commitment for case '{case_id}' not found.")
+
+        if promised_date.tzinfo is not None:
+            promised_date = promised_date.astimezone(timezone.utc).replace(tzinfo=None)
+
+        promise.promised_amount = promised_amount
+        promise.promised_date = promised_date
+        if notes is not None:
+            promise.notes = notes
+        promise.updated_at = datetime.utcnow()
+
+        await audit_service.log_event(
+            db=db,
+            case_id=case_id,
+            event_type=AuditEventType.P2P_CREATED.value,
+            actor_type=ActorType.HUMAN.value,
+            actor_id="P2P_TRACKER_AGENT",
+            reason=f"Customer promise-to-pay commitment updated: ₹{promised_amount:,.2f} due by {promised_date.strftime('%Y-%m-%d')}",
+            metadata_json={
+                "promise_id": promise.id,
+                "promised_amount": promised_amount,
+                "promised_date": promised_date.isoformat(),
+                "notes": notes
+            }
+        )
+
+        await db.commit()
+        await db.refresh(promise)
+        return promise
+
+    @staticmethod
+    async def delete_promise(
+        db: AsyncSession,
+        case_id: str,
+        promise_id: Optional[str] = None
+    ) -> bool:
+        query = select(PromiseToPay).where(PromiseToPay.case_id == case_id)
+        if promise_id:
+            query = query.where(PromiseToPay.id == promise_id)
+        res = await db.execute(query)
+        promises = list(res.scalars().all())
+        if not promises:
+            return False
+
+        for p in promises:
+            await db.delete(p)
+
+        await audit_service.log_event(
+            db=db,
+            case_id=case_id,
+            event_type=AuditEventType.P2P_BROKEN.value,
+            actor_type=ActorType.HUMAN.value,
+            actor_id="P2P_TRACKER_AGENT",
+            reason=f"Promise-to-pay commitment deleted/canceled for case {case_id}.",
+            metadata_json={"case_id": case_id, "action": "DELETED"}
+        )
+
+        await db.commit()
+        return True
+
 p2p_service = P2PService()

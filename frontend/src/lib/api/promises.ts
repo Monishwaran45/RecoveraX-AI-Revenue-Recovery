@@ -62,3 +62,41 @@ export async function verifyPromiseToPay(
 
   return await res.json();
 }
+
+export async function updatePromiseToPay(
+  caseId: string,
+  promiseId: string,
+  input: { promisedAmount: number; promisedDate: string; notes?: string }
+): Promise<PromiseToPayRecord> {
+  const res = await fetch(`${BACKEND_URL}/cases/${caseId}/p2p/${promiseId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      promised_amount: input.promisedAmount,
+      promised_date: input.promisedDate,
+      notes: input.notes || null,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Failed to update promise-to-pay commitment.`);
+  }
+
+  return await res.json();
+}
+
+export async function deletePromiseToPay(caseId: string, promiseId?: string): Promise<boolean> {
+  const url = promiseId ? `${BACKEND_URL}/cases/${caseId}/p2p?promise_id=${promiseId}` : `${BACKEND_URL}/cases/${caseId}/p2p`;
+  const res = await fetch(url, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Failed to delete promise-to-pay commitment.`);
+  }
+
+  const data = await res.json();
+  return data.success ?? true;
+}

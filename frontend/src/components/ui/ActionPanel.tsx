@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { RecoveryCase } from "@/lib/types";
 import { recheckPayment, executeRetry, approveCase, rejectCase, modifyCase } from "@/lib/api/approvals";
 import { triggerSarvamVoiceCall, SarvamVoiceResponse } from "@/lib/api/voice";
-import { createPromiseToPay, getPromisesToPay, verifyPromiseToPay, PromiseToPayRecord } from "@/lib/api/promises";
+import { createPromiseToPay, getPromisesToPay, verifyPromiseToPay, updatePromiseToPay, deletePromiseToPay, PromiseToPayRecord } from "@/lib/api/promises";
 import ModifyActionModal from "./ModifyActionModal";
 import PromiseToPayModal from "./PromiseToPayModal";
 import { 
@@ -20,7 +20,8 @@ import {
   PhoneCall,
   Calendar,
   Mic,
-  Volume2
+  Volume2,
+  Trash2
 } from "lucide-react";
 
 import { store } from "@/lib/store";
@@ -49,6 +50,7 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
   // P2P state
   const [p2pRecord, setP2PRecord] = useState<PromiseToPayRecord | null>(null);
   const [p2pVerifying, setP2PVerifying] = useState(false);
+  const [p2pDeleting, setP2PDeleting] = useState(false);
 
   // Auto-fetch existing P2P commitment for current case
   useEffect(() => {
@@ -86,11 +88,30 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
     }
   };
 
-  // Create P2P Commitment
-  const handleCreateP2P = async (promisedAmount: number, promisedDate: string, notes?: string) => {
-    const res = await createPromiseToPay(recoveryCase.id, { promisedAmount, promisedDate, notes });
-    setP2PRecord(res);
+  // Create or Update P2P Commitment
+  const handleSaveP2P = async (promisedAmount: number, promisedDate: string, notes?: string) => {
+    if (p2pRecord) {
+      const res = await updatePromiseToPay(recoveryCase.id, p2pRecord.id, { promisedAmount, promisedDate, notes });
+      setP2PRecord(res);
+    } else {
+      const res = await createPromiseToPay(recoveryCase.id, { promisedAmount, promisedDate, notes });
+      setP2PRecord(res);
+    }
     onUpdate();
+  };
+
+  // Delete P2P Commitment
+  const handleDeleteP2P = async () => {
+    setP2PDeleting(true);
+    try {
+      await deletePromiseToPay(recoveryCase.id, p2pRecord?.id);
+      setP2PRecord(null);
+      onUpdate();
+    } catch (err: any) {
+      console.warn("Delete P2P error:", err);
+    } finally {
+      setP2PDeleting(false);
+    }
   };
 
   // Verify P2P Fulfillment
@@ -469,24 +490,46 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
           </div>
 
           <div className="flex items-center gap-2">
-            {p2pRecord && (
+            {p2pRecord ? (
+              <>
+                <button
+                  onClick={handleVerifyP2P}
+                  disabled={p2pVerifying}
+                  className="px-2.5 py-1.5 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium border border-gray-300 rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="Verify against bank deposit ledger"
+                >
+                  {p2pVerifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5 text-emerald-600" />}
+                  Verify P2P
+                </button>
+
+                <button
+                  onClick={() => setIsP2POpen(true)}
+                  className="px-2.5 py-1.5 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium border border-gray-300 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                  title="Edit commitment date or amount"
+                >
+                  <Edit3 className="h-3.5 w-3.5 text-blue-600" />
+                  Edit P2P
+                </button>
+
+                <button
+                  onClick={handleDeleteP2P}
+                  disabled={p2pDeleting}
+                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium border border-rose-200 rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="Remove/cancel commitment"
+                >
+                  {p2pDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 text-rose-600" />}
+                  Remove P2P
+                </button>
+              </>
+            ) : (
               <button
-                onClick={handleVerifyP2P}
-                disabled={p2pVerifying}
-                className="px-2.5 py-1 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium border border-gray-300 rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                onClick={() => setIsP2POpen(true)}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1.5 cursor-pointer"
               >
-                {p2pVerifying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}
-                Verify P2P
+                <Calendar className="h-3.5 w-3.5" />
+                Log P2P Commitment
               </button>
             )}
-
-            <button
-              onClick={() => setIsP2POpen(true)}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <Calendar className="h-3.5 w-3.5" />
-              Log P2P Commitment
-            </button>
           </div>
         </div>
 
@@ -542,7 +585,8 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
         defaultAmount={recoveryCase.amount}
         isOpen={isP2POpen}
         onClose={() => setIsP2POpen(false)}
-        onSubmit={handleCreateP2P}
+        onSubmit={handleSaveP2P}
+        initialRecord={p2pRecord}
       />
     </div>
   );
