@@ -18,7 +18,7 @@ class ApprovalService:
     def _require_pending_human_review(case: RecoveryCase) -> None:
         status_val = case.status.value if hasattr(case.status, "value") else str(case.status).upper()
         if status_val in ("RECOVERED", "BLOCKED", "STOPPED", "FAILED"):
-            raise ValueError(f"Case {case.id} is already in terminal state {status_val} and cannot be modified.")
+            raise ValueError(f"Case {case.id} is in terminal state {status_val} and not awaiting human approval.")
 
     @staticmethod
     async def get_pending_approvals(db: AsyncSession) -> List[ApprovalRequest]:
