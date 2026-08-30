@@ -112,23 +112,24 @@ flowchart TD
 
 ---
 
-## Measured Batch Revenue Recovery & Empirical Outcomes
+## Simulator Benchmark — 1,000 Synthetic Payment Cases
 
-> **Don't just identify the problem — quantify the outcomes.** RecoveraX proves empirical financial lift by executing batch benchmark evaluations comparing naive blind retries against our deterministic safety guardrails.
+> **Empirical Evaluation**: RecoveraX evaluates performance through a 1,000-case synthetic payment simulator benchmark comparing naive blind retries against our guardrailed AI engine. *(Note: Metrics reflect simulator benchmark evaluation, not live Razorpay merchant production data).*
 
-### Measured Batch Benchmark (1,000 Payment Failure Cases)
+### Simulator Benchmark Outcomes (1,000 Synthetic Payment Cases)
 
-| Metric | Naive Blind Retry (Baseline) | RecoveraX Engine (Guardrailed) | Empirical Quantified Lift |
+| Metric | Baseline Strategy (Blind Retry) | RecoveraX AI Engine (Guardrailed) | Incremental Lift |
 | :--- | :--- | :--- | :--- |
-| **Total Volume at Risk** | ₹50,00,000 (₹50.0L) | ₹50,00,000 (₹50.0L) | Benchmark Cohort Baseline |
-| **Measured Revenue Recovered** | ₹12,50,000 (₹12.5L) | **₹34,80,000 (₹34.8L)** | **+₹22,30,000 (+₹22.3L Net Lift)** |
-| **Gross Recovery Rate** | 25.0% | **69.6%** | **+44.6% Recovery Rate Lift** |
-| **Double Debit Safety Incidents** | 14 Duplicate Debits | **0 Duplicate Debits (0%)** | **100% Double Debit Prevention** |
-| **Ambiguous State Safety Blocks** | 0 (Blind Retry Dispatched) | **1 Case Hard-Blocked** | **Zero Fraud/Double Charge Exposure** |
-| **High-Exposure Operator Reviews** | 0 (Uncontrolled) | **713 Cases Routed** | **Full HITL Risk Control (>₹50k)** |
+| **Total Volume Evaluated** | ₹50,00,000 (₹50.0L) | ₹50,00,000 (₹50.0L) | 1,000 Synthetic Cases |
+| **Baseline Recovery** | **₹12,50,000 (₹12.5L)** | — | 25.0% Baseline Rate |
+| **RecoveraX Recovery** | — | **₹34,80,000 (₹34.8L)** | 69.6% Guardrailed Rate |
+| **Incremental Revenue Lift** | — | — | **+₹22,30,000 (+₹22.3L Net Lift)** |
+| **Double Debit Safety Violations** | 14 Duplicate Debits | **0 Duplicate Debits (0%)** | 100% Double Debit Prevention |
+| **Ambiguous State Safety Blocks** | 0 (Blind Retry Dispatched) | **1 Case Hard-Blocked** | Zero Fraud/Double Charge Exposure |
+| **High-Exposure Operator Reviews** | 0 (Uncontrolled) | **713 Cases Routed** | Full HITL Risk Control (>₹50k) |
 
 ### Key Quantified Takeaways:
-1. **Quantified Monetary Recovery**: RecoveraX increased verified bank settlements by **+₹22.3 Lakhs** on a 1,000-case cohort.
+1. **Quantified Monetary Recovery**: RecoveraX achieved **₹34.8L total recovery** vs **₹12.5L baseline**, delivering **+₹22.3L incremental lift** on the 1,000 synthetic case benchmark cohort.
 2. **Zero Financial Safety Violations**: Prevented 14 potential duplicate customer debits through state-verified pre-execution checks (`recheck` node).
 3. **Automated vs Human Split**: **28.7%** low-risk cases auto-executed safely; **71.3%** high-value/risk cases required explicit human operator authorization.
 
@@ -163,7 +164,7 @@ RecoveraX includes a specialized **Mandate Presentation Window Sequencer** ([`ba
 ## Hinglish Voice Recovery & Promise-to-Pay Tracker
 
 ### 1. Hinglish Voice Recovery / AI-Generated Voice Intervention (Sarvam AI Integration)
-- **Sarvam AI Text-to-Speech Engine**: Generates natural, respectful Hinglish audio intervention payloads using Sarvam AI (`bulbul:v3`, speaker: `priya`, `target_language_code="hi-IN"`).
+- **Sarvam AI Text-to-Speech Engine**: Sarvam AI generates personalized Hinglish voice recovery messages (`bulbul:v3`, speaker: `priya`, `target_language_code="hi-IN"`).
 - **Environment & MOCK/REAL Mode**: Reads `SARVAM_API_KEY` from `.env`. When configured, executes live audio synthesis (`mode: "REAL"`). When omitted, runs in **MOCK/DEMO mode** (`mode: "MOCK"`) with Web Speech browser audio playback fallback.
 - **Payload Status & Audit Trail**: Logs `VOICE_SCRIPT_GENERATED` (Groq/template script) and `VOICE_AUDIO_GENERATED` (base64 WAV payload synthesized and ready for PSTN/IVR telephony dispatch layers like Exotel/Twilio/Vapi).
 - **Safety Policy Enforcement**: Voice intervention synthesis is governed by the deterministic safety policy engine. Prohibited on `BLOCKED` or `AMBIGUOUS` cases to prevent misleading or unsafe communications.
@@ -171,13 +172,13 @@ RecoveraX includes a specialized **Mandate Presentation Window Sequencer** ([`ba
 
 ### 2. Promise-to-Pay (P2P) Tracker
 - **P2P Lifecycle**: Full commitment tracking state machine: `PROMISED` ➔ `P2P_KEPT` or `P2P_BROKEN`.
-- **Authoritative Settlement Verification**: P2P commitments are verified against verified bank settlement webhooks. A promise is marked as `P2P_KEPT` only upon confirmed bank deposit. Unverified retries do not count.
+- **Authoritative Settlement Verification**: P2P commitments are verified against the system's authoritative verified settlement state. A promise is marked as `P2P_KEPT` only upon confirmed deposit. Unverified retries do not count.
 - **API Endpoints (Full Commitment Management)**:
   - `POST /api/v1/cases/{case_id}/p2p`: Record customer commitment date, amount & notes.
   - `GET /api/v1/cases/{case_id}/p2p`: Retrieve case P2P commitment history.
   - `PUT /api/v1/cases/{case_id}/p2p/{promise_id}`: Edit / update commitment date, amount & notes.
   - `DELETE /api/v1/cases/{case_id}/p2p`: Remove / cancel active commitment.
-  - `POST /api/v1/cases/{case_id}/p2p/verify`: Reconcile P2P state against bank gateway deposit ledger.
+  - `POST /api/v1/cases/{case_id}/p2p/verify`: Reconcile P2P state against system settlement state.
 
 ---
 

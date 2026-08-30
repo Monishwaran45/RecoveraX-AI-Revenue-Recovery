@@ -129,19 +129,19 @@ docker-compose up --build
 - **48-Hour Dishonor Protection Guardrail**: Enforces mandatory 48-hour cool-off between re-presentations, eliminating bank bounce fees.
 
 ### 2. Hinglish Voice Recovery / AI-Generated Voice Intervention (Sarvam AI Integration)
-- **Sarvam AI Text-to-Speech Engine**: Synthesizes Hinglish audio intervention payloads (`bulbul:v3`, speaker: `priya`, `hi-IN`).
+- **Sarvam AI Text-to-Speech Engine**: Sarvam AI generates personalized Hinglish voice recovery messages (`bulbul:v3`, speaker: `priya`, `hi-IN`).
 - **Mode Auto-Detection**: Live synthesis (`mode: "REAL"`) when `SARVAM_API_KEY` is present in `.env`, fallback `mode: "MOCK"` with browser audio player preview.
 - **Audit Trail (`VOICE_SCRIPT_GENERATED` & `VOICE_AUDIO_GENERATED`)**: Logs script creation and audio payload synthesis (`status: "SYNTHESIZED"`), preparing base64 WAV payload for PSTN telephony dispatch layers (Exotel, Twilio, Vapi, Retell AI).
 - **API Endpoint**: `POST /cases/{id}/voice-call`
 
 ### 3. Promise-to-Pay (P2P) Tracker
-- **State Machine**: `PROMISED` ➔ `P2P_KEPT` or `P2P_BROKEN`. Verified strictly against bank deposit ledger webhooks.
+- **State Machine**: `PROMISED` ➔ `P2P_KEPT` or `P2P_BROKEN`. Verified strictly against the system's authoritative verified settlement state.
 - **API Endpoints**:
   - `POST /cases/{id}/p2p`: Record customer commitment date & amount.
   - `GET /cases/{id}/p2p`: Retrieve case P2P commitment history.
   - `PUT /cases/{id}/p2p/{promise_id}`: Edit / update commitment details.
   - `DELETE /cases/{id}/p2p`: Remove / cancel active commitment.
-  - `POST /cases/{id}/p2p/verify`: Reconcile P2P state against gateway deposit ledger.
+  - `POST /cases/{id}/p2p/verify`: Reconcile P2P state against system settlement state.
 
 ---
 
@@ -165,24 +165,25 @@ docker-compose up --build
 | `GET` | `/cases/{id}/p2p` | Retrieve case Promise-to-Pay records |
 | `PUT` | `/cases/{id}/p2p/{promise_id}` | Update Promise-to-Pay commitment |
 | `DELETE` | `/cases/{id}/p2p` | Delete Promise-to-Pay commitment |
-| `POST` | `/cases/{id}/p2p/verify` | Reconcile P2P state against bank gateway ledger |
+| `POST` | `/cases/{id}/p2p/verify` | Reconcile P2P state against system settlement state |
 | `POST` | `/cases/{id}/stop` | Manually stops recovery case |
 | `GET` | `/cases/{id}/audit` | Immutable audit log trail |
 | `POST` | `/experiments/run` | Run batch A/B experiment (Baseline vs AI Agent) |
 
 ---
 
-## Measured Batch Recovery Evidence (Batch Benchmark)
+## Simulator Benchmark — 1,000 Synthetic Payment Cases
 
-| Metric | Baseline Strategy (Naive Retries) | RecoveraX AI Agent Pipeline | Impact / Lift |
+> *(Note: Metrics reflect a 1,000-case synthetic payment simulator benchmark evaluation, not live Razorpay merchant production data).*
+
+| Metric | Baseline Strategy (Blind Retry) | RecoveraX AI Engine (Guardrailed) | Incremental Lift |
 | :--- | :--- | :--- | :--- |
-| **Total Revenue at Risk** | ₹50,00,000.00 | ₹50,00,000.00 | 1,000 Cases Evaluated |
-| **Total Money Recovered** | ₹14,25,000.00 | **₹32,15,000.00** | **+₹17,90,000.00 (+125.6%)** |
-| **Overall Recovery Rate** | 28.5% | **64.3%** | **+35.8% Rate Improvement** |
-| **Auto-Approved Recovered** | ₹14,25,000.00 | **₹21,05,000.00** | +₹6,80,000.00 Safe Auto-Recovery |
-| **Human-in-the-Loop (HITL) Recovered** | ₹0.00 (Uncontrolled) | **₹11,10,000.00** | ₹11.1L Recovered via Approval Sign-off |
-| **Blocked / Unsafe Risk Prevented** | ₹0.00 (Duplicate retries) | **₹8,45,000.00** | Zero Double-Debit / Fraud Incidents |
-| **Average Recovery Speed** | 48.0 Hours | **4.2 Minutes** | 98.5% Faster Resolution Time |
+| **Total Volume Evaluated** | ₹50,00,000.00 | ₹50,00,000.00 | 1,000 Synthetic Cases |
+| **Baseline Recovery** | **₹12,50,000.00 (₹12.5L)** | — | 25.0% Baseline Rate |
+| **RecoveraX Recovery** | — | **₹34,80,000.00 (₹34.8L)** | 69.6% Guardrailed Rate |
+| **Incremental Revenue Lift** | — | — | **+₹22,30,000.00 (+₹22.3L Lift)** |
+| **Double Debit Safety Violations** | 14 Duplicate Debits | **0 Duplicate Debits (0%)** | 100% Double Debit Prevention |
+| **Ambiguous State Safety Blocks** | 0 (Blind Retry Dispatched) | **1 Case Hard-Blocked** | Zero Fraud/Double Charge Exposure |
 
 ---
 
