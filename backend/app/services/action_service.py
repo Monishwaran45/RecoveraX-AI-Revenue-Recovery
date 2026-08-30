@@ -173,11 +173,16 @@ class ActionService:
             from app.policy.enums import ApprovalStatus
             app_query = select(ApprovalRequest).where(
                 ApprovalRequest.case_id == case.id,
-                ApprovalRequest.status.in_([ApprovalStatus.APPROVED, ApprovalStatus.MODIFIED])
+                ApprovalRequest.status.in_([
+                    ApprovalStatus.APPROVED, ApprovalStatus.MODIFIED,
+                    "APPROVED", "MODIFIED", "Approved", "Modified"
+                ])
             )
             app_res = await db.execute(app_query)
             approved_req = app_res.scalars().first()
-            if not approved_req:
+
+            is_approved = approved_req is not None or (getattr(case, "approval_status", None) in ("APPROVED", "MODIFIED", "Approved", "Modified"))
+            if not is_approved:
                 case.status = CaseStatus.AWAITING_APPROVAL
                 case.amount_recovered = 0.0
                 await audit_service.log_event(

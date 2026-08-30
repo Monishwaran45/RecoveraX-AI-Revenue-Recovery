@@ -178,12 +178,20 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
     setIsLoading(true);
     try {
       await approveCase(recoveryCase.id);
+      setRetryStep("RECHECKING");
+      await recheckPayment(recoveryCase.id);
+      setRetryStep("EXECUTING");
+      await executeRetry(recoveryCase.id);
+      setRetryStep("SUCCESS");
     } catch (err) {
       console.warn("Backend approve API notice, updating local state:", err);
       store.approveCase(recoveryCase.id);
+      store.markRecovered(recoveryCase.id);
+      setRetryStep("SUCCESS");
+    } finally {
+      setIsLoading(false);
+      onUpdate();
     }
-    setIsLoading(false);
-    onUpdate();
   };
 
   const handleReject = async () => {
