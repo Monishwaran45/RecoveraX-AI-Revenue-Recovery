@@ -165,7 +165,7 @@ RecoveraX includes a specialized **Mandate Presentation Window Sequencer** ([`ba
 ### 1. Hinglish Voice Recovery / AI-Generated Voice Intervention (Sarvam AI Integration)
 - **Sarvam AI Text-to-Speech Engine**: Generates natural, respectful Hinglish audio intervention payloads using Sarvam AI (`bulbul:v3`, speaker: `priya`, `target_language_code="hi-IN"`).
 - **Environment & MOCK/REAL Mode**: Reads `SARVAM_API_KEY` from `.env`. When configured, executes live audio synthesis (`mode: "REAL"`). When omitted, runs in **MOCK/DEMO mode** (`mode: "MOCK"`) with Web Speech browser audio playback fallback.
-- **Payload Status (`SYNTHESIZED`)**: Synthesizes structured base64 WAV audio payloads ready for PSTN/IVR telephony dispatch systems (Exotel, Twilio, Vapi, Retell AI).
+- **Payload Status & Audit Trail**: Logs `VOICE_SCRIPT_GENERATED` (Groq/template script) and `VOICE_AUDIO_GENERATED` (base64 WAV payload synthesized and ready for PSTN/IVR telephony dispatch layers like Exotel/Twilio/Vapi).
 - **Safety Policy Enforcement**: Voice intervention synthesis is governed by the deterministic safety policy engine. Prohibited on `BLOCKED` or `AMBIGUOUS` cases to prevent misleading or unsafe communications.
 - **API Endpoint**: `POST /api/v1/cases/{case_id}/voice-call`
 

@@ -131,7 +131,7 @@ docker-compose up --build
 ### 2. Hinglish Voice Recovery / AI-Generated Voice Intervention (Sarvam AI Integration)
 - **Sarvam AI Text-to-Speech Engine**: Synthesizes Hinglish audio intervention payloads (`bulbul:v3`, speaker: `priya`, `hi-IN`).
 - **Mode Auto-Detection**: Live synthesis (`mode: "REAL"`) when `SARVAM_API_KEY` is present in `.env`, fallback `mode: "MOCK"` with browser audio player preview.
-- **Payload Status (`SYNTHESIZED`)**: Generates base64 WAV payloads ready for telephony dispatch layers (Exotel, Twilio, Vapi, Retell AI).
+- **Audit Trail (`VOICE_SCRIPT_GENERATED` & `VOICE_AUDIO_GENERATED`)**: Logs script creation and audio payload synthesis (`status: "SYNTHESIZED"`), preparing base64 WAV payload for PSTN telephony dispatch layers (Exotel, Twilio, Vapi, Retell AI).
 - **API Endpoint**: `POST /cases/{id}/voice-call`
 
 ### 3. Promise-to-Pay (P2P) Tracker
