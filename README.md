@@ -160,7 +160,7 @@ RecoveraX includes a specialized **Mandate Presentation Window Sequencer** ([`ba
 
 ---
 
-## Track 3 Capabilities: Hinglish Voice Recovery & Promise-to-Pay Tracker
+## Hinglish Voice Recovery & Promise-to-Pay Tracker
 
 ### 1. Hinglish Voice Recovery (Sarvam AI Integration)
 - **Sarvam AI Text-to-Speech Engine**: Generates natural, respectful Hinglish audio scripts using Sarvam AI (`bulbul:v3`, speaker: `priya`, `target_language_code="hi-IN"`).
