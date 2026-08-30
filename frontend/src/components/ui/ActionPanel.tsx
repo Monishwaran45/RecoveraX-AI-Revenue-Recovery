@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * ==============================================================================
+ * RecoveraX — Autonomous AI Revenue Recovery Engine
+ * Author & Copyright (c) 2026 Monishwaran45 (https://github.com/Monishwaran45)
+ * Repository: https://github.com/Monishwaran45/RecoveraX-AI-Revenue-Recovery
+ * All Rights Reserved.
+ * ==============================================================================
+ */
+
 import { useState, useEffect } from "react";
 import { RecoveryCase } from "@/lib/types";
 import { recheckPayment, executeRetry, approveCase, rejectCase, modifyCase } from "@/lib/api/approvals";

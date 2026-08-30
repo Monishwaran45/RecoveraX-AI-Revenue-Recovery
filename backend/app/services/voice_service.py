@@ -1,3 +1,10 @@
+# ==============================================================================
+# RecoveraX — Autonomous AI Revenue Recovery Engine
+# Author & Copyright (c) 2026 Monishwaran45 (https://github.com/Monishwaran45)
+# Repository: https://github.com/Monishwaran45/RecoveraX-AI-Revenue-Recovery
+# All Rights Reserved.
+# ==============================================================================
+
 import logging
 from typing import Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession

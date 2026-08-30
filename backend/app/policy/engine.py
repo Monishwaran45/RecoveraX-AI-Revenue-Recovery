@@ -1,3 +1,10 @@
+# ==============================================================================
+# RecoveraX — Autonomous AI Revenue Recovery Engine
+# Author & Copyright (c) 2026 Monishwaran45 (https://github.com/Monishwaran45)
+# Repository: https://github.com/Monishwaran45/RecoveraX-AI-Revenue-Recovery
+# All Rights Reserved.
+# ==============================================================================
+
 import logging
 from app.config import settings
 from app.policy.enums import PolicyDecision, ActionType, PaymentState, TransactionStatus, RiskLevel
