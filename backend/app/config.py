@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = ""
     ENVIRONMENT: str = Field(default="development", alias="ENVIRONMENT")
     API_AUTH_TOKEN: str = Field(default="", alias="API_AUTH_TOKEN")
-    RATE_LIMIT_PER_MINUTE: int = Field(default=120, alias="RATE_LIMIT_PER_MINUTE")
+    RATE_LIMIT_PER_MINUTE: int = Field(default=600, alias="RATE_LIMIT_PER_MINUTE")
     
     # Database
     DATABASE_URL: str = Field(

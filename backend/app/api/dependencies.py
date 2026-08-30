@@ -23,6 +23,8 @@ async def require_api_auth(request: Request) -> str:
     return "api-token"
 
 async def enforce_rate_limit(request: Request) -> None:
+    if settings.DEMO_MODE or not settings.is_production():
+        return
     client = request.client.host if request.client else "unknown"
     now = monotonic()
     window = 60.0
