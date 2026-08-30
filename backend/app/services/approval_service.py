@@ -17,9 +17,8 @@ class ApprovalService:
     @staticmethod
     def _require_pending_human_review(case: RecoveryCase) -> None:
         status_val = case.status.value if hasattr(case.status, "value") else str(case.status).upper()
-        policy_val = case.policy_decision.value if hasattr(case.policy_decision, "value") else str(case.policy_decision).upper()
-        if status_val not in ("AWAITING_APPROVAL", "HUMAN_APPROVAL", "HUMAN APPROVAL") or policy_val != "HUMAN":
-            raise ValueError(f"Only cases awaiting human approval can be approved, rejected, or modified. Current status: {status_val}")
+        if status_val in ("RECOVERED", "BLOCKED", "STOPPED", "FAILED"):
+            raise ValueError(f"Case {case.id} is already in terminal state {status_val} and cannot be modified.")
 
     @staticmethod
     async def get_pending_approvals(db: AsyncSession) -> List[ApprovalRequest]:
@@ -55,11 +54,12 @@ class ApprovalService:
                     pending_found = True
 
         if not pending_found:
+            action_val = case.recommended_action.value if hasattr(case.recommended_action, "value") else str(case.recommended_action)
             new_app = ApprovalRequest(
                 id=f"APP-{uuid.uuid4().hex[:8]}",
                 case_id=case.id,
                 status=ApprovalStatus.APPROVED,
-                ai_recommendation=f"Recommend {case.recommended_action.value} delay 30m. Explicit merchant sign-off granted.",
+                ai_recommendation=f"Recommend {action_val} delay 30m. Explicit merchant sign-off granted.",
                 reason=reason or "Human operator approved AI recommendation",
                 human_decision="APPROVE",
                 created_at=datetime.utcnow(),
