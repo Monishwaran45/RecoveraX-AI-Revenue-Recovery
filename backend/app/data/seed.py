@@ -87,44 +87,69 @@ def ensure_demo_cases_updated(db: Session):
     db.commit()
 
 def seed_database_if_empty():
-    ensure_columns_exist()
-    Base.metadata.create_all(bind=sync_engine)
-    
-    with SyncSessionLocal() as db:
-        existing = db.scalars(select(RecoveryCase)).first()
-        if existing:
-            ensure_demo_cases_updated(db)
-            logger.info("Database already seeded. Demo case decisions updated.")
-            return
-
-        logger.info("Seeding database with 1,000 synthetic cases and demo cases (seed=42)...")
-        customers, transactions, subscriptions, invoices, recovery_cases, recommendations, approval_requests, audit_logs = generate_synthetic_dataset(seed=42)
+    try:
+        ensure_columns_exist()
+        Base.metadata.create_all(bind=sync_engine)
         
-        for c in customers:
-            db.add(c)
-        db.commit()
+        with SyncSessionLocal() as db:
+            existing = db.scalars(select(RecoveryCase)).first()
+            if existing:
+                ensure_demo_cases_updated(db)
+                logger.info("Database already seeded. Demo case decisions updated.")
+                return
 
-        for t in transactions:
-            db.add(t)
-        for s in subscriptions:
-            db.add(s)
-        for i in invoices:
-            db.add(i)
-        db.commit()
+            logger.info("Seeding database with 1,000 synthetic cases and demo cases (seed=42)...")
+            customers, transactions, subscriptions, invoices, recovery_cases, recommendations, approval_requests, audit_logs = generate_synthetic_dataset(seed=42)
+            
+            for c in customers:
+                db.add(c)
+            db.commit()
 
-        for rc in recovery_cases:
-            db.add(rc)
-        db.commit()
+            for t in transactions:
+                db.add(t)
+            for s in subscriptions:
+                db.add(s)
+            for i in invoices:
+                db.add(i)
+            db.commit()
 
-        for rec in recommendations:
-            db.add(rec)
-        for app in approval_requests:
-            db.add(app)
-        for aud in audit_logs:
-            db.add(aud)
-        db.commit()
+            for rc in recovery_cases:
+                db.add(rc)
+            db.commit()
 
-        logger.info(f"Database successfully seeded with {len(recovery_cases)} recovery cases!")
+            for rec in recommendations:
+                db.add(rec)
+            for app in approval_requests:
+                db.add(app)
+            for aud in audit_logs:
+                db.add(aud)
+            db.commit()
+
+            logger.info(f"Database successfully seeded with {len(recovery_cases)} recovery cases!")
+    except Exception as e:
+        logger.warning("Primary database connection unavailable (%s). Falling back to SQLite database...", e)
+        try:
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            sqlite_engine = create_engine("sqlite:///./recovery.db", echo=False)
+            Base.metadata.create_all(bind=sqlite_engine)
+            SqliteSession = sessionmaker(bind=sqlite_engine)
+            with SqliteSession() as db:
+                existing = db.scalars(select(RecoveryCase)).first()
+                if not existing:
+                    customers, transactions, subscriptions, invoices, recovery_cases, recommendations, approval_requests, audit_logs = generate_synthetic_dataset(seed=42)
+                    for c in customers: db.add(c)
+                    for t in transactions: db.add(t)
+                    for s in subscriptions: db.add(s)
+                    for i in invoices: db.add(i)
+                    for rc in recovery_cases: db.add(rc)
+                    for rec in recommendations: db.add(rec)
+                    for app in approval_requests: db.add(app)
+                    for aud in audit_logs: db.add(aud)
+                    db.commit()
+            logger.info("Fallback SQLite database seeded successfully.")
+        except Exception as sqlite_err:
+            logger.error("Fallback SQLite seeding error: %s", sqlite_err)
 
 if __name__ == "__main__":
     seed_database_if_empty()

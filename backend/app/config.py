@@ -23,6 +23,16 @@ class Settings(BaseSettings):
         default="sqlite+aiosqlite:///./recovery.db",
         alias="DATABASE_URL"
     )
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def sanitize_database_url(cls, v: Any) -> str:
+        if not v or not isinstance(v, str):
+            return "sqlite+aiosqlite:///./recovery.db"
+        env_mode = os.environ.get("ENVIRONMENT", "development").lower()
+        if env_mode == "production" and ("localhost" in v or "127.0.0.1" in v):
+            return "sqlite+aiosqlite:///./recovery.db"
+        return v
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
