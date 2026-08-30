@@ -121,6 +121,30 @@ docker-compose up --build
 
 ---
 
+## Track 3 Capabilities: Mandate Sequencer, Hinglish Voice Intervention & P2P Tracker
+
+### 1. Mandate Retry Sequencer (NPCI & Salary Window Matching)
+- **NPCI Batch Schedule Alignment**: Automatically aligns NACH auto-debit retries with NPCI clearing windows (**Morning Batch 09:00 AM IST** & **Evening Batch 17:00 PM IST**).
+- **Salary & Liquidity Day Matching**: Synchronizes retries for `INSUFFICIENT_FUNDS` failures with customer salary credit days (1st, 5th, 7th, 10th, 25th of the month).
+- **48-Hour Dishonor Protection Guardrail**: Enforces mandatory 48-hour cool-off between re-presentations, eliminating bank bounce fees.
+
+### 2. Hinglish Voice Recovery / AI-Generated Voice Intervention (Sarvam AI Integration)
+- **Sarvam AI Text-to-Speech Engine**: Synthesizes Hinglish audio intervention payloads (`bulbul:v3`, speaker: `priya`, `hi-IN`).
+- **Mode Auto-Detection**: Live synthesis (`mode: "REAL"`) when `SARVAM_API_KEY` is present in `.env`, fallback `mode: "MOCK"` with browser audio player preview.
+- **Payload Status (`SYNTHESIZED`)**: Generates base64 WAV payloads ready for telephony dispatch layers (Exotel, Twilio, Vapi, Retell AI).
+- **API Endpoint**: `POST /cases/{id}/voice-call`
+
+### 3. Promise-to-Pay (P2P) Tracker
+- **State Machine**: `PROMISED` ➔ `P2P_KEPT` or `P2P_BROKEN`. Verified strictly against bank deposit ledger webhooks.
+- **API Endpoints**:
+  - `POST /cases/{id}/p2p`: Record customer commitment date & amount.
+  - `GET /cases/{id}/p2p`: Retrieve case P2P commitment history.
+  - `PUT /cases/{id}/p2p/{promise_id}`: Edit / update commitment details.
+  - `DELETE /cases/{id}/p2p`: Remove / cancel active commitment.
+  - `POST /cases/{id}/p2p/verify`: Reconcile P2P state against gateway deposit ledger.
+
+---
+
 ## 📡 Key REST API Endpoints
 
 | Method | Endpoint | Description |
@@ -136,6 +160,12 @@ docker-compose up --build
 | `POST` | `/cases/{id}/modify` | Human operator modifies action/delay |
 | `POST` | `/cases/{id}/recheck` | Re-checks gateway payment state |
 | `POST` | `/cases/{id}/execute` | Executes retry via simulator & verifies deposit |
+| `POST` | `/cases/{id}/voice-call` | Synthesizes Sarvam AI Hinglish voice intervention payload |
+| `POST` | `/cases/{id}/p2p` | Record Promise-to-Pay commitment |
+| `GET` | `/cases/{id}/p2p` | Retrieve case Promise-to-Pay records |
+| `PUT` | `/cases/{id}/p2p/{promise_id}` | Update Promise-to-Pay commitment |
+| `DELETE` | `/cases/{id}/p2p` | Delete Promise-to-Pay commitment |
+| `POST` | `/cases/{id}/p2p/verify` | Reconcile P2P state against bank gateway ledger |
 | `POST` | `/cases/{id}/stop` | Manually stops recovery case |
 | `GET` | `/cases/{id}/audit` | Immutable audit log trail |
 | `POST` | `/experiments/run` | Run batch A/B experiment (Baseline vs AI Agent) |
