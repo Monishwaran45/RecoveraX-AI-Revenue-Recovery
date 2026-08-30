@@ -16,8 +16,10 @@ from app.services.case_service import CaseService
 class ApprovalService:
     @staticmethod
     def _require_pending_human_review(case: RecoveryCase) -> None:
-        if case.status != CaseStatus.AWAITING_APPROVAL or case.policy_decision != PolicyDecision.HUMAN:
-            raise ValueError("Only cases awaiting human approval can be approved, rejected, or modified.")
+        status_val = case.status.value if hasattr(case.status, "value") else str(case.status).upper()
+        policy_val = case.policy_decision.value if hasattr(case.policy_decision, "value") else str(case.policy_decision).upper()
+        if status_val not in ("AWAITING_APPROVAL", "HUMAN_APPROVAL", "HUMAN APPROVAL") or policy_val != "HUMAN":
+            raise ValueError(f"Only cases awaiting human approval can be approved, rejected, or modified. Current status: {status_val}")
 
     @staticmethod
     async def get_pending_approvals(db: AsyncSession) -> List[ApprovalRequest]:

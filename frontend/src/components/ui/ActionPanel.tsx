@@ -16,15 +16,15 @@ import { triggerSarvamVoiceCall, SarvamVoiceResponse } from "@/lib/api/voice";
 import { createPromiseToPay, getPromisesToPay, verifyPromiseToPay, updatePromiseToPay, deletePromiseToPay, PromiseToPayRecord } from "@/lib/api/promises";
 import ModifyActionModal from "./ModifyActionModal";
 import PromiseToPayModal from "./PromiseToPayModal";
-import { 
-  Play, 
-  RotateCw, 
-  CheckCircle2, 
-  XCircle, 
-  ShieldAlert, 
-  Loader2, 
-  UserCheck, 
-  Edit3, 
+import {
+  Play,
+  RotateCw,
+  CheckCircle2,
+  XCircle,
+  ShieldAlert,
+  Loader2,
+  UserCheck,
+  Edit3,
   Lock,
   PhoneCall,
   Calendar,
@@ -80,8 +80,13 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
     };
   }, [recoveryCase.id]);
 
-  const isHuman = recoveryCase.policyDecision.type === "HUMAN" || recoveryCase.status === "HUMAN_APPROVAL";
-  const isBlock = recoveryCase.policyDecision.type === "BLOCK" || recoveryCase.status === "BLOCKED";
+  const isHuman =
+    (typeof recoveryCase.policyDecision === "object" ? (recoveryCase.policyDecision as any)?.type === "HUMAN" : recoveryCase.policyDecision === "HUMAN") ||
+    ["HUMAN_APPROVAL", "AWAITING_APPROVAL", "Human Approval", "Awaiting Approval"].includes(recoveryCase.status);
+
+  const isBlock =
+    (typeof recoveryCase.policyDecision === "object" ? (recoveryCase.policyDecision as any)?.type === "BLOCK" : recoveryCase.policyDecision === "BLOCK") ||
+    ["BLOCKED", "Blocked"].includes(recoveryCase.status);
 
   // Trigger Sarvam AI Hinglish Voice Call
   const handleTriggerVoiceCall = async () => {
@@ -236,7 +241,7 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
               <span className="font-semibold text-gray-900 text-xs">Manual Settlement Reconciliation</span>
             </div>
           </div>
-          
+
           <div className="pt-2.5 border-t border-rose-200">
             {!humanSentReview ? (
               <button
@@ -254,7 +259,7 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
             )}
           </div>
         </div>
-      ) : isHuman && recoveryCase.status === "HUMAN_APPROVAL" ? (
+      ) : isHuman && ["HUMAN_APPROVAL", "AWAITING_APPROVAL", "Human Approval", "Awaiting Approval"].includes(recoveryCase.status) ? (
         <div className="bg-amber-50/60 border border-amber-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2.5">
             <div>
@@ -409,7 +414,7 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
           <div className="flex items-center gap-2">
             <PhoneCall className="h-4 w-4 text-purple-600" />
             <div>
-              <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">Sarvam AI Hinglish Voice Recovery</h3>
+              <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">Hinglish Voice Recovery</h3>
               <p className="text-[11px] text-gray-500">AI-generated voice intervention agent</p>
             </div>
           </div>
@@ -546,13 +551,12 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
           <div className="bg-emerald-50/70 border border-emerald-200 p-3 rounded text-xs space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-emerald-950 text-xs">P2P STATUS</span>
-              <span className={`px-2.5 py-0.5 text-xs font-mono font-bold rounded ${
-                p2pRecord.status === "P2P_KEPT"
+              <span className={`px-2.5 py-0.5 text-xs font-mono font-bold rounded ${p2pRecord.status === "P2P_KEPT"
                   ? "bg-emerald-600 text-white"
                   : p2pRecord.status === "P2P_BROKEN"
-                  ? "bg-rose-600 text-white"
-                  : "bg-amber-500 text-white"
-              }`}>
+                    ? "bg-rose-600 text-white"
+                    : "bg-amber-500 text-white"
+                }`}>
                 {p2pRecord.status === "P2P_KEPT" ? "✓ P2P_KEPT" : (p2pRecord.status === "P2P_BROKEN" ? "⚠ P2P_BROKEN" : "PROMISED")}
               </span>
             </div>
