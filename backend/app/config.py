@@ -55,10 +55,10 @@ class Settings(BaseSettings):
     DEMO_RETRY_DELAY_SECONDS: int = Field(default=10, alias="DEMO_RETRY_DELAY_SECONDS")
     
     # Safety & Policy Engine Thresholds
-    MAX_AUTO_RETRY_AMOUNT: float = Field(default=5000.0, alias="MAX_AUTO_RETRY_AMOUNT")
+    MAX_AUTO_RETRY_AMOUNT: float = Field(default=50000.0, alias="MAX_AUTO_RETRY_AMOUNT")
     MAX_RETRIES: int = Field(default=2, alias="MAX_RETRIES")
     MIN_AUTO_RECOVERY_SCORE: int = Field(default=80, alias="MIN_AUTO_RECOVERY_SCORE")
-    HUMAN_APPROVAL_AMOUNT: float = Field(default=5000.0, alias="HUMAN_APPROVAL_AMOUNT")
+    HUMAN_APPROVAL_AMOUNT: float = Field(default=50000.0, alias="HUMAN_APPROVAL_AMOUNT")
     
     # CORS
     CORS_ORIGINS: Any = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"]
