@@ -208,8 +208,12 @@ export async function getCases(filters?: {
   status?: string;
   risk?: string;
   type?: string;
+  limit?: number;
 }): Promise<RecoveryCase[]> {
   const params = new URLSearchParams();
+  if (filters?.limit) {
+    params.append("limit", filters.limit.toString());
+  }
   if (filters?.search && filters.search.trim()) {
     params.append("search", filters.search.trim());
   }

@@ -9,12 +9,12 @@ import { RecoveryCase } from "@/lib/types";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import RecoveryScoreBadge from "@/components/ui/RecoveryScoreBadge";
 import ModifyActionModal from "@/components/ui/ModifyActionModal";
-import { 
-  ShieldCheck, 
-  UserCheck, 
-  XCircle, 
-  Edit3, 
-  CheckCircle2, 
+import {
+  ShieldCheck,
+  UserCheck,
+  XCircle,
+  Edit3,
+  CheckCircle2,
   ArrowRight,
   ShieldAlert,
   Clock

@@ -147,11 +147,10 @@ export default function AuditPage() {
             <button
               key={cat}
               onClick={() => setCategoryFilter(cat)}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
-                categoryFilter === cat
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${categoryFilter === cat
                   ? "bg-gray-900 text-white font-semibold"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               {cat === "AI" ? "DIAGNOSTICS" : cat}
             </button>
@@ -193,15 +192,14 @@ export default function AuditPage() {
                       <td className="py-3 px-4 font-semibold text-blue-600">{log.caseId}</td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-1.5 py-0.2 text-[9px] font-semibold rounded ${
-                            log.category === "AI"
+                          className={`px-1.5 py-0.2 text-[9px] font-semibold rounded ${log.category === "AI"
                               ? "bg-blue-50 text-blue-700 border border-blue-200"
                               : log.category === "POLICY"
-                              ? "bg-purple-50 text-purple-700 border border-purple-200"
-                              : log.category === "HUMAN"
-                              ? "bg-amber-50 text-amber-800 border border-amber-200"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          }`}
+                                ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                : log.category === "HUMAN"
+                                  ? "bg-amber-50 text-amber-800 border border-amber-200"
+                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            }`}
                         >
                           {log.category === "AI" ? "DIAG" : log.category}
                         </span>
@@ -216,8 +214,8 @@ export default function AuditPage() {
                             log.policy === "AUTO"
                               ? "text-emerald-700"
                               : log.policy === "BLOCK"
-                              ? "text-rose-700"
-                              : "text-amber-700"
+                                ? "text-rose-700"
+                                : "text-amber-700"
                           }
                         >
                           {log.policy || "AUTO"}

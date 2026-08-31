@@ -3,7 +3,7 @@ import { BACKEND_URL } from "./config";
 import { getCase, getCases } from "./cases";
 
 export async function getApprovalCases(): Promise<RecoveryCase[]> {
-  return await getCases({ status: "Human Approval" });
+  return await getCases({ status: "Human Approval", limit: 1000 });
 }
 
 export async function approveCase(id: string): Promise<RecoveryCase> {

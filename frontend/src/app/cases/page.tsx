@@ -29,6 +29,7 @@ function CasesContent() {
         status: statusFilter,
         risk: riskFilter,
         type: typeFilter,
+        limit: 1000,
       });
       setCasesList(data);
     } catch (e) {
@@ -112,11 +113,10 @@ function CasesContent() {
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
-                  className={`px-2 py-0.5 rounded text-xs transition-colors cursor-pointer ${
-                    statusFilter.toLowerCase() === st.toLowerCase()
+                  className={`px-2 py-0.5 rounded text-xs transition-colors cursor-pointer ${statusFilter.toLowerCase() === st.toLowerCase()
                       ? "bg-gray-900 text-white font-medium"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                    }`}
                 >
                   {st}
                 </button>
@@ -133,11 +133,10 @@ function CasesContent() {
                 <button
                   key={rk}
                   onClick={() => setRiskFilter(rk)}
-                  className={`px-2 py-0.5 rounded text-xs transition-colors cursor-pointer ${
-                    riskFilter.toLowerCase() === rk.toLowerCase()
+                  className={`px-2 py-0.5 rounded text-xs transition-colors cursor-pointer ${riskFilter.toLowerCase() === rk.toLowerCase()
                       ? "bg-gray-900 text-white font-medium"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                    }`}
                 >
                   {rk}
                 </button>
@@ -154,11 +153,10 @@ function CasesContent() {
                 <button
                   key={tp}
                   onClick={() => setTypeFilter(tp)}
-                  className={`px-2 py-0.5 rounded text-xs transition-colors cursor-pointer ${
-                    typeFilter === tp
+                  className={`px-2 py-0.5 rounded text-xs transition-colors cursor-pointer ${typeFilter === tp
                       ? "bg-blue-600 text-white font-medium"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                    }`}
                 >
                   {tp}
                 </button>

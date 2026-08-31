@@ -16,7 +16,7 @@ async def get_cases(
     search: Optional[str] = Query(None),
     sort_by: str = Query("created_at"),
     sort_order: str = Query("desc"),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=10000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):

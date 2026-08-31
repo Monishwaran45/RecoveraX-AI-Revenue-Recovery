@@ -35,11 +35,29 @@ class CaseService:
         )
 
         if status and status != "All":
-            query = query.where(RecoveryCase.status == CaseStatus(status))
+            try:
+                st_enum = CaseStatus(status)
+            except ValueError:
+                if status.upper() in ("HUMAN APPROVAL", "HUMAN_APPROVAL"):
+                    st_enum = CaseStatus.AWAITING_APPROVAL
+                else:
+                    st_enum = None
+            if st_enum:
+                query = query.where(RecoveryCase.status == st_enum)
+
         if risk_level and risk_level != "All":
-            query = query.where(RecoveryCase.risk_level == RiskLevel(risk_level))
+            try:
+                rk_enum = RiskLevel(risk_level.upper())
+                query = query.where(RecoveryCase.risk_level == rk_enum)
+            except ValueError:
+                pass
+
         if problem_type and problem_type != "All":
-            query = query.where(RecoveryCase.problem_type == ProblemType(problem_type))
+            try:
+                pt_enum = ProblemType(problem_type.upper())
+                query = query.where(RecoveryCase.problem_type == pt_enum)
+            except ValueError:
+                pass
 
         if search:
             search_term = f"%{search}%"

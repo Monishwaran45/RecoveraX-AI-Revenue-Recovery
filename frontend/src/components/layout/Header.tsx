@@ -73,12 +73,12 @@ export default function Header() {
   }, []);
 
   const navItems = [
-    { label: "Overview",           href: "/dashboard",   icon: LayoutDashboard },
-    { label: "Simulator",          href: "/simulator",   icon: Play            },
-    { label: "Payment Cases",      href: "/cases",       icon: FolderKanban    },
-    { label: "Approval Queue",     href: "/approvals",   icon: ShieldCheck, badge: pendingApprovals > 0 ? pendingApprovals : null },
-    { label: "Benchmarks",         href: "/experiments",  icon: BarChart3       },
-    { label: "Audit Logs",         href: "/audit",       icon: FileText        },
+    { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Simulator", href: "/simulator", icon: Play },
+    { label: "Payment Cases", href: "/cases", icon: FolderKanban },
+    { label: "Approval Queue", href: "/approvals", icon: ShieldCheck, badge: pendingApprovals > 0 ? pendingApprovals : null },
+    { label: "Benchmarks", href: "/experiments", icon: BarChart3 },
+    { label: "Audit Logs", href: "/audit", icon: FileText },
   ];
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -114,11 +114,10 @@ export default function Header() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                      isActive
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isActive
                         ? "text-gray-900 bg-gray-100 font-semibold"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }`}
+                      }`}
                   >
                     <Icon className={`h-3.5 w-3.5 ${isActive ? "text-gray-900" : "text-gray-400"}`} />
                     <span>{item.label}</span>
@@ -228,9 +227,8 @@ export default function Header() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setShowMobileMenu(false)}
-                  className={`flex items-center gap-2 p-2 rounded-md text-xs font-medium ${
-                    isActive ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100 bg-gray-50"
-                  }`}
+                  className={`flex items-center gap-2 p-2 rounded-md text-xs font-medium ${isActive ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100 bg-gray-50"
+                    }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   <span>{item.label}</span>
