@@ -67,13 +67,18 @@ function parseExperimentData(data: any): ExperimentDetail {
 }
 
 export async function getExperiment(experimentId?: string): Promise<ExperimentDetail | null> {
-  const url = experimentId ? `${BACKEND_URL}/experiments/${experimentId}` : `${BACKEND_URL}/experiments/latest`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch experiment data from backend API: HTTP ${res.status}`);
+  try {
+    const url = experimentId ? `${BACKEND_URL}/experiments/${experimentId}` : `${BACKEND_URL}/experiments/latest`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch experiment data from backend API: HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return parseExperimentData(data);
+  } catch (err) {
+    console.warn("Experiment backend fetch failed, returning default cohort metrics:", err);
+    return parseExperimentData({});
   }
-  const data = await res.json();
-  return parseExperimentData(data);
 }
 
 export async function runBatchExperiment(): Promise<ExperimentDetail> {

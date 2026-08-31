@@ -126,7 +126,7 @@ export interface DashboardMetrics {
 
 export interface ModifyActionInput {
   action?: string;
-  delayMinutes: number;
+  delayMinutes?: number;
   maxRetries?: number;
   notes?: string;
 }

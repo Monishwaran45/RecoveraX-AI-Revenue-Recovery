@@ -208,6 +208,19 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
     onUpdate();
   };
 
+  const handleEscalate = async () => {
+    setIsLoading(true);
+    try {
+      await modifyCase(recoveryCase.id, { action: "ESCALATE", delayMinutes: 0, notes: "Escalated to Risk & Legal Ops by Human Operator" });
+    } catch (err) {
+      console.warn("Backend escalate API notice, updating local state:", err);
+      store.modifyCase(recoveryCase.id, { delayMinutes: 0, notes: "Escalated to Risk Ops" });
+    }
+    setHumanSentReview(true);
+    setIsLoading(false);
+    onUpdate();
+  };
+
   const handleModifySubmit = async (delayMinutes: number, notes?: string) => {
     setIsLoading(true);
     try {
@@ -302,6 +315,15 @@ export default function ActionPanel({ recoveryCase, onUpdate }: ActionPanelProps
             >
               <Edit3 className="h-3.5 w-3.5 text-gray-500" />
               Modify Delay
+            </button>
+
+            <button
+              onClick={handleEscalate}
+              disabled={isLoading}
+              className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 font-medium text-xs rounded border border-purple-200 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <ShieldAlert className="h-3.5 w-3.5 text-purple-600" />
+              Escalate to Risk Ops
             </button>
 
             <button

@@ -178,14 +178,22 @@ class RecoveryStore {
     const target = this.getCaseById(id);
     if (!target) return undefined;
 
-    target.status = "MODIFIED";
-    target.scheduledDelayMinutes = input.delayMinutes;
+    if (input.delayMinutes !== undefined) {
+      target.scheduledDelayMinutes = input.delayMinutes;
+    }
     if (input.maxRetries) {
       target.maxRetries = input.maxRetries;
     }
 
-    target.policyDecision.decisionLabel = "MODIFIED BY HUMAN";
-    target.policyDecision.explanation = `Human operator adjusted retry schedule to ${input.delayMinutes} minutes.${input.notes ? ` Notes: ${input.notes}` : ""}`;
+    if (input.action === "ESCALATE") {
+      target.status = "STOPPED";
+      target.policyDecision.type = "STOP";
+      target.policyDecision.decisionLabel = "ESCALATED BY HUMAN";
+      target.policyDecision.explanation = input.notes || "Action escalated to Risk & Legal Ops by merchant operator.";
+    } else {
+      target.policyDecision.decisionLabel = "MODIFIED BY HUMAN";
+      target.policyDecision.explanation = `Human operator adjusted retry schedule${input.delayMinutes ? ` to ${input.delayMinutes} minutes` : ""}.${input.notes ? ` Notes: ${input.notes}` : ""}`;
+    }
 
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;

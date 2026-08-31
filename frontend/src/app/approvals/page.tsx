@@ -70,6 +70,19 @@ export default function ApprovalsPage() {
     }
   };
 
+  const handleEscalate = async (id: string) => {
+    setActionLoadingId(id);
+    try {
+      await modifyCase(id, { action: "ESCALATE", notes: "Escalated to Risk & Legal Ops by Human Operator" });
+    } catch (e) {
+      console.warn("API escalate warning, updating local store state:", e);
+      store.rejectCase(id);
+    } finally {
+      setActionLoadingId(null);
+      fetchApprovals();
+    }
+  };
+
   const handleModifySubmit = async (delayMinutes: number, notes?: string) => {
     if (!modifyingCase) return;
     setActionLoadingId(modifyingCase.id);
@@ -201,6 +214,15 @@ export default function ApprovalsPage() {
                   >
                     <Edit3 className="h-3 w-3" />
                     Modify
+                  </button>
+
+                  <button
+                    disabled={actionLoadingId === c.id}
+                    onClick={() => handleEscalate(c.id)}
+                    className="px-3 py-1 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-medium text-xs rounded transition-colors flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                  >
+                    <ShieldAlert className="h-3 w-3 text-purple-600" />
+                    Escalate
                   </button>
 
                   <button

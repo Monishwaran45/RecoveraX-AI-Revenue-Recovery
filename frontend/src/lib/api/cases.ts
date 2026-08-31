@@ -1,5 +1,6 @@
 import { RecoveryCase, RiskLevel, CaseStatus, CaseType, PolicyDecisionType } from "../types";
 import { BACKEND_URL } from "./config";
+import { store } from "../store";
 
 export function formatDynamicTitle(rawStr?: string): string {
   if (!rawStr) return "Payment Failure Detected";
@@ -237,30 +238,42 @@ export async function getCases(filters?: {
     params.append("problem_type", tp);
   }
 
-  const res = await fetch(`${BACKEND_URL}/cases?${params.toString()}`, {
-    cache: "no-store",
-  });
+  try {
+    const res = await fetch(`${BACKEND_URL}/cases?${params.toString()}`, {
+      cache: "no-store",
+    });
 
-  if (!res.ok) {
-    throw new Error(`Failed to fetch cases from backend API: HTTP ${res.status}`);
-  }
+    if (!res.ok) {
+      throw new Error(`Failed to fetch cases from backend API: HTTP ${res.status}`);
+    }
 
-  const data = await res.json();
-  if (Array.isArray(data)) {
-    return data.map(mapBackendCaseToFrontend);
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      return data.map(mapBackendCaseToFrontend);
+    }
+    return [];
+  } catch (err) {
+    console.warn("Backend fetch failed, falling back to local store:", err);
+    return store.getCases(filters);
   }
-  return [];
 }
 
 export async function getCase(id: string): Promise<RecoveryCase> {
-  const res = await fetch(`${BACKEND_URL}/cases/${id}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch case ${id} from backend API: HTTP ${res.status}`);
+  try {
+    const res = await fetch(`${BACKEND_URL}/cases/${id}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch case ${id} from backend API: HTTP ${res.status}`);
+    }
+    const item = await res.json();
+    return mapBackendCaseToFrontend(item);
+  } catch (err) {
+    console.warn(`Backend fetch failed for case ${id}, falling back to store:`, err);
+    const found = store.getCaseById(id);
+    if (!found) throw err;
+    return found;
   }
-  const item = await res.json();
-  return mapBackendCaseToFrontend(item);
 }
 
 export async function analyzeCase(id: string): Promise<RecoveryCase> {
