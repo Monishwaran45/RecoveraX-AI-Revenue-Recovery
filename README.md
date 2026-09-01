@@ -45,7 +45,7 @@ graph TD
     
     Node5 -- AUTO --> Node7["7. schedule"]
     Node5 -- HUMAN --> Node6["6. human_approval"]
-    Node5 -- "BLOCK / STOP" --> Node11["11. stop"]
+    Node5 -- BLOCK / STOP --> Node11["11. stop"]
 
     Node6 --> END1((END - Awaiting Sign-off))
     
@@ -53,11 +53,11 @@ graph TD
     Node8 --> Node9["9. execute (Retry Dispatch)"]
     Node9 --> Node10["10. verify (Bank Settlement)"]
     
-    Node10 -- "Verified Success" --> END2((END - Recovered))
-    Node10 -- "Gateway Failed" --> Node12["12. reevaluate"]
+    Node10 -- Verified Success --> END2((END - Recovered))
+    Node10 -- Gateway Failed --> Node12["12. reevaluate"]
     
-    Node12 -- "Max Retries (2) Reached" --> Node11
-    Node12 -- "Retry Allowed" --> Node2
+    Node12 -- Max Retries (2) Reached --> Node11
+    Node12 -- Retry Allowed --> Node2
     
     Node11 --> END3((END - Hard Blocked / Stopped))
 ```
@@ -98,12 +98,12 @@ flowchart TD
     subgraph Observability ["Observability Layer (Passive Only)"]
         LangSmith["LangSmith Dashboard & Tracing"]
         Sanitizer["Data Sanitizer (Redacts Credentials)"]
-        TraceLogger["Run Spans, Latency and Error Metrics"]
+        TraceLogger["Run Spans, Latency & Error Metrics"]
     end
 
-    LangGraph -. "Traces and Tags" .-> Sanitizer
-    Groq -. "LLM Token and Latency" .-> Sanitizer
-    Simulator -. "Outcome State" .-> Sanitizer
+    LangGraph -. Traces & Tags .-> Sanitizer
+    Groq -. LLM Token & Latency .-> Sanitizer
+    Simulator -. Outcome State .-> Sanitizer
     Sanitizer --> LangSmith
     LangSmith --> TraceLogger
 ```
