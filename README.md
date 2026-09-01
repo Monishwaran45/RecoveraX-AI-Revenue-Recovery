@@ -33,7 +33,7 @@ RecoveraX detects revenue at risk, diagnoses root cause failure patterns using *
 ## LangGraph Workflow Architecture
 
 RecoveraX implements a stateful **cyclic execution graph** in LangGraph ([`backend/app/agents/graph.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/agents/graph.py)):
-![RecoveraX AI Revenue Recovery Workflow Architecture](docs/images/Agent%20Workflow.png)
+![RecoveraX AI Revenue Recovery Workflow Architecture](docs/images/Agent%20Workflow(Langgraph)..png)
 
 ```mermaid
 graph TD
