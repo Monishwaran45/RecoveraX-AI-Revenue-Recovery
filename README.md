@@ -14,9 +14,7 @@ RecoveraX detects revenue at risk, diagnoses root cause failure patterns using *
 
 ## Workflow Of The Application
 
-```
-AI RECOMMENDS  →  POLICY AUTHORIZES  →  EXECUTOR ACTS  →  VERIFIER CONFIRMS  →  HUMAN CONTROLS RISK
-```
+![RecoveraX AI Revenue Recovery Workflow Architecture](docs/images/Flow.png)
 
 ### Key Architectural Principles
 1. **Scoped LLM Authority**:
