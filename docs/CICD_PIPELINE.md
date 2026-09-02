@@ -8,32 +8,30 @@ Welcome to the **RecoverAX Continuous Integration and Continuous Deployment (CI/
 
 The CI/CD setup automates code validation, security checks, Docker image building, and production deployment across both frontend and backend stacks.
 
-```
-                  ┌────────────────────────────────────────┐
-                  │              Git Push / PR             │
-                  └───────────────────┬────────────────────┘
-                                      │
-                                      ▼
-           ┌─────────────────────────────────────────────────────┐
-           │        GitHub Actions CI Pipeline (ci.yml)          │
-           ├──────────────────┬──────────────────┬───────────────┤
-           │                  │                  │               │
-           ▼                  ▼                  ▼               ▼
-     [Backend CI]       [Frontend CI]       [Docker CI]   [Security Audit]
-    - Python 3.12      - Node.js 22        - Build Docker  - Dependencies
-    - Pytest (32+ tests)- TypeScript check   Image test    - Secrets check
-    - Ruff linting     - Next.js Build
-    - Code Coverage
-                                      │
-                                      ▼ (On Merge to 'main')
-           ┌─────────────────────────────────────────────────────┐
-           │        GitHub Actions CD Pipeline (cd.yml)          │
-           ├─────────────────────────┬───────────────────────────┤
-           │                         │                           │
-           ▼                         ▼                           ▼
-    [Deploy Backend]         [Deploy Frontend]         [Post-Deploy Health]
-   - Render Deploy Hook      - Vercel CLI               - Smoke test /health
-   - Auto-deploy API         - Production Build         - Keepalive check
+```mermaid
+graph TD
+    A["Git Push / Pull Request"] --> B["GitHub Actions CI Pipeline (ci.yml)"]
+    
+    subgraph CI ["Continuous Integration Jobs"]
+        B --> C["Backend CI<br/>• Python 3.12<br/>• Pytest (32+ tests)<br/>• Ruff Linting<br/>• Code Coverage"]
+        B --> D["Frontend CI<br/>• Node.js 22<br/>• TypeScript Check<br/>• Next.js Production Build"]
+        B --> E["Docker CI<br/>• Build Docker Image Test"]
+        B --> F["Security Audit<br/>• Dependency Audit<br/>• Secrets Scan"]
+    end
+
+    C --> G["Merge to 'main' Branch"]
+    D --> G
+    E --> G
+    F --> G
+
+    G --> H["GitHub Actions CD Pipeline (cd.yml)"]
+
+    subgraph CD ["Continuous Deployment Jobs"]
+        H --> I["Deploy Backend<br/>• Render Deploy Hook"]
+        H --> J["Deploy Frontend<br/>• Vercel CLI Production"]
+        I --> K["Post-Deploy Health Check<br/>• Smoke test /health"]
+        J --> K
+    end
 ```
 
 ---
