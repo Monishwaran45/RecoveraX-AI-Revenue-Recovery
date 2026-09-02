@@ -35,6 +35,7 @@ jobs:
 
       - name: Execute Full Pytest Suite
         env:
+          PYTHONPATH: "."
           DEMO_MODE: "true"
           ENVIRONMENT: "testing"
           GROQ_MODEL: "qwen/qwen3.8-27b"
