@@ -9,7 +9,7 @@
 
 RecoveraX detects revenue at risk, diagnoses root cause failure patterns using **Groq LLM (`qwen/qwen3.8-27b`)**, calculates deterministic recovery scores, evaluates strict **financial safety guardrails**, routes high-risk or high-value actions to **Human-in-the-Loop (HITL) approval**, executes approved recovery retries, verifies settlement outcomes, and maintains an **immutable audit trail**.
 
-> 💡 **CI/CD Pipeline**: Automated Continuous Integration (Backend Pytest, Frontend Next.js build, TypeScript typecheck, Docker verification) & Continuous Deployment (Render & Vercel) are documented in [`docs/CICD_PIPELINE.md`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/docs/CICD_PIPELINE.md).
+> **CI/CD Pipeline**: Automated Continuous Integration (Backend Pytest, Frontend Next.js build, TypeScript typecheck, Docker verification) & Continuous Deployment (Render & Vercel) are documented in [`docs/CICD_PIPELINE.md`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/docs/CICD_PIPELINE.md).
 
 
 ---
