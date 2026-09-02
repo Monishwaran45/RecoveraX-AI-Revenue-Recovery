@@ -1,20 +1,16 @@
-name: Nightly Test Suite & Verification
+name: Nightly Test Suite & Quality Verification
 
 on:
   schedule:
-    # Runs tests every day at 4am UTC
+    # Runs comprehensive verification every day at 04:00 UTC
     - cron: '0 4 * * *'
   workflow_dispatch:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 permissions:
   contents: read
 
 jobs:
-  backend-tests:
+  backend-nightly:
     name: Backend Pytest & Safety Verification
     runs-on: ubuntu-24.04
     defaults:
@@ -35,16 +31,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio
+          pip install pytest pytest-asyncio pytest-cov
 
-      - name: Execute Backend Tests
+      - name: Execute Full Pytest Suite
         env:
           DEMO_MODE: "true"
-          ENVIRONMENT: "development"
+          ENVIRONMENT: "testing"
+          GROQ_MODEL: "qwen/qwen3.8-27b"
+          CORS_ORIGINS: '["*"]'
         run: |
-          pytest -v
+          pytest -v --cov=app tests/
 
-  frontend-build:
+  frontend-nightly:
     name: Frontend Next.js Build & Verification
     runs-on: ubuntu-24.04
     defaults:
@@ -62,7 +60,10 @@ jobs:
           cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Install Frontend Dependencies
-        run: npm ci || npm install
+        run: npm ci
 
-      - name: Build Next.js Application
+      - name: TypeScript Type Check
+        run: npx tsc --noEmit
+
+      - name: Build Next.js Production Application
         run: npm run build

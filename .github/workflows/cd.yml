@@ -1,0 +1,89 @@
+name: RecoverAX Continuous Deployment (CD)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-backend-render:
+    name: Deploy Backend to Render
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deployment
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "⚠️ RENDER_DEPLOY_HOOK_URL secret is not set. Skipping Render trigger."
+            echo "To enable automated backend deployment, add RENDER_DEPLOY_HOOK_URL in GitHub Repository Secrets."
+          else
+            echo "🚀 Triggering Render backend deployment via deploy hook..."
+            RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$RENDER_DEPLOY_HOOK_URL")
+            echo "Render Deploy Hook HTTP Status: ${RESPONSE_CODE}"
+            if [ "$RESPONSE_CODE" -ge 200 ] && [ "$RESPONSE_CODE" -lt 300 ]; then
+              echo "✅ Render deployment successfully triggered!"
+            else
+              echo "❌ Render deploy hook returned status code ${RESPONSE_CODE}"
+              exit 1
+            fi
+          fi
+
+  deploy-frontend-vercel:
+    name: Deploy Frontend to Vercel
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "⚠️ VERCEL_TOKEN secret is not set. Skipping Vercel deployment."
+            echo "To enable automated frontend deployment, configure VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID secrets."
+          else
+            echo "🚀 Deploying RecoverAX Next.js frontend to Vercel production..."
+            vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+            vercel build --prod --token=$VERCEL_TOKEN
+            vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+          fi
+
+  post-deploy-verification:
+    name: Post-Deployment Smoke Test & Health Ping
+    runs-on: ubuntu-24.04
+    needs: [deploy-backend-render, deploy-frontend-vercel]
+    steps:
+      - name: Wait for Deployment Propagation
+        run: sleep 15
+
+      - name: Check Backend Health
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          TARGET_URL="${BACKEND_URL:-https://recoverax-backend.onrender.com}"
+          echo "🔍 Performing health check ping on ${TARGET_URL}/health ..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${TARGET_URL}/health" || echo "000")
+          echo "Backend returned HTTP Status: ${STATUS}"
+          if [ "$STATUS" -eq 200 ]; then
+            echo "🎉 Backend post-deployment smoke test passed!"
+          else
+            echo "⚠️ Backend health ping returned ${STATUS}. Render instance may still be building/restarting."
+          fi

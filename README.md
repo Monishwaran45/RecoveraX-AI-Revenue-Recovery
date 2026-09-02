@@ -1,8 +1,16 @@
 # RecoveraX — AI-Revenue-Recovery
 
+[![Continuous Integration (CI)](https://github.com/Monishwaran45/AI-Revenue-Recovery/actions/workflows/ci.yml/badge.svg)](https://github.com/Monishwaran45/AI-Revenue-Recovery/actions/workflows/ci.yml)
+[![Continuous Deployment (CD)](https://github.com/Monishwaran45/AI-Revenue-Recovery/actions/workflows/cd.yml/badge.svg)](https://github.com/Monishwaran45/AI-Revenue-Recovery/actions/workflows/cd.yml)
+[![Nightly Verification](https://github.com/Monishwaran45/AI-Revenue-Recovery/actions/workflows/nightly.yml/badge.svg)](https://github.com/Monishwaran45/AI-Revenue-Recovery/actions/workflows/nightly.yml)
+[![CI/CD Documentation](https://img.shields.io/badge/CI%2FCD-Docs-blue)](docs/CICD_PIPELINE.md)
+
 > Autonomous AI Revenue Recovery Engine — LangGraph + Groq (`qwen/qwen3.8-27b`) + Deterministic Policy Guardrails + Human-in-the-Loop (HITL) + Celery/Redis + LangSmith Observability.
 
 RecoveraX detects revenue at risk, diagnoses root cause failure patterns using **Groq LLM (`qwen/qwen3.8-27b`)**, calculates deterministic recovery scores, evaluates strict **financial safety guardrails**, routes high-risk or high-value actions to **Human-in-the-Loop (HITL) approval**, executes approved recovery retries, verifies settlement outcomes, and maintains an **immutable audit trail**.
+
+> 💡 **CI/CD Pipeline**: Automated Continuous Integration (Backend Pytest, Frontend Next.js build, TypeScript typecheck, Docker verification) & Continuous Deployment (Render & Vercel) are documented in [`docs/CICD_PIPELINE.md`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/docs/CICD_PIPELINE.md).
+
 
 ---
 
