@@ -4,7 +4,7 @@ Welcome to the **RecoverAX Continuous Integration and Continuous Deployment (CI/
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 The CI/CD setup automates code validation, security checks, Docker image building, and production deployment across both frontend and backend stacks.
 
@@ -36,7 +36,7 @@ graph TD
 
 ---
 
-## ⚙️ GitHub Actions Workflows
+## GitHub Actions Workflows
 
 The repository includes four workflow files in `.github/workflows/`:
 
@@ -49,7 +49,7 @@ The repository includes four workflow files in `.github/workflows/`:
 
 ---
 
-## 🔑 Secret Configuration Guide
+## Secret Configuration Guide
 
 To enable automated deployment and backend health checks in GitHub Actions, configure the following secrets in **GitHub Repository Settings → Secrets and variables → Actions**:
 
@@ -68,7 +68,7 @@ To enable automated deployment and backend health checks in GitHub Actions, conf
 
 ---
 
-## 🚀 Deployment Platforms
+## Deployment Platforms
 
 ### Backend: Render
 - **Config**: [`render.yaml`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/render.yaml)
@@ -83,7 +83,7 @@ To enable automated deployment and backend health checks in GitHub Actions, conf
 
 ---
 
-## 🧪 Local Verification & Pre-Commit Testing
+## Local Verification & Pre-Commit Testing
 
 Before pushing code to GitHub, developers can run local validation commands matching the CI pipeline:
 
@@ -121,7 +121,7 @@ docker build -t recoverax-backend:local .
 
 ---
 
-## 🛡️ Recommended Branch Protection Rules
+##  Recommended Branch Protection Rules
 
 For optimal quality control, configure Branch Protection Rules on the `main` branch in GitHub Repository Settings:
 
