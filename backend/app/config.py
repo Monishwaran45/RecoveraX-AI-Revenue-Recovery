@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     HUMAN_APPROVAL_AMOUNT: float = Field(default=50000.0, alias="HUMAN_APPROVAL_AMOUNT")
     
     # CORS
-    CORS_ORIGINS: Any = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: Any = ["https://recovera-x-ai-revenue-recovery.vercel.app", "http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

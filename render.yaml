@@ -16,4 +16,4 @@ services:
       - key: GROQ_MODEL
         value: qwen/qwen3.8-27b
       - key: CORS_ORIGINS
-        value: '["*"]'
+        value: '["https://recovera-x-ai-revenue-recovery.vercel.app", "http://localhost:3000", "*"]'

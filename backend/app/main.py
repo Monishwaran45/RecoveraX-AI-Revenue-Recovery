@@ -52,12 +52,24 @@ app = FastAPI(
 )
 
 # CORS Configuration (Allows all HTTP/HTTPS origins cleanly including Vercel, Render, Localhost)
+cors_origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else [settings.CORS_ORIGINS]
+cors_origins = [o for o in cors_origins if o != "*"]
+cors_origins.extend([
+    "https://recovera-x-ai-revenue-recovery.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+])
+cors_origins = list(set(cors_origins))
+
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=cors_origins,
     allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 @app.middleware("http")
