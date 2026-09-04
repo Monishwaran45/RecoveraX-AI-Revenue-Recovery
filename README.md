@@ -24,6 +24,33 @@ RecoveraX detects revenue at risk, diagnoses root cause failure patterns using *
 
 ![RecoveraX AI Revenue Recovery Workflow Architecture](docs/images/Flow.png)
 
+```mermaid
+graph TD
+    A["Failed Transaction Event<br/>(Razorpay Webhook / Gateway Error)"] --> B["Ingestion & Context Loading<br/>(Customer History, LTV, Error Code)"]
+    B --> C["Groq LLM Diagnosis<br/>(qwen/qwen3.8-27b)"]
+    C --> D["Deterministic Recovery Scoring<br/>(0–100 Score & $EV$ Calculation)"]
+    D --> E["Strategy Recommendation<br/>(RETRY, REMIND, ESCALATE, STOP)"]
+    E --> F{"Deterministic Policy Guardrails"}
+    
+    F -- AUTO --> G["Celery Worker Scheduling"]
+    F -- HUMAN --> H["HITL Merchant Approval Queue"]
+    F -- BLOCK / STOP --> I["Hard Safety Halt & Audit Log"]
+    
+    H -- Merchant Approves --> G
+    H -- Merchant Rejects --> I
+    
+    G --> J["Fresh Gateway Pre-Check (recheck)<br/>(Prevent Duplicate Debits)"]
+    J -- Clear State --> K["Execute Retry Dispatch (execute)"]
+    J -- Already Debited / External Payment --> I
+    
+    K --> L["Bank Gateway Settlement Verification (verify)"]
+    L -- Verified Success --> M["RECOVERED State & Audit Logging"]
+    L -- Gateway Failed --> N["Re-evaluate Max Retries (reevaluate)"]
+    
+    N -- Retries Remaining --> C
+    N -- Max Retries Reached --> I
+```
+
 ### Key Architectural Principles
 1. **Scoped LLM Authority**:
    - The LLM is **ONLY** responsible for failure diagnosis, reasoning over structured customer payment history, and generating recovery strategy recommendations (`RETRY`, `REMIND`, `ESCALATE`, `STOP`).
@@ -95,7 +122,7 @@ graph TD
 RecoveraX embeds **LangSmith** as a centralized observability and tracing layer ([`backend/app/observability/langsmith.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/observability/langsmith.py)):
 
 ```mermaid
-flowchart TD
+graph TD
     subgraph Execution ["RecoveraX Core Engine"]
         FastAPI["FastAPI REST Routes"]
         LangGraph["Stateful Cyclic LangGraph Workflow"]
@@ -155,6 +182,47 @@ flowchart TD
 7. **Rule 7 (`PERMANENT_FAILURE = STOP`)**: Closed accounts or invalid details cause hard **STOP**.
 8. **Rule 11 (`MANDATE_COOLOFF_PROTECTION`)**: Auto-debit mandate retries (`NACH`, `E_MANDATE`, `UPI_AUTOPAY`) enforce a **48-hour minimum cool-off guardrail** to prevent bank dishonor/bounce fee penalties (₹250–₹500/bounce).
 
+```mermaid
+graph TD
+    Input["Input Case Data & AI Recommendation"] --> R1{"Already Successful?"}
+    R1 -- Yes --> S_STOP["Decision: STOP"]
+    R1 -- No --> R2{"Payment State Ambiguous?"}
+    
+    R2 -- Yes --> S_BLOCK["Decision: BLOCK"]
+    R2 -- No --> R3{"Possible Customer Debit?"}
+    
+    R3 -- Yes --> S_BLOCK
+    R3 -- No --> R4{"Fraud Signal Present?"}
+    
+    R4 -- Yes --> S_BLOCK
+    R4 -- No --> R5{"Retry Count >= Max Retries (2)?"}
+    
+    R5 -- Yes --> S_STOP
+    R5 -- No --> R6{"Permanent Failure Code?"}
+    
+    R6 -- Yes --> S_STOP
+    R6 -- No --> R7{"Action != RETRY?"}
+    
+    R7 -- Yes --> S_HUMAN["Decision: HUMAN"]
+    R7 -- No --> R8{"Payment State != CLEAR?"}
+    
+    R8 -- Yes --> S_BLOCK
+    R8 -- No --> R9{"Amount > ₹50,000?"}
+    
+    R9 -- Yes --> S_HUMAN
+    R9 -- No --> R10{"Recovery Score < 80?"}
+    
+    R10 -- Yes --> S_HUMAN
+    R10 -- No --> R11{"Mandate Payment Method?"}
+    
+    R11 -- Yes --> Cooloff["Enforce 48h Minimum Cool-Off Guardrail"]
+    R11 -- No --> R12{"Risk Level == LOW?"}
+    Cooloff --> R12
+    
+    R12 -- Yes --> S_AUTO["Decision: AUTO"]
+    R12 -- No --> S_HUMAN
+```
+
 ---
 
 ## Mandate & E-Mandate Retry Sequencer
@@ -168,6 +236,25 @@ RecoveraX includes a specialized **Mandate Presentation Window Sequencer** ([`ba
 3. **100% Dishonor Fee Protection Guardrail**:
    - Enforces a minimum 48-hour cool-off before 2nd mandate re-presentation, eliminating bank bounce fee charges for merchants and customers.
 
+```mermaid
+graph TD
+    M1["Mandate Transaction Failure<br/>(NACH / E-Mandate / UPI Autopay)"] --> M2{"Check Payment Method"}
+    M2 -- Non-Mandate --> M3["Apply Short Standard Delay<br/>(30 Minutes)"]
+    M2 -- Mandate Method --> M4["Enforce Dishonor Fee Cool-Off<br/>(48 Hours Minimum)"]
+    
+    M4 --> M5{"Diagnosis: INSUFFICIENT_FUNDS?"}
+    M5 -- Yes --> M6["Match Salary Credit Window<br/>(1st, 5th, 7th, 10th, 25th)"]
+    M5 -- No --> M7["Proceed to NPCI Batch Alignment"]
+    M6 --> M7
+    
+    M7 --> M8{"NPCI Clearing Window Selection"}
+    M8 -- Morning Batch --> M9["Schedule Morning Clearing<br/>(09:00 AM IST / 03:30 UTC)"]
+    M8 -- Evening Batch --> M10["Schedule Evening Clearing<br/>(17:00 PM IST / 11:30 UTC)"]
+    
+    M9 --> M11["Prevent Bank Bounce Penalty<br/>(Saves ₹250–₹500 Fee)"]
+    M10 --> M11
+```
+
 ---
 
 ## Hinglish Voice Recovery & Promise-to-Pay Tracker
@@ -179,6 +266,21 @@ RecoveraX includes a specialized **Mandate Presentation Window Sequencer** ([`ba
 - **Safety Policy Enforcement**: Voice intervention synthesis is governed by the deterministic safety policy engine. Prohibited on `BLOCKED` or `AMBIGUOUS` cases to prevent misleading or unsafe communications.
 - **API Endpoint**: `POST /api/v1/cases/{case_id}/voice-call`
 
+```mermaid
+graph TD
+    V1["Trigger Voice Recovery Request<br/>(POST /cases/{case_id}/voice-call)"] --> V2{"Evaluate Safety Policy"}
+    V2 -- BLOCKED / AMBIGUOUS --> V3["Abort Voice Synthesis<br/>(Unsafe Communication Blocked)"]
+    V2 -- Policy Approved --> V4["Generate Hinglish Script<br/>(Groq LLM / Template)"]
+    
+    V4 --> V5{"Check API Mode (SARVAM_API_KEY)"}
+    V5 -- REAL Mode --> V6["Synthesize Speech via Sarvam AI<br/>(bulbul:v3 / priya / hi-IN)"]
+    V5 -- MOCK Mode --> V7["Generate Web Speech Audio Payload<br/>(Demo Audio Fallback)"]
+    
+    V6 --> V8["Package Audio WAV Payload & Write Audit Trail"]
+    V7 --> V8
+    V8 --> V9["Dispatch to Telephony Provider<br/>(Exotel / Twilio / IVR Pipeline)"]
+```
+
 ### 2. Promise-to-Pay (P2P) Tracker
 - **P2P Lifecycle**: Full commitment tracking state machine: `PROMISED` ➔ `P2P_KEPT` or `P2P_BROKEN`.
 - **Authoritative Settlement Verification**: P2P commitments are verified against the system's authoritative verified settlement state. A promise is marked as `P2P_KEPT` only upon confirmed deposit. Unverified retries do not count.
@@ -188,6 +290,20 @@ RecoveraX includes a specialized **Mandate Presentation Window Sequencer** ([`ba
   - `PUT /api/v1/cases/{case_id}/p2p/{promise_id}`: Edit / update commitment date, amount & notes.
   - `DELETE /api/v1/cases/{case_id}/p2p`: Remove / cancel active commitment.
   - `POST /api/v1/cases/{case_id}/p2p/verify`: Reconcile P2P state against system settlement state.
+
+```mermaid
+graph TD
+    P1["Customer Agrees to Pay Date"] --> P2["Record Commitment<br/>(Status: PROMISED)"]
+    P2 --> P3["Monitor Commitment Target Date & Amount"]
+    P3 --> P4["Settlement Reconciliation Engine<br/>(POST /p2p/verify)"]
+    
+    P4 --> P5{"Verify Against Bank Gateway Settlement"}
+    P5 -- Deposit Confirmed --> P6["Status: P2P_KEPT<br/>(Successful Recovery)"]
+    P5 -- Deposit Unconfirmed / Failed --> P7["Status: P2P_BROKEN<br/>(Trigger Strategy Re-evaluation)"]
+    
+    P6 --> P8["Record Audit Log Entry"]
+    P7 --> P8
+```
 
 ---
 
