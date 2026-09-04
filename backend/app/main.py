@@ -62,6 +62,9 @@ cors_origins.extend([
 ])
 cors_origins = list(set(cors_origins))
 
+from app.middleware.idempotency import IdempotencyMiddleware
+
+app.add_middleware(IdempotencyMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,

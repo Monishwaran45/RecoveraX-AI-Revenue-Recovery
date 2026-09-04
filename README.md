@@ -4,12 +4,20 @@
 [![Continuous Deployment (CD)](https://github.com/Monishwaran45/AI-Revenue-Recovery/actions/workflows/cd.yml/badge.svg)](https://github.com/Monishwaran45/AI-Revenue-Recovery/actions/workflows/cd.yml)
 [![Nightly Verification](https://github.com/Monishwaran45/AI-Revenue-Recovery/actions/workflows/nightly.yml/badge.svg)](https://github.com/Monishwaran45/AI-Revenue-Recovery/actions/workflows/nightly.yml)
 [![CI/CD Documentation](https://img.shields.io/badge/CI%2FCD-Docs-blue)](docs/CICD_PIPELINE.md)
+[![Security Threat Model](https://img.shields.io/badge/STRIDE-Threat%20Model-red)](docs/SECURITY_THREAT_MODEL.md)
+[![LLM Diagnosis Evals](https://img.shields.io/badge/LLM-Accuracy%20Evals-green)](backend/app/evals/accuracy.py)
+[![Platt Score Calibration](https://img.shields.io/badge/Score-Calibration-purple)](backend/app/recovery/calibration.py)
 
 > Autonomous AI Revenue Recovery Engine — LangGraph + Groq (`qwen/qwen3.8-27b`) + Deterministic Policy Guardrails + Human-in-the-Loop (HITL) + Celery/Redis + LangSmith Observability.
 
 RecoveraX detects revenue at risk, diagnoses root cause failure patterns using **Groq LLM (`qwen/qwen3.8-27b`)**, calculates deterministic recovery scores, evaluates strict **financial safety guardrails**, routes high-risk or high-value actions to **Human-in-the-Loop (HITL) approval**, executes approved recovery retries, verifies settlement outcomes, and maintains an **immutable audit trail**.
 
-> **CI/CD Pipeline**: Automated Continuous Integration (Backend Pytest, Frontend Next.js build, TypeScript typecheck, Docker verification) & Continuous Deployment (Render & Vercel) are documented in [`docs/CICD_PIPELINE.md`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/docs/CICD_PIPELINE.md).
+> **Documentation & Security**:
+> - **CI/CD Pipeline**: Documented in [`docs/CICD_PIPELINE.md`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/docs/CICD_PIPELINE.md).
+> - **STRIDE Security Threat Model**: Documented in [`docs/SECURITY_THREAT_MODEL.md`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/docs/SECURITY_THREAT_MODEL.md).
+> - **LLM Diagnosis Accuracy Evals**: Located in [`backend/app/evals/accuracy.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/evals/accuracy.py).
+> - **Platt Recovery Score Calibration**: Located in [`backend/app/recovery/calibration.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/recovery/calibration.py).
+> - **Idempotency & Distributed Failure Testing**: Located in [`backend/app/middleware/idempotency.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/app/middleware/idempotency.py) and [`backend/tests/test_distributed_failures.py`](file:///c:/Users/Asus-2025/Downloads/Razorpay%20AI%20Buildathon/backend/tests/test_distributed_failures.py).
 
 
 ---
