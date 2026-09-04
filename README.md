@@ -18,6 +18,24 @@ RecoveraX detects revenue at risk, diagnoses root cause failure patterns using *
 
 > **The AI recommends; the deterministic policy engine authorizes; execution is blocked for HUMAN/BLOCK states until the required authorization is satisfied. A case is shown as RECOVERED only after verified payment success.**
 
+```mermaid
+graph TD
+    H1["Policy Engine Evaluates Decision == HUMAN<br/>(Amount > ₹50k or Recovery Score < 80)"] --> H2["Pause LangGraph Execution Graph"]
+    H2 --> H3["Route Case to HITL Merchant Approval Queue<br/>(Status: AWAITING_APPROVAL)"]
+    H3 --> H4["Merchant Reviews AI Diagnosis & EV Score"]
+    
+    H4 --> H5{"Merchant Sign-Off Choice"}
+    
+    H5 -- APPROVE --> H6["Authorize Recommended Action<br/>(Status: SCHEDULED)"]
+    H5 -- REJECT --> H7["Reject Strategy & Stop Pipeline<br/>(Status: REJECTED / STOPPED)"]
+    H5 -- MODIFY --> H8["Override Strategy / Custom Schedule<br/>(Status: SCHEDULED with New Plan)"]
+    
+    H6 --> H9["Resume LangGraph Execution Graph"]
+    H8 --> H9
+    H7 --> H10["Write Decision Record to Immutable Audit Trail"]
+    H9 --> H10
+```
+
 ---
 
 ## Workflow Of The Application
@@ -62,6 +80,27 @@ graph TD
    - Scores cases 0–100 deterministically based on diagnosis, customer LTV, past payment history, and recency.
    - Expected Recovery Value ($EV$) calculated in Python:
      $$EV = \text{amount\_at\_risk} \times \left(\frac{\text{recovery\_score}}{100}\right) - \text{costs}$$
+
+### Failure Scenario & Strategy Routing Matrix
+
+```mermaid
+graph TD
+    D1["Payment Failure Event Webhook"] --> D2["Groq LLM Failure Diagnosis<br/>(qwen/qwen3.8-27b)"]
+    
+    D2 --> D3{"Diagnosed Failure Scenario"}
+    
+    D3 -- INSUFFICIENT_FUNDS --> D4["Strategy: RETRY (Delayed)<br/>Align with Mandate Salary Window"]
+    D3 -- TEMPORARY_BANK_ERROR --> D5["Strategy: RETRY (Short Delay)<br/>Schedule 30-min Gateway Retry"]
+    D3 -- CARD_EXPIRED / CLOSED_ACCT --> D6["Strategy: STOP / REMIND<br/>Send Card Update Notification"]
+    D3 -- OVERDUE_RECEIVABLE --> D7["Strategy: REMIND / VOICE_CALL<br/>Trigger Hinglish Audio & P2P Tracker"]
+    D3 -- FRAUD_RISK / AMBIGUOUS --> D8["Strategy: STOP / BLOCK<br/>Hard Safety Stop (Zero Exposure)"]
+    
+    D4 --> D9["Evaluate Pure Python Policy Engine"]
+    D5 --> D9
+    D6 --> D9
+    D7 --> D9
+    D8 --> D9
+```
 
 ---
 
@@ -168,6 +207,32 @@ graph TD
 1. **Quantified Monetary Recovery**: RecoveraX achieved **₹34.8L total recovery** vs **₹12.5L baseline**, delivering **+₹22.3L incremental lift** on the 1,000 synthetic case benchmark cohort.
 2. **Zero Financial Safety Violations**: Prevented 14 potential duplicate customer debits through state-verified pre-execution checks (`recheck` node).
 3. **Automated vs Human Split**: **28.7%** low-risk cases auto-executed safely; **71.3%** high-value/risk cases required explicit human operator authorization.
+
+```mermaid
+graph TD
+    B1["1,000 Synthetic Payment Failures Cohort<br/>(Total Exposure: ₹50,00,000 / ₹50.0L)"] --> B2{"Parallel Evaluation Engines"}
+    
+    subgraph Baseline ["Baseline Strategy: Naive Blind Retry"]
+        B3["Execute Direct Auto-Retries<br/>(No AI / No Policy Guardrails)"] --> B4["Baseline Recovery: ₹12,50,000 (25.0%)"]
+        B3 --> B5["14 Duplicate Debits Incurred"]
+        B3 --> B6["0 Operator Approvals Required"]
+    end
+    
+    subgraph RecoveraX ["RecoveraX AI Engine: Guardrailed"]
+        B7["Groq Diagnosis + Scoring + Policy Engine"] --> B8["28.7% Low-Risk Cases Auto-Executed"]
+        B7 --> B9["71.3% High-Risk/Exposure Routed to HITL"]
+        B8 --> B10["RecoveraX Recovery: ₹34,80,000 (69.6%)"]
+        B9 --> B10
+        B7 --> B11["0 Duplicate Debits (100% Prevention)"]
+        B7 --> B12["1 Ambiguous Case Hard-Blocked"]
+    end
+    
+    B2 --> Baseline
+    B2 --> RecoveraX
+    
+    B4 --> B13["Net Incremental Lift: +₹22,30,000 (+₹22.3L Lift)"]
+    B10 --> B13
+```
 
 ---
 
