@@ -38,7 +38,7 @@ graph TD
 
 ---
 
-## Full Application System Architecture
+## Solutions Architect
 
 ```mermaid
 graph TD
