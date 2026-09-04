@@ -38,6 +38,83 @@ graph TD
 
 ---
 
+## Full Application System Architecture
+
+```mermaid
+graph TD
+    subgraph Frontend ["1. Frontend Layer (Next.js 14 App Router)"]
+        UI_Dash["Merchant Revenue Dashboard"]
+        UI_HITL["HITL Approval & Override Queue"]
+        UI_P2P["Promise-to-Pay Commitment Tracker"]
+        UI_Voice["Voice Intervention & Speech Player"]
+        UI_Bench["1,000-Case Simulator Benchmark UI"]
+    end
+
+    subgraph API ["2. REST API & Gateway Layer (FastAPI)"]
+        API_Routes["FastAPI REST Routes (/api/v1/*)"]
+        API_Auth["Request Authentication & Input Validation"]
+        API_Sanitizer["Data Sanitizer (Redacts PII / API Keys)"]
+    end
+
+    subgraph Orchestration ["3. AI Orchestration Engine (LangGraph + Groq)"]
+        LG_Graph["Stateful Cyclic Execution Graph"]
+        Groq_LLM["Groq LLM Engine (qwen/qwen3.8-27b)"]
+        Scorer["Deterministic Scorer & EV Calculator"]
+    end
+
+    subgraph Policy ["4. Deterministic Policy & Safety Guardrails"]
+        Policy_Rules["Pure Python Policy Engine (Rules 1–12)"]
+        Mandate_Seq["Mandate Presentation Window Sequencer<br/>(NPCI Clearing Batch + 48h Cool-off)"]
+    end
+
+    subgraph Workers ["5. Async Queue & Worker Layer (Celery + Redis)"]
+        Celery_Broker["Redis Message Broker"]
+        Celery_Worker["Celery Background Task Workers"]
+    end
+
+    subgraph External ["6. External Services & Telephony Integrations"]
+        Sarvam_AI["Sarvam AI TTS Engine (Hinglish Voice)"]
+        Gateway_Sim["Payment Gateway Simulator"]
+        Bank_Gateway["Razorpay / Bank Settlement API"]
+    end
+
+    subgraph Storage ["7. Observability & Data Persistence"]
+        DB["Authoritative Database & State Store"]
+        Audit["Immutable Audit Trail Log"]
+        LangSmith["LangSmith Observability & Tracing Dashboard"]
+    end
+
+    %% Data Flow Connections
+    Frontend --> API_Routes
+    API_Routes --> API_Auth
+    API_Auth --> LG_Graph
+    
+    LG_Graph <--> Groq_LLM
+    LG_Graph --> Scorer
+    LG_Graph --> Policy_Rules
+    Policy_Rules --> Mandate_Seq
+    
+    Policy_Rules -- AUTO Decision --> Celery_Broker
+    Policy_Rules -- HUMAN Decision --> UI_HITL
+    Policy_Rules -- BLOCK / STOP Decision --> Audit
+    
+    Celery_Broker --> Celery_Worker
+    Celery_Worker --> Gateway_Sim
+    Gateway_Sim --> Bank_Gateway
+    
+    API_Routes --> Sarvam_AI
+    API_Routes --> UI_P2P
+    
+    LG_Graph -. Traces & Spans .-> API_Sanitizer
+    Groq_LLM -. Tokens & Latency .-> API_Sanitizer
+    API_Sanitizer --> LangSmith
+    
+    Bank_Gateway --> DB
+    Bank_Gateway --> Audit
+```
+
+---
+
 ## Workflow Of The Application
 
 ![RecoveraX AI Revenue Recovery Workflow Architecture](docs/images/Flow.png)
@@ -232,6 +309,29 @@ graph TD
     
     B4 --> B13["Net Incremental Lift: +₹22,30,000 (+₹22.3L Lift)"]
     B10 --> B13
+```
+
+### Deterministic Payment Gateway Simulator Execution Flow & Failure Profiles
+
+```mermaid
+graph TD
+    Sim1["Payment Simulator Invocation<br/>(simulate_retry / execute Node)"] --> Sim2{"Policy Decision Evaluation"}
+    
+    Sim2 -- Policy Decision == BLOCK --> Sim3["Raise ValueError: Action Hard-Blocked<br/>(Refuse Gateway Retry Execution)"]
+    Sim2 -- Policy Decision != BLOCK --> Sim4{"Payment State Verification"}
+    
+    Sim4 -- Payment State == AMBIGUOUS --> Sim5["Return TransactionStatus.AMBIGUOUS<br/>(Execution Blocked by Simulator)"]
+    Sim4 -- Payment State == CLEAR --> Sim6{"Load Failure Profile ID<br/>(TEMPORARY_BANK_ERROR, PERMANENT_HARD_DECLINE, SUBSCRIPTION_RETRY_FLAKE, AMBIGUOUS_PAYMENT)"}
+    
+    Sim6 --> Sim7{"Evaluate Profile Retry Outcomes for Current Attempt"}
+    
+    Sim7 -- Attempt Outcome == SUCCESS --> Sim8["Return TransactionStatus.SUCCESS & PaymentState.CLEAR<br/>(Payment Successfully Settled with Bank)"]
+    Sim7 -- Attempt Outcome == FAILED --> Sim9["Return TransactionStatus.FAILED & PaymentState.CLEAR<br/>(Gateway Retry Declined)"]
+    
+    Sim3 --> Sim10["Log Execution Outcome to Immutable Audit Trail"]
+    Sim5 --> Sim10
+    Sim8 --> Sim10
+    Sim9 --> Sim10
 ```
 
 ---
