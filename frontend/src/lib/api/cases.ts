@@ -44,23 +44,41 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     },
   ];
 
-  const rules = [
-    {
-      id: "r1",
-      text: `Amount Policy: ₹${(item.amount_at_risk || 0).toLocaleString("en-IN")} <= ₹50,000 Auto Limit`,
-      passed: (item.amount_at_risk || 0) <= 50000,
-    },
-    {
-      id: "r2",
-      text: `Confidence Threshold: ${item.recovery_score || 50}/100 >= 80 Score Minimum`,
-      passed: (item.recovery_score || 50) >= 80,
-    },
-    {
-      id: "r3",
-      text: `Retry Limit: ${item.retry_count || 0} < ${item.max_retries || 2} Max Attempts`,
-      passed: (item.retry_count || 0) < (item.max_retries || 2),
-    },
-  ];
+  // Try to find dynamic rules from audit logs first
+  let rules = [];
+  let dynamicReason = "";
+  if (Array.isArray(item.audit_logs)) {
+    const policyLog = item.audit_logs.find((log: any) => log.actor_type === "POLICY" && log.metadata_json && log.metadata_json.rules);
+    if (policyLog && policyLog.metadata_json.rules) {
+      rules = policyLog.metadata_json.rules.map((r: any, idx: number) => ({
+        id: `r${idx}`,
+        text: `${r.rule}: ${r.reason}`,
+        passed: r.decision !== "BLOCK" && r.decision !== "HUMAN"
+      }));
+      dynamicReason = policyLog.reason || policyLog.metadata_json.reason || "";
+    }
+  }
+
+  // Fallback to synthetic rules if no audit log
+  if (rules.length === 0) {
+    rules = [
+      {
+        id: "r1",
+        text: `Amount Policy: ₹${(item.amount_at_risk || 0).toLocaleString("en-IN")} <= ₹50,000 Auto Limit`,
+        passed: (item.amount_at_risk || 0) <= 50000,
+      },
+      {
+        id: "r2",
+        text: `Confidence Threshold: ${item.recovery_score || 50}/100 >= 80 Score Minimum`,
+        passed: (item.recovery_score || 50) >= 80,
+      },
+      {
+        id: "r3",
+        text: `Retry Limit: ${item.retry_count || 0} < ${item.max_retries || 2} Max Attempts`,
+        passed: (item.retry_count || 0) < (item.max_retries || 2),
+      },
+    ];
+  }
 
   let rawPolicy = "";
   if (typeof item.policy_decision === "string") {
@@ -146,12 +164,12 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
     policyDecision: {
       type: policyType as PolicyDecisionType,
       decisionLabel: policyType === "AUTO" ? "AUTOMATED RECOVERY" : (policyType === "BLOCK" ? "POLICY BLOCKED" : "HUMAN APPROVAL REQUIRED"),
-      reason: policyType === "AUTO"
+      reason: dynamicReason || (policyType === "AUTO"
         ? "Automated recovery authorized by deterministic policy rules."
         : (policyType === "BLOCK"
         ? "Safety engine blocked execution due to potential duplicate debit or policy violation."
-        : `Amount (₹${(item.amount_at_risk || 0).toLocaleString("en-IN")}) or risk tier requires explicit merchant sign-off.`),
-      rules,
+        : `Amount (₹${(item.amount_at_risk || 0).toLocaleString("en-IN")}) or risk tier requires explicit merchant sign-off.`)),
+      rules: rules,
       explanation: "Policy evaluation completed against active rule engine.",
     },
     status: statusVal,

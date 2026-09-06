@@ -30,9 +30,7 @@ export default function RecoveryResultCard({
 
   const isEscalateAction =
     caseData.recommendedAction === "ESCALATE" ||
-    caseData.aiRecommendation?.badgeText === "ESCALATE" ||
-    caseData.id === "CASE-1006" ||
-    caseData.id === "CASE-1003";
+    caseData.aiRecommendation?.badgeText === "ESCALATE";
 
   const isReminderAction = (caseData.recommendedAction === "REMIND" || caseData.type === "CHECKOUT" || caseData.type === "INVOICE") && !isEscalateAction;
 

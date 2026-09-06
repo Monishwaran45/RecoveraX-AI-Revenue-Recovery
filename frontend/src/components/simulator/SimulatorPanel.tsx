@@ -442,8 +442,8 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
       {/* 3. 12-Stage Recovery Workflow Visualizer */}
       <AgentWorkflow steps={workflowSteps} currentStepIndex={currentStepIdx} />
 
-      {/* 4. Policy Guardrail Callout if Blocked */}
-      {(isCompleted || currentStepIdx >= 4) && (activeScenario.badge === "BLOCK" || activeScenario.caseId === "CASE-1003") && (
+      {/* 4. Policy Guardrail Callout */}
+      {(isCompleted || currentStepIdx >= 4) && (activeScenario.badge === "BLOCK" || (currentCase && currentCase.policyDecision === "BLOCK")) && (
         <SafetyAlert amount={activeScenario.amount} caseId={activeScenario.caseId} />
       )}
 

@@ -34,7 +34,7 @@ export function mapCaseToScenario(c: any, index: number): Scenario {
   const actionVal = String(c.recommendedAction || c.aiRecommendation?.badgeText || c.aiRecommendation?.recommendation || "").toUpperCase();
 
   let badge: "AUTO" | "HUMAN" | "BLOCK" | "ESCALATE" = "HUMAN";
-  if (actionVal.includes("ESCALAT") || c.status === "ESCALATED" || c.id === "CASE-1006") {
+  if (actionVal.includes("ESCALAT") || c.status === "ESCALATED") {
     badge = "ESCALATE";
   } else if (policyVal.includes("BLOCK") || c.status === "BLOCKED" || c.status === "STOPPED") {
     badge = "BLOCK";

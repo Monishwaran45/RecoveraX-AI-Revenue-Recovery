@@ -75,7 +75,7 @@ class CaseService:
             )
 
         if sort_by == "created_at" and not search:
-            query = query.order_by(desc(RecoveryCase.id.in_(["CASE-1001", "CASE-1002", "CASE-1003", "CASE-1004", "CASE-1005", "CASE-1006"])), asc(RecoveryCase.id))
+            query = query.order_by(desc(RecoveryCase.created_at))
         else:
             order_col = getattr(RecoveryCase, sort_by, RecoveryCase.created_at)
             if sort_order.lower() == "desc":
