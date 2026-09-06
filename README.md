@@ -10,7 +10,7 @@
 
 ---
 
-### 🏆 Key Executive Performance KPI Dashboard
+### Key Executive Performance KPI Dashboard
 
 | **Metric** | **RecoveraX AI Engine** | **Blind Retry Baseline** | **Rule-Only Baseline** | **Safety Impact** |
 | :--- | :---: | :---: | :---: | :---: |
