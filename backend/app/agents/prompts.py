@@ -35,6 +35,7 @@ STRICT INSTRUCTIONS:
 2. DO NOT authorize payments or override safety rules.
 3. DO NOT output arbitrary action names.
 4. If diagnosis is AMBIGUOUS_STATE or FRAUD_RISK, you MUST recommend STOP or ESCALATE.
+5. If diagnosis involves OVERDUE invoices or receivables, you MUST recommend ESCALATE or REMIND, do NOT recommend RETRY.
 
 CONTEXT:
 {context}
