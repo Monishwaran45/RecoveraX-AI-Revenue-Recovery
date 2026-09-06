@@ -104,7 +104,7 @@ def evaluate_policy_rules(
 
     # Rule 6b: Low-confidence / Unknown diagnosis uncertainty gate
     valid_diagnoses = [d.value for d in DiagnosisType]
-    if diagnosis_confidence < MIN_DIAGNOSIS_CONFIDENCE or diagnosis == DiagnosisType.UNKNOWN.value or diagnosis not in valid_diagnoses:
+    if diagnosis != "PRE_EXECUTION_CHECK" and (diagnosis_confidence < MIN_DIAGNOSIS_CONFIDENCE or diagnosis == DiagnosisType.UNKNOWN.value or diagnosis not in valid_diagnoses):
         r = PolicyRuleResult(
             decision=PolicyDecision.HUMAN,
             reason=f"Low diagnosis confidence ({diagnosis_confidence:.2f} < {MIN_DIAGNOSIS_CONFIDENCE}) or unclassified diagnosis ('{diagnosis}'). Routing to HUMAN review for safety.",
