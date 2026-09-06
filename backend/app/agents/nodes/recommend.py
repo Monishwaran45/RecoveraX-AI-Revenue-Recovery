@@ -24,9 +24,16 @@ def recommend_action_node(state: RecoveryState) -> RecoveryState:
     retry_count = tx.get("retry_count", 0)
 
     if not llm:
-        action_str = ActionType.RETRY.value
+        prob_type_str = str(state.get("problem_type", "")).upper()
+        raw_reason = str(tx.get("failure_reason", "")).upper()
+        if "INVOICE" in prob_type_str or "OVERDUE" in raw_reason:
+            action_str = ActionType.ESCALATE.value
+        elif "CHECKOUT" in prob_type_str:
+            action_str = ActionType.REMIND.value
+        else:
+            action_str = ActionType.RETRY.value
         delay_val = 30
-        reason_str = "LLM unavailable; using default RETRY recommendation for policy evaluation"
+        reason_str = f"Deterministic recommendation engine selected {action_str} for strategy evaluation."
     else:
         context_str = json.dumps({
             "diagnosis": diagnosis,
