@@ -166,6 +166,17 @@ def evaluate_policy_rules(
             "reason": f"Mandate payment {payment_method}: 48h cool-off guardrail active to prevent dishonor bounce fees."
         })
 
+    # Rule 11b: Elevated risk gate (MEDIUM / HIGH risk requires operator review)
+    if risk_level in (RiskLevel.MEDIUM, RiskLevel.HIGH):
+        r = PolicyRuleResult(
+            decision=PolicyDecision.HUMAN,
+            reason=f"Risk level {risk_level.value}: Operator review required before recovery execution.",
+            rule_name="ELEVATED_RISK_OPERATOR_REVIEW",
+            passed=True
+        )
+        rules_evaluated.append({"rule": r.rule_name, "decision": r.decision.value, "reason": r.reason})
+        return PolicyEvaluation(decision=r.decision, reason=r.reason, rules_evaluated=rules_evaluated)
+
     # Rule 12: AUTO qualification
     if (
         amount <= max_auto_retry_amount

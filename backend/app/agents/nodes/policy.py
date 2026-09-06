@@ -16,9 +16,13 @@ def policy_check_node(state: RecoveryState) -> RecoveryState:
     amount = state.get("amount_at_risk", tx.get("amount", 0.0))
     score = state.get("recovery_score", 50)
     
-    if tx.get("possible_customer_debit") or tx.get("fraud_signal") or tx.get("payment_state") == "AMBIGUOUS" or amount > settings.HUMAN_APPROVAL_AMOUNT:
+    # Authoritative risk level evaluation:
+    # Preserve existing state/case risk level (e.g. MEDIUM or HIGH risk profiles)
+    existing_risk_str = str(state.get("risk_level", "LOW")).upper()
+    
+    if tx.get("possible_customer_debit") or tx.get("fraud_signal") or tx.get("payment_state") == "AMBIGUOUS" or amount > settings.HUMAN_APPROVAL_AMOUNT or existing_risk_str == "HIGH":
         risk_level = RiskLevel.HIGH
-    elif amount > settings.MAX_AUTO_RETRY_AMOUNT or score < settings.MIN_AUTO_RECOVERY_SCORE:
+    elif amount > settings.MAX_AUTO_RETRY_AMOUNT or score < settings.MIN_AUTO_RECOVERY_SCORE or existing_risk_str == "MEDIUM":
         risk_level = RiskLevel.MEDIUM
     else:
         risk_level = RiskLevel.LOW

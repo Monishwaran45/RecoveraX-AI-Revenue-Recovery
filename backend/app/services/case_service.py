@@ -181,6 +181,8 @@ class CaseService:
         initial_state = {
             "case_id": case.id,
             "amount_at_risk": case.amount_at_risk,
+            "problem_type": _val(case.problem_type),
+            "risk_level": _val(case.risk_level),
             "transaction": {
                 "id": tx.id if tx else "TX-000",
                 "amount": case.amount_at_risk,
