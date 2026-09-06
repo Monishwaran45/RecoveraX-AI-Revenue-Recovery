@@ -67,15 +67,31 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
   useEffect(() => {
     const initSimulator = async () => {
       try {
-        const dbCases = await getCases();
-        if (dbCases && dbCases.length > 0) {
-          const coreIds = ["CASE-1001", "CASE-1002", "CASE-1006", "CASE-1003", "CASE-1004"];
-          const coreCases = coreIds.map((id) => dbCases.find((c) => c.id === id)).filter(Boolean);
-          const finalCases = coreCases.length >= 4 ? coreCases : dbCases.slice(0, 5);
-          const mapped = finalCases.map((c, i) => mapCaseToScenario(c, i));
+        const coreIds = ["CASE-1001", "CASE-1002", "CASE-1006", "CASE-1003", "CASE-1004"];
+        const casePromises = coreIds.map((id) => getCase(id).catch(() => null));
+        const fetchedCases = (await Promise.all(casePromises)).filter(Boolean) as RecoveryCase[];
+
+        if (fetchedCases && fetchedCases.length >= 4) {
+          const mapped = fetchedCases.map((c, i) => mapCaseToScenario(c, i));
           setDynamicScenarios(mapped);
           if (mapped.length > 0) {
             loadScenarioCase(mapped[0]);
+          }
+        } else {
+          const dbCases = await getCases();
+          if (dbCases && dbCases.length > 0) {
+            const autoCase = dbCases.find((c) => c.status === "SCHEDULED" || c.policyDecision?.type === "AUTO" || c.risk === "LOW");
+            const reviewCase = dbCases.find((c) => c.status === "HUMAN_APPROVAL" || c.policyDecision?.type === "HUMAN" || c.risk === "MEDIUM");
+            const escalateCase = dbCases.find((c) => c.type === "INVOICE" || c.recommendedAction === "ESCALATE" || (c.status as string) === "ESCALATED");
+            const blockCase = dbCases.find((c) => c.status === "BLOCKED" || c.policyDecision?.type === "BLOCK" || c.risk === "HIGH");
+            const mandateCase = dbCases.find((c) => c.type === "SUBSCRIPTION" || c.isMandate);
+
+            const chosen = [autoCase, reviewCase, escalateCase, blockCase, mandateCase].filter(Boolean) as RecoveryCase[];
+            const mapped = (chosen.length >= 4 ? chosen : dbCases.slice(0, 5)).map((c, i) => mapCaseToScenario(c, i));
+            setDynamicScenarios(mapped);
+            if (mapped.length > 0) {
+              loadScenarioCase(mapped[0]);
+            }
           }
         }
       } catch (err: any) {
