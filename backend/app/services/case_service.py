@@ -239,13 +239,13 @@ class CaseService:
         
         status_str = final_state.get("workflow_status")
         if status_str and hasattr(CaseStatus, status_str):
-            case.status = CaseStatus(status_str)
+            case.status = CaseStatus(status_str).value
         elif case.policy_decision == PolicyDecision.HUMAN:
-            case.status = CaseStatus.AWAITING_APPROVAL
+            case.status = CaseStatus.AWAITING_APPROVAL.value
         elif case.policy_decision == PolicyDecision.AUTO:
-            case.status = CaseStatus.SCHEDULED
+            case.status = CaseStatus.SCHEDULED.value
         elif case.policy_decision == PolicyDecision.BLOCK:
-            case.status = CaseStatus.BLOCKED
+            case.status = CaseStatus.BLOCKED.value
 
         # Authoritative state machine synchronization
         if case.policy_decision == PolicyDecision.HUMAN:
@@ -258,7 +258,7 @@ class CaseService:
             case.amount_recovered = 0.0
         elif case.policy_decision == PolicyDecision.AUTO:
             case.approval_status = "NOT_REQUIRED"
-            if case.status != CaseStatus.RECOVERED:
+            if case.status != CaseStatus.RECOVERED.value and case.status != CaseStatus.RECOVERED:
                 case.verification_result = "NONE"
                 case.amount_recovered = 0.0
 

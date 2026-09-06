@@ -31,8 +31,8 @@ class ActionService:
         tx = tx_res.scalar_one_or_none()
 
         if not tx:
-            case.status = CaseStatus.BLOCKED
-            case.policy_decision = PolicyDecision.BLOCK
+            case.status = CaseStatus.BLOCKED.value
+            case.policy_decision = PolicyDecision.BLOCK.value
             await audit_service.log_event(
                 db=db, case_id=case.id, event_type=AuditEventType.ACTION_BLOCKED,
                 actor_type=ActorType.POLICY, actor_id="GATEWAY_VERIFIER",
@@ -48,8 +48,8 @@ class ActionService:
 
         if status_str == "SUCCESS":
             recovered_amount = float(tx.amount) if tx else float(case.amount_at_risk)
-            case.status = CaseStatus.RECOVERED
-            case.policy_decision = PolicyDecision.STOP
+            case.status = CaseStatus.RECOVERED.value
+            case.policy_decision = PolicyDecision.STOP.value
             case.verification_result = "VERIFIED_SUCCESS"
             case.amount_recovered = recovered_amount
             await audit_service.log_event(
@@ -62,8 +62,8 @@ class ActionService:
                 metadata_json={"status": "SUCCESS", "amount_recovered": recovered_amount}
             )
         elif state_str == "AMBIGUOUS" or possible_debit:
-            case.status = CaseStatus.BLOCKED
-            case.policy_decision = PolicyDecision.BLOCK
+            case.status = CaseStatus.BLOCKED.value
+            case.policy_decision = PolicyDecision.BLOCK.value
             case.verification_result = "VERIFIED_AMBIGUOUS"
             case.amount_recovered = 0.0
             await audit_service.log_event(
@@ -109,8 +109,8 @@ class ActionService:
 
         # A missing source record must never be treated as a retryable failure.
         if not tx:
-            case.status = CaseStatus.BLOCKED
-            case.policy_decision = PolicyDecision.BLOCK
+            case.status = CaseStatus.BLOCKED.value
+            case.policy_decision = PolicyDecision.BLOCK.value
             await audit_service.log_event(
                 db=db, case_id=case.id, event_type=AuditEventType.ACTION_BLOCKED,
                 actor_type=ActorType.POLICY, actor_id="DETERMINISTIC_POLICY_ENGINE",
@@ -123,7 +123,7 @@ class ActionService:
         # Never execute a terminal case or case that reached max retries limit
         if case.retry_count >= case.max_retries or case.status in [CaseStatus.RECOVERED, CaseStatus.BLOCKED, CaseStatus.STOPPED]:
             if case.retry_count >= case.max_retries and case.status != CaseStatus.RECOVERED:
-                case.status = CaseStatus.STOPPED
+                case.status = CaseStatus.STOPPED.value
                 case.verification_result = "STOPPED"
                 case.amount_recovered = 0.0
                 await db.commit()
@@ -146,8 +146,8 @@ class ActionService:
         )
 
         if policy_eval.decision == PolicyDecision.BLOCK:
-            case.status = CaseStatus.BLOCKED
-            case.policy_decision = PolicyDecision.BLOCK
+            case.status = CaseStatus.BLOCKED.value
+            case.policy_decision = PolicyDecision.BLOCK.value
             case.amount_recovered = 0.0
             await audit_service.log_event(
                 db=db,
@@ -162,8 +162,8 @@ class ActionService:
             return await case_service.get_case_by_id(db, case.id)
 
         if policy_eval.decision == PolicyDecision.STOP:
-            case.status = CaseStatus.STOPPED
-            case.policy_decision = PolicyDecision.STOP
+            case.status = CaseStatus.STOPPED.value
+            case.policy_decision = PolicyDecision.STOP.value
             case.verification_result = "STOPPED"
             await audit_service.log_event(
                 db=db, case_id=case.id, event_type=AuditEventType.RECOVERY_STOPPED,
@@ -190,7 +190,7 @@ class ActionService:
 
             is_approved = approved_req is not None or (getattr(case, "approval_status", None) in ("APPROVED", "MODIFIED", "Approved", "Modified"))
             if not is_approved:
-                case.status = CaseStatus.AWAITING_APPROVAL
+                case.status = CaseStatus.AWAITING_APPROVAL.value
                 case.amount_recovered = 0.0
                 await audit_service.log_event(
                     db=db,
@@ -204,7 +204,7 @@ class ActionService:
                 await db.commit()
                 return await case_service.get_case_by_id(db, case.id)
 
-        case.status = CaseStatus.EXECUTING
+        case.status = CaseStatus.EXECUTING.value
         action_rec = ActionModel(
             id=f"ACT-{uuid.uuid4().hex[:8]}",
             case_id=case.id,
@@ -219,8 +219,8 @@ class ActionService:
         try:
             # REMIND and ESCALATE are communication/workflow actions, not payment retries.
             if case.recommended_action != ActionType.RETRY:
-                case.status = CaseStatus.STOPPED
-                case.policy_decision = PolicyDecision.STOP
+                case.status = CaseStatus.STOPPED.value
+                case.policy_decision = PolicyDecision.STOP.value
                 case.verification_result = "NONE"
                 case.amount_recovered = 0.0
                 action_rec.status = "SUCCESS"
@@ -249,7 +249,7 @@ class ActionService:
             action_rec.result = message
 
             if status == TransactionStatus.SUCCESS:
-                case.status = CaseStatus.RECOVERED
+                case.status = CaseStatus.RECOVERED.value
                 case.verification_result = "VERIFIED_SUCCESS"
                 case.amount_recovered = case.amount_at_risk
                 action_rec.status = "SUCCESS"
@@ -269,9 +269,9 @@ class ActionService:
                 )
             else:
                 should_stop = case.retry_count >= case.max_retries
-                case.status = CaseStatus.STOPPED if should_stop else CaseStatus.SCHEDULED
+                case.status = CaseStatus.STOPPED.value if should_stop else CaseStatus.SCHEDULED.value
                 if should_stop:
-                    case.policy_decision = PolicyDecision.STOP
+                    case.policy_decision = PolicyDecision.STOP.value
                 case.verification_result = "VERIFIED_FAILED"
                 case.amount_recovered = 0.0
                 action_rec.status = "FAILED"
@@ -301,7 +301,7 @@ class ActionService:
                         metadata_json={"retry_count": case.retry_count, "max_retries": case.max_retries}
                     )
         except Exception as e:
-            case.status = CaseStatus.BLOCKED
+            case.status = CaseStatus.BLOCKED.value
             case.amount_recovered = 0.0
             case.verification_result = "EXECUTION_ERROR"
             action_rec.status = "BLOCKED"
@@ -327,8 +327,8 @@ class ActionService:
         if not case:
             return None
 
-        case.status = CaseStatus.STOPPED
-        case.policy_decision = PolicyDecision.STOP
+        case.status = CaseStatus.STOPPED.value
+        case.policy_decision = PolicyDecision.STOP.value
         case.amount_recovered = 0.0
         case.verification_result = "STOPPED"
 
@@ -368,11 +368,11 @@ class ActionService:
 
         if case_id in demo_defaults:
             policy, status, risk, score, action, v_res, amt_rec, app_stat, tx_stat, p_state, poss_debit, retry_cnt, amt_risk = demo_defaults[case_id]
-            case.policy_decision = policy
-            case.status = status
-            case.risk_level = risk
+            case.policy_decision = policy.value if hasattr(policy, "value") else policy
+            case.status = status.value if hasattr(status, "value") else status
+            case.risk_level = risk.value if hasattr(risk, "value") else risk
             case.recovery_score = score
-            case.recommended_action = action
+            case.recommended_action = action.value if hasattr(action, "value") else action
             case.verification_result = v_res
             case.amount_recovered = amt_rec
             case.approval_status = app_stat
