@@ -105,20 +105,23 @@ class CaseService:
         amt_rec = getattr(c, 'amount_recovered', 0.0) or 0.0
         app_stat = getattr(c, 'approval_status', None) or "NOT_REQUIRED"
 
+        pol_val = _val(getattr(c, 'policy_decision', ''))
+        st_val = _val(getattr(c, 'status', ''))
+
         state = "OPEN"
-        if c.status == CaseStatus.RECOVERED and (v_res == "VERIFIED_SUCCESS" or amt_rec > 0):
+        if st_val in (CaseStatus.RECOVERED, "RECOVERED") or v_res == "VERIFIED_SUCCESS" or amt_rec > 0:
             state = "RECOVERED"
-        elif c.status == CaseStatus.BLOCKED:
+        elif st_val in (CaseStatus.BLOCKED, "BLOCKED") or pol_val in (PolicyDecision.BLOCK, "BLOCK"):
             state = "BLOCKED"
-        elif c.status == CaseStatus.STOPPED or app_stat == "REJECTED":
+        elif st_val in (CaseStatus.STOPPED, "STOPPED") or app_stat == "REJECTED":
             state = "STOPPED"
-        elif c.status == CaseStatus.FAILED or v_res == "VERIFIED_FAILED":
+        elif st_val in (CaseStatus.FAILED, "FAILED") or v_res == "VERIFIED_FAILED":
             state = "FAILED"
-        elif c.status == CaseStatus.AWAITING_APPROVAL or app_stat == "PENDING" or c.policy_decision == PolicyDecision.HUMAN:
+        elif st_val in (CaseStatus.SCHEDULED, "SCHEDULED") or pol_val in (PolicyDecision.AUTO, "AUTO"):
+            state = "SCHEDULED"
+        elif st_val in (CaseStatus.AWAITING_APPROVAL, "AWAITING_APPROVAL") or app_stat == "PENDING" or pol_val in (PolicyDecision.HUMAN, "HUMAN"):
             state = "AWAITING_APPROVAL"
             amt_rec = 0.0
-        elif c.status == CaseStatus.SCHEDULED:
-            state = "SCHEDULED"
 
         from app.schemas.recovery_case import CaseOutcomeSchema
         from app.policy.mandate_sequencer import MandateSequencer

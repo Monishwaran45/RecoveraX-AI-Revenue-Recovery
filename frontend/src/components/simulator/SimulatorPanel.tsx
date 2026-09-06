@@ -88,7 +88,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     }
   };
 
-  const updateStepState = (stepIndex: number, state: "waiting" | "processing" | "completed" | "failed" | "blocked") => {
+  const updateStepState = (stepIndex: number, state: "waiting" | "processing" | "completed" | "failed" | "blocked" | "skipped") => {
     setWorkflowSteps((prev) =>
       prev.map((step, idx) => {
         if (idx === stepIndex) return { ...step, state };
@@ -163,7 +163,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     await new Promise((r) => setTimeout(r, 200));
     updateStepState(4, "completed");
 
-    // Step 6: Routing
+    // Step 6: Routing / HITL Gate
     setCurrentStepIdx(5);
     updateStepState(5, "processing");
     addLog("POLICY", `Routing authorization: ${c?.policyDecision?.decisionLabel || polDecision}`);
@@ -179,7 +179,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     }
 
     if (isHumanRequired) {
-      updateStepState(5, "completed");
+      updateStepState(5, "processing");
       for (let i = 6; i <= 11; i++) updateStepState(i, "waiting");
       addLog("HUMAN", `APPROVAL REQUIRED: ${c?.policyDecision?.reason || "High value transaction requires sign-off."}`);
       addLog("ACTION", `Dispatched to manual review queue for sign-off.`);
@@ -188,7 +188,9 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
       return;
     }
 
-    updateStepState(5, "completed");
+    // AUTO policy: HITL Gate is bypassed!
+    updateStepState(5, "skipped");
+    addLog("SYSTEM", `HITL Gate bypassed: Autonomous policy rule applied.`);
 
     // Step 7: Schedule
     setCurrentStepIdx(6);
@@ -238,16 +240,21 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     await new Promise((r) => setTimeout(r, 200));
     updateStepState(10, "completed");
 
-    // Step 12: Settled
+    // Step 12: Settled / Stop Terminal Node
     setCurrentStepIdx(11);
-    const isVerifiedRecovered = execRes?.status === "RECOVERED" && (execRes?.verificationResult === "VERIFIED_SUCCESS" || (execRes?.amountRecovered || 0) > 0);
-    if (isVerifiedRecovered) {
+    const resStatusStr = String(execRes?.status || c?.status || "").toUpperCase();
+    const isSuccessfulExecution = resStatusStr === "RECOVERED" || resStatusStr === "SCHEDULED" || resStatusStr === "COMPLETED" || (execRes?.amountRecovered || 0) > 0;
+    if (isSuccessfulExecution) {
       updateStepState(11, "completed");
       const finalAmount = execRes?.amountRecovered || execRes?.amount || c?.amount || activeScenario.amountVal;
-      addLog("SYSTEM", `SETTLEMENT COMPLETE: ₹${finalAmount.toLocaleString("en-IN")} deposited.`);
+      if (resStatusStr === "RECOVERED") {
+        addLog("SYSTEM", `SETTLEMENT COMPLETE: ₹${finalAmount.toLocaleString("en-IN")} deposited.`);
+      } else {
+        addLog("SYSTEM", `AUTOMATED RETRY DISPATCHED: Scheduled delay timer active for ₹${finalAmount.toLocaleString("en-IN")}.`);
+      }
     } else {
       updateStepState(11, "failed");
-      addLog("SYSTEM", `RECOVERY UNVERIFIED: Status = ${execRes?.status || "FAILED"}`);
+      addLog("SYSTEM", `RECOVERY UNVERIFIED: Status = ${resStatusStr || "FAILED"}`);
     }
     setIsRunning(false);
     setIsCompleted(true);
@@ -295,6 +302,9 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     const approved = await approveCase(activeScenario.caseId);
     if (approved) setCurrentCase(approved);
 
+    // Step 6 (human_approval) is now authorized/completed
+    updateStepState(5, "completed");
+
     // Step 7: Schedule
     setCurrentStepIdx(6);
     updateStepState(6, "processing");
@@ -336,14 +346,15 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
 
     // Step 12: Settled
     setCurrentStepIdx(11);
-    const isApprovedVerifiedRecovered = execRes?.status === "RECOVERED" && (execRes?.verificationResult === "VERIFIED_SUCCESS" || (execRes?.amountRecovered || 0) > 0);
-    if (isApprovedVerifiedRecovered) {
+    const resStatusStr = String(execRes?.status || currentCase?.status || "").toUpperCase();
+    const isApprovedSuccess = resStatusStr === "RECOVERED" || resStatusStr === "SCHEDULED" || resStatusStr === "APPROVED" || resStatusStr === "COMPLETED" || (execRes?.amountRecovered || 0) > 0;
+    if (isApprovedSuccess) {
       updateStepState(11, "completed");
       const finalAmt = execRes?.amountRecovered || execRes?.amount || currentCase?.amount || activeScenario.amountVal;
-      addLog("SYSTEM", `SETTLEMENT COMPLETE: ₹${finalAmt.toLocaleString("en-IN")} deposited.`);
+      addLog("SYSTEM", `AUTHORIZED DISPATCH COMPLETE: Revenue ₹${finalAmt.toLocaleString("en-IN")} processed.`);
     } else {
       updateStepState(11, "failed");
-      addLog("SYSTEM", `RECOVERY UNVERIFIED: Status = ${execRes?.status || "FAILED"}`);
+      addLog("SYSTEM", `RECOVERY UNVERIFIED: Status = ${resStatusStr || "FAILED"}`);
     }
     setIsRunning(false);
     setIsCompleted(true);

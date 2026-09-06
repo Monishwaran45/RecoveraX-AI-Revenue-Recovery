@@ -22,9 +22,11 @@ export default function RecoveryResultCard({
   const isStopped = (caseData.status === "STOPPED" || caseData.status === "REJECTED") && !isEscalatedAlready;
   const isFailed = caseData.status === "FAILED";
 
-  const isAuto = (caseData.policyDecision?.type === "AUTO" || caseData.status === "SCHEDULED") && !isRecovered && !isBlocked && !isStopped && !isFailed;
+  const polDecAny = caseData.policyDecision as any;
+  const polType = String(polDecAny?.type || polDecAny?.value || caseData.policyDecision || "").toUpperCase();
+  const isAuto = (polType.includes("AUTO") || caseData.status === "SCHEDULED") && !isRecovered && !isBlocked && !isStopped && !isFailed;
 
-  const isHuman = (caseData.status === "HUMAN_APPROVAL" || caseData.approvalStatus === "PENDING" || caseData.policyDecision?.type === "HUMAN") && !isAuto && !isRecovered && !isBlocked && !isStopped && !isFailed && !isEscalatedAlready;
+  const isHuman = (caseData.status === "HUMAN_APPROVAL" || caseData.approvalStatus === "PENDING" || polType.includes("HUMAN")) && !isAuto && !isRecovered && !isBlocked && !isStopped && !isFailed && !isEscalatedAlready;
 
   const isEscalateAction =
     caseData.recommendedAction === "ESCALATE" ||

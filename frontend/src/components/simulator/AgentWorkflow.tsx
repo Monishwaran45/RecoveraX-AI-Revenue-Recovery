@@ -1,8 +1,8 @@
 "use client";
 
-import { CheckCircle2, Clock, ShieldAlert, AlertTriangle, ChevronRight, Activity, Layers } from "lucide-react";
+import { CheckCircle2, Clock, ShieldAlert, AlertTriangle, ChevronRight, Activity, Layers, FastForward } from "lucide-react";
 
-export type StepState = "waiting" | "processing" | "completed" | "failed" | "blocked";
+export type StepState = "waiting" | "processing" | "completed" | "failed" | "blocked" | "skipped";
 
 export interface WorkflowStep {
   id: string;
@@ -57,21 +57,25 @@ export default function AgentWorkflow({ steps, currentStepIndex }: AgentWorkflow
             const isProcessing = step.state === "processing";
             const isBlocked = step.state === "blocked";
             const isFailed = step.state === "failed";
+            const isSkipped = step.state === "skipped";
 
             return (
               <div key={step.id} className="flex items-center">
                 {/* Step Box */}
                 <div
-                  className={`p-2.5 rounded-md border transition-colors flex flex-col justify-between w-28 h-18 ${isCompleted
+                  className={`p-2.5 rounded-md border transition-colors flex flex-col justify-between w-28 h-18 ${
+                    isCompleted
                       ? "bg-emerald-50/50 border-emerald-300 text-emerald-950"
                       : isProcessing
-                        ? "bg-blue-50/70 border-blue-500 text-blue-950"
-                        : isBlocked
-                          ? "bg-rose-50/60 border-rose-300 text-rose-950"
-                          : isFailed
-                            ? "bg-rose-50/60 border-rose-300 text-rose-950"
-                            : "bg-gray-50/70 border-gray-200 text-gray-400"
-                    }`}
+                      ? "bg-blue-50/70 border-blue-500 text-blue-950"
+                      : isBlocked
+                      ? "bg-rose-50/60 border-rose-300 text-rose-950"
+                      : isFailed
+                      ? "bg-rose-50/60 border-rose-300 text-rose-950"
+                      : isSkipped
+                      ? "bg-slate-100/80 border-slate-300 text-slate-500 opacity-80"
+                      : "bg-gray-50/70 border-gray-200 text-gray-400"
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-[9px] font-semibold text-gray-400">
@@ -82,6 +86,7 @@ export default function AgentWorkflow({ steps, currentStepIndex }: AgentWorkflow
                     {isProcessing && <Activity className="h-3 w-3 text-blue-600 animate-spin shrink-0" />}
                     {isBlocked && <ShieldAlert className="h-3 w-3 text-rose-600 shrink-0" />}
                     {isFailed && <AlertTriangle className="h-3 w-3 text-rose-600 shrink-0" />}
+                    {isSkipped && <FastForward className="h-3 w-3 text-slate-500 shrink-0" />}
                     {step.state === "waiting" && <Clock className="h-3 w-3 text-gray-300 shrink-0" />}
                   </div>
 
@@ -90,7 +95,7 @@ export default function AgentWorkflow({ steps, currentStepIndex }: AgentWorkflow
                       {step.label}
                     </h4>
                     <p className="text-[9px] text-gray-500 mt-0.5 truncate font-normal">
-                      {step.sublabel}
+                      {isSkipped ? "(Bypassed)" : step.sublabel}
                     </p>
                   </div>
                 </div>
