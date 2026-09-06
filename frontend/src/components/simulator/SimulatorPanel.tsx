@@ -69,9 +69,14 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
       try {
         const dbCases = await getCases();
         if (dbCases && dbCases.length > 0) {
-          const mapped = dbCases.map((c, i) => mapCaseToScenario(c, i));
+          const coreIds = ["CASE-1001", "CASE-1002", "CASE-1006", "CASE-1003", "CASE-1004"];
+          const coreCases = coreIds.map((id) => dbCases.find((c) => c.id === id)).filter(Boolean);
+          const finalCases = coreCases.length >= 4 ? coreCases : dbCases.slice(0, 5);
+          const mapped = finalCases.map((c, i) => mapCaseToScenario(c, i));
           setDynamicScenarios(mapped);
-          loadScenarioCase(mapped[0]);
+          if (mapped.length > 0) {
+            loadScenarioCase(mapped[0]);
+          }
         }
       } catch (err: any) {
         setBackendError(`Backend server offline. Please verify FastAPI service.`);
