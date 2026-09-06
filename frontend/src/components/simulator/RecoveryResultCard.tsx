@@ -86,7 +86,7 @@ export default function RecoveryResultCard({
                 : isEscalatedAlready
                 ? "Escalated to Risk Operations"
                 : isAuto
-                ? "Automated Retry Scheduled"
+                ? (isReminderAction ? "Automated Reminder Scheduled" : "Automated Retry Scheduled")
                 : isEscalateAction
                 ? "Risk Operations Escalation Required"
                 : "Manual Sign-off Required"}
@@ -103,7 +103,7 @@ export default function RecoveryResultCard({
                 : isEscalatedAlready
                 ? `Case assigned to Risk & Legal Operations for manual ledger settlement & recovery outreach.`
                 : isAuto
-                ? `Transaction ₹${caseData.amount.toLocaleString("en-IN")} authorized for autonomous retry by deterministic policy engine.`
+                ? (isReminderAction ? `Reminder communication for ₹${caseData.amount.toLocaleString("en-IN")} authorized for autonomous dispatch.` : `Transaction ₹${caseData.amount.toLocaleString("en-IN")} authorized for autonomous retry by deterministic policy engine.`)
                 : isEscalateAction
                 ? `Transaction ₹${caseData.amount.toLocaleString("en-IN")} flagged for high risk exposure. Route to Risk Ops or authorize link.`
                 : isReminderAction
@@ -167,7 +167,7 @@ export default function RecoveryResultCard({
       </div>
 
       {/* Mandate Sequencer Banner */}
-      {caseData.isMandate && (
+      {caseData.isMandate && !isReminderAction && (
         <div className="mt-4 pt-3.5 border-t border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs bg-white/5 p-3 rounded border border-white/10">
           <div>
             <div className="flex items-center gap-2">
