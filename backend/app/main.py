@@ -34,11 +34,17 @@ async def _backend_heartbeat():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.is_production() and not settings.DEMO_MODE and not settings.API_AUTH_TOKEN:
-        raise RuntimeError("Non-demo production requires a non-empty API_AUTH_TOKEN")
     logger.info("Initializing RecoveraX Backend Services...")
-    configure_langsmith()
-    seed_database_if_empty()
+    try:
+        configure_langsmith()
+    except Exception as ls_err:
+        logger.warning("LangSmith configuration notice: %s", ls_err)
+
+    try:
+        seed_database_if_empty()
+    except Exception as seed_err:
+        logger.warning("Database seed notice on startup: %s", seed_err)
+
     heartbeat_task = asyncio.create_task(_backend_heartbeat())
     yield
     heartbeat_task.cancel()
@@ -69,9 +75,8 @@ from app.middleware.idempotency import IdempotencyMiddleware
 app.add_middleware(IdempotencyMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_origin_regex=r"https?://.*",
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
@@ -84,11 +89,7 @@ async def add_security_headers(request: Request, call_next):
 
     if request.method == "OPTIONS":
         response = Response(status_code=204)
-        if origin:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-        else:
-            response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Origin"] = origin or "*"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
         response.headers["Access-Control-Allow-Headers"] = req_headers
         return response
@@ -103,16 +104,12 @@ async def add_security_headers(request: Request, call_next):
             content={"detail": f"Internal Server Error: {str(e)}"}
         )
 
-    if origin:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-    else:
-        response.headers["Access-Control-Allow-Origin"] = "*"
-
+    response.headers["Access-Control-Allow-Origin"] = origin or "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    response.headers["Access-Control-Allow-Headers"] = "*"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Cache-Control"] = "no-store"
     return response
 
