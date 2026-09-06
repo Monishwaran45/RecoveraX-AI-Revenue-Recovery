@@ -443,7 +443,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
       <AgentWorkflow steps={workflowSteps} currentStepIndex={currentStepIdx} />
 
       {/* 4. Policy Guardrail Callout */}
-      {(isCompleted || currentStepIdx >= 4) && (activeScenario.badge === "BLOCK" || (currentCase && currentCase.policyDecision === "BLOCK")) && (
+      {(isCompleted || currentStepIdx >= 4) && (activeScenario.badge === "BLOCK" || (currentCase && currentCase.policyDecision?.type === "BLOCK")) && (
         <SafetyAlert amount={activeScenario.amount} caseId={activeScenario.caseId} />
       )}
 
