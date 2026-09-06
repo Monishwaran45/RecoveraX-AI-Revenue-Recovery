@@ -218,18 +218,19 @@ class ActionService:
 
         try:
             # REMIND and ESCALATE are communication/workflow actions, not payment retries.
-            if case.recommended_action != ActionType.RETRY:
+            case_action_val = _val(case.recommended_action, "RETRY")
+            if case_action_val != ActionType.RETRY.value:
                 case.status = CaseStatus.STOPPED.value
                 case.policy_decision = PolicyDecision.STOP.value
                 case.verification_result = "NONE"
                 case.amount_recovered = 0.0
                 action_rec.status = "SUCCESS"
-                action_rec.result = f"{case.recommended_action.value} action completed; no payment retry was attempted."
+                action_rec.result = f"{case_action_val} action completed; no payment retry was attempted."
                 await audit_service.log_event(
                     db=db, case_id=case.id, event_type=AuditEventType.ACTION_EXECUTED,
                     actor_type=ActorType.EXECUTOR, actor_id="ACTION_EXECUTOR",
                     reason=action_rec.result,
-                    metadata_json={"action": case.recommended_action.value, "payment_retry": False}
+                    metadata_json={"action": case_action_val, "payment_retry": False}
                 )
                 await db.commit()
                 return await case_service.get_case_by_id(db, case.id)

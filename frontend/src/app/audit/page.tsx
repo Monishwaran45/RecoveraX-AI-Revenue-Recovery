@@ -44,6 +44,13 @@ export default function AuditPage() {
 
           const ts = dbItem.timestamp ? new Date(dbItem.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString();
 
+          const relatedCase = cases.find((c: RecoveryCase) => c.id === dbItem.case_id);
+          let pDecision = "AUTO";
+          if (relatedCase) {
+             const rawPol = relatedCase.policyDecision;
+             pDecision = (typeof rawPol === 'string' ? rawPol : rawPol?.type) || "AUTO";
+          }
+          
           formatted.push({
             id: dbItem.id || `db-${Math.random()}`,
             timestamp: ts,
@@ -51,13 +58,16 @@ export default function AuditPage() {
             category: cat,
             event: dbItem.event_type || "AUDIT_EVENT",
             details: dbItem.reason || (dbItem.metadata_json ? JSON.stringify(dbItem.metadata_json) : "Audit log recorded"),
-            policy: (dbItem.metadata_json?.policy || "AUTO").toUpperCase(),
+            policy: (dbItem.metadata_json?.policy || pDecision).toUpperCase(),
           });
         });
       }
 
       // 2. Map case audit timelines
       cases.forEach((c: RecoveryCase) => {
+        const rawPol = c.policyDecision;
+        const pDecision = (typeof rawPol === 'string' ? rawPol : rawPol?.type) || "AUTO";
+        
         (c.auditTimeline || []).forEach((tItem, idx) => {
           formatted.push({
             id: `case-${c.id}-${idx}`,
@@ -66,7 +76,7 @@ export default function AuditPage() {
             category: (tItem.category as any) || "ACTION",
             event: tItem.title,
             details: tItem.description,
-            policy: c.policyDecision?.type || "AUTO",
+            policy: pDecision,
           });
         });
       });
