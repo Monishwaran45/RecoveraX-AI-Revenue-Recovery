@@ -390,6 +390,16 @@ class ActionService:
                 tx.payment_state = p_state
                 tx.possible_customer_debit = poss_debit
                 tx.retry_count = retry_cnt
+        else:
+            case.status = CaseStatus.OPEN.value
+            case.verification_result = "NONE"
+            case.amount_recovered = 0.0
+            case.retry_count = 0
+            case.approval_status = "NOT_REQUIRED"
+            if tx:
+                tx.status = TransactionStatus.FAILED
+                tx.retry_count = 0
+
         from app.models.approval import ApprovalRequest
         from app.policy.enums import ApprovalStatus
 

@@ -184,7 +184,7 @@ class CaseService:
             "transaction": {
                 "id": tx.id if tx else "TX-000",
                 "amount": case.amount_at_risk,
-                "status": _val(tx.status) if tx else "FAILED",
+                "status": "FAILED",
                 "payment_method": pm_str,
                 "failure_reason": tx.failure_reason if tx else "BANK_ERROR",
                 "failure_profile_id": tx.failure_reason if tx else "TEMPORARY_BANK_ERROR",

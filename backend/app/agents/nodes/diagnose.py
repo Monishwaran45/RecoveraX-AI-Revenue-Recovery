@@ -22,32 +22,62 @@ def diagnose_node(state: RecoveryState) -> RecoveryState:
     if not llm:
         logger.info("LLM unavailable. Executing deterministic root-cause diagnostic engine.")
         fail_reason = str(tx.get("failure_reason", "")).upper()
-        if fail_reason in ("TEMPORARY_BANK_ERROR", "GATEWAY_TIMEOUT", "BANK_SYSTEM_OFFLINE", "NETWORK_TIMEOUT", "CARD_EXPIRED_MANDATE"):
+        p_state = str(tx.get("payment_state", "CLEAR")).upper()
+        is_debit = tx.get("possible_customer_debit", False)
+        is_fraud = tx.get("fraud_signal", False)
+
+        if is_fraud or "FRAUD" in fail_reason or "HIGH_RISK" in fail_reason:
+            state["diagnosis"] = DiagnosisType.FRAUD_RISK.value
+            state["diagnosis_confidence"] = 0.95
+            state["diagnosis_reason"] = "Security telemetry detected fraud risk or high-risk IP. Policy safety halt required."
+            state["forced_human"] = False
+        elif p_state == "AMBIGUOUS" or is_debit or "DROPPED_MID" in fail_reason:
+            state["diagnosis"] = DiagnosisType.AMBIGUOUS_STATE.value
+            state["diagnosis_confidence"] = 0.90
+            state["diagnosis_reason"] = "Ambiguous payment state or possible customer debit detected. Retry blocked to prevent duplicate debit."
+            state["forced_human"] = False
+        elif "INSUFFICIENT" in fail_reason:
+            state["diagnosis"] = DiagnosisType.INSUFFICIENT_FUNDS.value
+            state["diagnosis_confidence"] = 0.95
+            state["diagnosis_reason"] = "Customer account balance reload required. Align retry with liquidity window."
+            state["forced_human"] = False
+        elif fail_reason in ("ACCOUNT_CLOSED", "INVALID_CARD", "PERMANENT_HARD_DECLINE"):
+            state["diagnosis"] = DiagnosisType.PERMANENT_FAILURE.value
+            state["diagnosis_confidence"] = 0.98
+            state["diagnosis_reason"] = "Permanent payment method failure. Customer must update payment details."
+            state["forced_human"] = False
+        elif "INVOICE" in fail_reason or "OVERDUE" in fail_reason or "RECEIVABLE" in fail_reason:
+            state["diagnosis"] = DiagnosisType.OVERDUE_RECEIVABLE.value
+            state["diagnosis_confidence"] = 0.90
+            state["diagnosis_reason"] = "Receivable past due date. Structured reminder and operator escalation recommended."
+            state["forced_human"] = False
+        elif "SESSION" in fail_reason or "OTP" in fail_reason or "AUTH_FAILED" in fail_reason or "ABANDON" in fail_reason:
+            state["diagnosis"] = DiagnosisType.CUSTOMER_ACTION_REQUIRED.value
+            state["diagnosis_confidence"] = 0.85
+            state["diagnosis_reason"] = "Customer authentication expired or abandoned. Automated reminder recommended."
+            state["forced_human"] = False
+        elif fail_reason in ("TEMPORARY_BANK_ERROR", "GATEWAY_TIMEOUT", "BANK_SYSTEM_OFFLINE", "NETWORK_TIMEOUT", "CARD_EXPIRED_MANDATE", "HIGH_VALUE_RETRY_LIMIT"):
             state["diagnosis"] = DiagnosisType.TEMPORARY_FAILURE.value
             state["diagnosis_confidence"] = 0.95
-            state["diagnosis_reason"] = f"Deterministic diagnostic engine classified root cause as TEMPORARY_FAILURE from signal '{fail_reason}'."
+            state["diagnosis_reason"] = f"Temporary bank gateway decline ('{fail_reason}'). Bounded retry recommended."
             state["forced_human"] = False
-            audit_events.append({
-                "event_type": AuditEventType.AI_DIAGNOSED.value,
-                "actor_type": ActorType.POLICY.value,
-                "actor_id": "DETERMINISTIC_DIAGNOSTIC_ENGINE",
-                "reason": state["diagnosis_reason"],
-                "metadata": {"confidence": 0.95, "diagnosis": DiagnosisType.TEMPORARY_FAILURE.value}
-            })
         else:
             state["diagnosis"] = DiagnosisType.TEMPORARY_FAILURE.value
             state["diagnosis_confidence"] = 0.0
-            state["diagnosis_reason"] = "LLM unavailable for unclassified failure code; fail-closed safety forced HUMAN review."
+            state["diagnosis_reason"] = f"LLM unavailable for unclassified failure code ('{fail_reason}'); fail-closed safety forced HUMAN review."
             state["forced_human"] = True
-            audit_events.append({
-                "event_type": AuditEventType.LLM_OUTPUT_INVALID.value,
-                "actor_type": ActorType.AI.value,
-                "actor_id": "GROQ_LLM",
-                "reason": "GROQ_API_KEY missing or ChatGroq unavailable for generic signal. Fail-closed safety forced HUMAN review.",
-                "metadata": {"fallback": True}
-            })
+
+
+        audit_events.append({
+            "event_type": AuditEventType.AI_DIAGNOSED.value,
+            "actor_type": ActorType.POLICY.value,
+            "actor_id": "DETERMINISTIC_DIAGNOSTIC_ENGINE",
+            "reason": state["diagnosis_reason"],
+            "metadata": {"confidence": state["diagnosis_confidence"], "diagnosis": state["diagnosis"]}
+        })
         state["audit_events"] = audit_events
         return state
+
 
     context_str = json.dumps({
         "transaction_amount": tx.get("amount"),

@@ -15,6 +15,11 @@ async def run_experiment(name: Optional[str] = Query("Recovery Outcome Evaluatio
 async def get_latest_experiment(db: AsyncSession = Depends(get_db)):
     return await experiment_service.get_latest_experiment(db)
 
+@router.get("/experiments/benchmarks/comprehensive")
+async def get_comprehensive_benchmarks(seeds: int = Query(50, ge=5, le=100), tx_per_seed: int = Query(1000, ge=100, le=5000)):
+    from app.evals.benchmark_reporter import run_multi_seed_benchmarks
+    return run_multi_seed_benchmarks(num_seeds=seeds, tx_per_seed=tx_per_seed)
+
 @router.get("/experiments/{experiment_id}", response_model=ExperimentDetailRead)
 async def get_experiment(experiment_id: str, db: AsyncSession = Depends(get_db)):
     exp = await experiment_service.get_experiment_by_id(db, experiment_id)
@@ -28,3 +33,4 @@ async def get_experiment_results(experiment_id: str, db: AsyncSession = Depends(
     if not exp:
         exp = await experiment_service.get_latest_experiment(db)
     return exp.results
+

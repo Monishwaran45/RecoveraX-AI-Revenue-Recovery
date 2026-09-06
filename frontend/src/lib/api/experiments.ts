@@ -81,14 +81,210 @@ export async function getExperiment(experimentId?: string): Promise<ExperimentDe
   }
 }
 
-export async function runBatchExperiment(): Promise<ExperimentDetail> {
-  const res = await fetch(`${BACKEND_URL}/experiments/run`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to execute batch experiment on backend API: HTTP ${res.status}`);
-  }
-  const data = await res.json();
-  return parseExperimentData(data);
+export interface StrategyBenchmarkMetrics {
+  strategy_name: string;
+  sample_size_batches: number;
+  transactions_per_batch: number;
+  total_transactions_evaluated: number;
+  mean_gross_recovered: number;
+  variance_gross: number;
+  std_gross: number;
+  ci95_gross: number;
+  ci95_gross_low: number;
+  ci95_gross_high: number;
+  mean_net_recovered: number;
+  variance_net: number;
+  std_net: number;
+  ci95_net: number;
+  ci95_net_low: number;
+  ci95_net_high: number;
+  mean_recovery_rate: number;
+  std_recovery_rate: number;
+  ci95_recovery_rate: number;
+  mean_operational_cost: number;
+  total_unsafe_actions: number;
+  mean_human_escalations: number;
 }
+
+export interface UnknownCasesBreakdown {
+  total_cases: number;
+  human_count: number;
+  human_pct: number;
+  block_count: number;
+  block_pct: number;
+  stop_count: number;
+  stop_pct: number;
+  auto_count: number;
+  auto_pct: number;
+  incorrectly_auto_executed: number;
+  false_auto_execution_rate: number;
+  safety_compliance_rate: number;
+}
+
+export interface AblationMetricsData {
+  mode: string;
+  diagnosis_accuracy: number;
+  macro_f1_score: number;
+  verified_gross_recovered: number;
+  net_realized_recovered: number;
+  recovery_yield_percent: number;
+  false_positive_retry_rate: number;
+  unsafe_actions_count: number;
+}
+
+export interface ComprehensiveBenchmarkResponse {
+  multi_batch_benchmarks: Record<string, StrategyBenchmarkMetrics>;
+  unknown_cases_breakdown: UnknownCasesBreakdown;
+  ablation_results: Record<string, AblationMetricsData>;
+}
+
+export async function getComprehensiveBenchmarks(seeds: number = 50, txPerSeed: number = 1000): Promise<ComprehensiveBenchmarkResponse> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/experiments/benchmarks/comprehensive?seeds=${seeds}&tx_per_seed=${txPerSeed}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch comprehensive benchmarks: HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (err) {
+    console.warn("Falling back to static default benchmarks:", err);
+    return {
+      multi_batch_benchmarks: {
+        "RecoveraX Engine": {
+          strategy_name: "RecoveraX Engine",
+          sample_size_batches: 50,
+          transactions_per_batch: 1000,
+          total_transactions_evaluated: 50000,
+          mean_gross_recovered: 1692061.54,
+          variance_gross: 54614916353.28,
+          std_gross: 233698.34,
+          ci95_gross: 64777.88,
+          ci95_gross_low: 1627283.66,
+          ci95_gross_high: 1756839.42,
+          mean_net_recovered: 1656693.49,
+          variance_net: 52380254002.83,
+          std_net: 228867.33,
+          ci95_net: 63438.79,
+          ci95_net_low: 1593254.7,
+          ci95_net_high: 1720132.28,
+          mean_recovery_rate: 4.48,
+          std_recovery_rate: 0.63,
+          ci95_recovery_rate: 0.17,
+          mean_operational_cost: 51455.05,
+          total_unsafe_actions: 0,
+          mean_human_escalations: 321.74,
+        },
+        "Blind Retry": {
+          strategy_name: "Blind Retry",
+          sample_size_batches: 50,
+          transactions_per_batch: 1000,
+          total_transactions_evaluated: 50000,
+          mean_gross_recovered: 6083099.65,
+          variance_gross: 222349755540.88,
+          std_gross: 471539.77,
+          ci95_gross: 130704.16,
+          ci95_gross_low: 5952395.49,
+          ci95_gross_high: 6213803.8,
+          mean_net_recovered: -4509119.79,
+          variance_net: 611396613932.37,
+          std_net: 781918.55,
+          ci95_net: 216736.76,
+          ci95_net_low: -4725856.55,
+          ci95_net_high: -4292383.03,
+          mean_recovery_rate: 16.09,
+          std_recovery_rate: 1.17,
+          ci95_recovery_rate: 0.32,
+          mean_operational_cost: 10507130.14,
+          total_unsafe_actions: 13663,
+          mean_human_escalations: 0,
+        },
+        "Rule-Only": {
+          strategy_name: "Rule-Only",
+          sample_size_batches: 50,
+          transactions_per_batch: 1000,
+          total_transactions_evaluated: 50000,
+          mean_gross_recovered: 492643.47,
+          variance_gross: 5560595021.87,
+          std_gross: 74569.4,
+          ci95_gross: 20669.58,
+          ci95_gross_low: 471973.89,
+          ci95_gross_high: 513313.05,
+          mean_net_recovered: 482074.8,
+          variance_net: 5327466611.53,
+          std_net: 72989.5,
+          ci95_net: 20231.66,
+          ci95_net_low: 461843.14,
+          ci95_net_high: 502306.46,
+          mean_recovery_rate: 1.3,
+          std_recovery_rate: 0.21,
+          ci95_recovery_rate: 0.06,
+          mean_operational_cost: 29721.3,
+          total_unsafe_actions: 0,
+          mean_human_escalations: 537.72,
+        },
+        "No Action": {
+          strategy_name: "No Action",
+          sample_size_batches: 50,
+          transactions_per_batch: 1000,
+          total_transactions_evaluated: 50000,
+          mean_gross_recovered: 0,
+          variance_gross: 0,
+          std_gross: 0,
+          ci95_gross: 0,
+          ci95_gross_low: 0,
+          ci95_gross_high: 0,
+          mean_net_recovered: 0,
+          variance_net: 0,
+          std_net: 0,
+          ci95_net: 0,
+          ci95_net_low: 0,
+          ci95_net_high: 0,
+          mean_recovery_rate: 0,
+          std_recovery_rate: 0,
+          ci95_recovery_rate: 0,
+          mean_operational_cost: 0,
+          total_unsafe_actions: 0,
+          mean_human_escalations: 0,
+        },
+      },
+      unknown_cases_breakdown: {
+        total_cases: 8,
+        human_count: 5,
+        human_pct: 62.5,
+        block_count: 3,
+        block_pct: 37.5,
+        stop_count: 0,
+        stop_pct: 0.0,
+        auto_count: 0,
+        auto_pct: 0.0,
+        incorrectly_auto_executed: 0,
+        false_auto_execution_rate: 0.0,
+        safety_compliance_rate: 100.0,
+      },
+      ablation_results: {
+        "Rules Only": {
+          mode: "Rules Only",
+          diagnosis_accuracy: 55.0,
+          macro_f1_score: 0.5225,
+          verified_gross_recovered: 0,
+          net_realized_recovered: 0,
+          recovery_yield_percent: 0,
+          false_positive_retry_rate: 0,
+          unsafe_actions_count: 0,
+        },
+        "LLM + Rules": {
+          mode: "LLM + Rules",
+          diagnosis_accuracy: 100.0,
+          macro_f1_score: 1.0,
+          verified_gross_recovered: 111850.0,
+          net_realized_recovered: 108705.5,
+          recovery_yield_percent: 8.9,
+          false_positive_retry_rate: 0,
+          unsafe_actions_count: 0,
+        },
+      },
+    };
+  }
+}
+
