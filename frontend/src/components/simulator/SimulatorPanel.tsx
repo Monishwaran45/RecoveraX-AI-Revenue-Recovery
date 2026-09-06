@@ -309,7 +309,6 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     setCurrentStepIdx(6);
     updateStepState(6, "processing");
     addLog("ACTION", `Retry scheduled following authorization...`);
-    await new Promise((r) => setTimeout(r, 200));
     updateStepState(6, "completed");
 
     // Step 8: Pre-Check
@@ -318,7 +317,6 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     addLog("ACTION", `Executing pre-retry verification...`);
     const rechecked = await recheckCase(activeScenario.caseId);
     if (rechecked) setCurrentCase(rechecked);
-    await new Promise((r) => setTimeout(r, 200));
     updateStepState(7, "completed");
 
     // Step 9: Dispatch
@@ -327,21 +325,18 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     addLog("ACTION", `Dispatching authorized retry to gateway...`);
     const execRes = await executeCaseAction(activeScenario.caseId);
     if (execRes) setCurrentCase(execRes);
-    await new Promise((r) => setTimeout(r, 280));
     updateStepState(8, "completed");
 
     // Step 10: Settlement
     setCurrentStepIdx(9);
     updateStepState(9, "processing");
     addLog("SYSTEM", `Verifying gateway settlement...`);
-    await new Promise((r) => setTimeout(r, 200));
     updateStepState(9, "completed");
 
     // Step 11: Reconcile
     setCurrentStepIdx(10);
     updateStepState(10, "processing");
     addLog("AI", `Reconciling transaction ledger...`);
-    await new Promise((r) => setTimeout(r, 200));
     updateStepState(10, "completed");
 
     // Step 12: Settled
