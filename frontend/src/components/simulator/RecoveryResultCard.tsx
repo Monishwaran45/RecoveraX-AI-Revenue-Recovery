@@ -22,7 +22,9 @@ export default function RecoveryResultCard({
   const isStopped = (caseData.status === "STOPPED" || caseData.status === "REJECTED") && !isEscalatedAlready;
   const isFailed = caseData.status === "FAILED";
 
-  const isHuman = (caseData.status === "HUMAN_APPROVAL" || caseData.approvalStatus === "PENDING" || caseData.policyDecision?.type === "HUMAN") && !isRecovered && !isBlocked && !isStopped && !isFailed && !isEscalatedAlready;
+  const isAuto = (caseData.policyDecision?.type === "AUTO" || caseData.status === "SCHEDULED") && !isRecovered && !isBlocked && !isStopped && !isFailed;
+
+  const isHuman = (caseData.status === "HUMAN_APPROVAL" || caseData.approvalStatus === "PENDING" || caseData.policyDecision?.type === "HUMAN") && !isAuto && !isRecovered && !isBlocked && !isStopped && !isFailed && !isEscalatedAlready;
 
   const isEscalateAction =
     caseData.recommendedAction === "ESCALATE" ||
@@ -35,8 +37,8 @@ export default function RecoveryResultCard({
   return (
     <div
       className={`border rounded-lg p-5 transition-colors ${
-        isRecovered
-          ? "bg-emerald-900 text-white border-emerald-800"
+        isRecovered || isAuto
+          ? "bg-emerald-950 text-white border-emerald-900"
           : (isBlocked || isStopped || isFailed)
           ? "bg-gray-900 text-white border-gray-800"
           : isEscalatedAlready
@@ -48,7 +50,7 @@ export default function RecoveryResultCard({
         <div className="flex items-center gap-3.5">
           <div
             className={`p-2.5 rounded text-white shrink-0 ${
-              isRecovered
+              isRecovered || isAuto
                 ? "bg-emerald-600"
                 : (isBlocked || isStopped || isFailed)
                 ? "bg-rose-600"
@@ -57,7 +59,7 @@ export default function RecoveryResultCard({
                 : "bg-amber-600"
             }`}
           >
-            {isRecovered ? (
+            {isRecovered || isAuto ? (
               <CheckCircle2 className="h-5 w-5" />
             ) : (isBlocked || isStopped || isFailed || isEscalatedAlready) ? (
               <ShieldAlert className="h-5 w-5" />
@@ -81,6 +83,8 @@ export default function RecoveryResultCard({
                 ? "Recovery Retry Unsuccessful"
                 : isEscalatedAlready
                 ? "Escalated to Risk Operations"
+                : isAuto
+                ? "Automated Retry Scheduled"
                 : isEscalateAction
                 ? "Risk Operations Escalation Required"
                 : "Manual Sign-off Required"}
@@ -96,6 +100,8 @@ export default function RecoveryResultCard({
                 ? `Recovery retry failed. Gateway response unverified.`
                 : isEscalatedAlready
                 ? `Case assigned to Risk & Legal Operations for manual ledger settlement & recovery outreach.`
+                : isAuto
+                ? `Transaction ₹${caseData.amount.toLocaleString("en-IN")} authorized for autonomous retry by deterministic policy engine.`
                 : isEscalateAction
                 ? `Transaction ₹${caseData.amount.toLocaleString("en-IN")} flagged for high risk exposure. Route to Risk Ops or authorize link.`
                 : isReminderAction
