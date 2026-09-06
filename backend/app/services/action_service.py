@@ -220,8 +220,13 @@ class ActionService:
             # REMIND and ESCALATE are communication/workflow actions, not payment retries.
             case_action_val = _val(case.recommended_action, "RETRY")
             if case_action_val != ActionType.RETRY.value:
-                case.status = CaseStatus.STOPPED.value
-                case.policy_decision = PolicyDecision.STOP.value
+                if case_action_val == "REMIND":
+                    case.status = CaseStatus.SCHEDULED.value
+                    case.policy_decision = PolicyDecision.AUTO.value
+                else:
+                    case.status = CaseStatus.STOPPED.value
+                    case.policy_decision = PolicyDecision.STOP.value
+                
                 case.verification_result = "NONE"
                 case.amount_recovered = 0.0
                 action_rec.status = "SUCCESS"

@@ -114,9 +114,9 @@ def evaluate_policy_rules(
         rules_evaluated.append({"rule": r.rule_name, "decision": r.decision.value, "reason": r.reason})
         return PolicyEvaluation(decision=r.decision, reason=r.reason, rules_evaluated=rules_evaluated)
 
-    # Rule 7: Action non-RETRY/DEFER (e.g. REMIND, ESCALATE, STOP)
+    # Rule 7: Action non-RETRY/DEFER/REMIND (e.g. ESCALATE, STOP)
     action_val = action.value if hasattr(action, 'value') else str(action)
-    if action_val not in (ActionType.RETRY.value, ActionType.DEFER.value):
+    if action_val not in (ActionType.RETRY.value, ActionType.DEFER.value, ActionType.REMIND.value):
         if action_val == ActionType.STOP.value:
             r = PolicyRuleResult(decision=PolicyDecision.STOP, reason="Action recommended STOP", rule_name="ACTION_STOP", passed=True)
         else:
