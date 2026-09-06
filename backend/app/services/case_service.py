@@ -131,7 +131,8 @@ class CaseService:
             verification_result=v_res if state == "RECOVERED" else ("BLOCKED" if state == "BLOCKED" else ("VERIFIED_FAILED" if state == "FAILED" else "NONE"))
         )
 
-        if c.problem_type == ProblemType.SUBSCRIPTION_FAILURE or getattr(c, 'is_mandate', False):
+        prob_val = _val(getattr(c, 'problem_type', ''))
+        if prob_val in (ProblemType.SUBSCRIPTION_FAILURE, "SUBSCRIPTION_FAILURE") or getattr(c, 'is_mandate', False):
             c.is_mandate = True
             plan = MandateSequencer.calculate_presentation_window("NACH", "INSUFFICIENT_FUNDS", c.retry_count)
             c.mandate_sequence_plan = {

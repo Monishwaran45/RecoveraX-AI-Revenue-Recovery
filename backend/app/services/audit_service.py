@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from app.models.audit import AuditLog
@@ -19,31 +20,30 @@ class AuditService:
         actor_id: str,
         reason: str,
         metadata_json: dict = None
-    ) -> AuditLog:
-        audit_entry = AuditLog(
-            id=f"AUD-{uuid.uuid4().hex[:8]}",
-            case_id=case_id,
-            event_type=str(event_type.value if hasattr(event_type, "value") else event_type),
-            actor_type=str(actor_type.value if hasattr(actor_type, "value") else actor_type),
-            actor_id=actor_id,
-            reason=reason,
-            metadata_json=metadata_json or {},
-            timestamp=datetime.utcnow()
-        )
-        db.add(audit_entry)
+    ) -> Optional[AuditLog]:
         try:
-            await db.flush()
-        except Exception as e:
-            logger.warning(f"Audit log flush fallback notice ({event_type}): {e}")
-            await db.rollback()
-            # Try fallback short event type if schema constrained
+            ev_str = str(event_type.value if hasattr(event_type, "value") else event_type)[:64]
+            ac_str = str(actor_type.value if hasattr(actor_type, "value") else actor_type)[:64]
+            audit_entry = AuditLog(
+                id=f"AUD-{uuid.uuid4().hex[:8]}",
+                case_id=case_id,
+                event_type=ev_str,
+                actor_type=ac_str,
+                actor_id=str(actor_id)[:128],
+                reason=str(reason)[:500],
+                metadata_json=metadata_json or {},
+                timestamp=datetime.utcnow()
+            )
+            db.add(audit_entry)
             try:
-                audit_entry.event_type = "ACTION_EXECUTED"
-                db.add(audit_entry)
-                await db.flush()
+                async with db.begin_nested():
+                    await db.flush()
             except Exception:
-                await db.rollback()
-        return audit_entry
+                pass
+            return audit_entry
+        except Exception as e:
+            logger.warning(f"Audit log exception notice ({event_type}): {e}")
+            return None
 
     @staticmethod
     def log_event_sync(
@@ -54,29 +54,29 @@ class AuditService:
         actor_id: str,
         reason: str,
         metadata_json: dict = None
-    ) -> AuditLog:
-        audit_entry = AuditLog(
-            id=f"AUD-{uuid.uuid4().hex[:8]}",
-            case_id=case_id,
-            event_type=str(event_type.value if hasattr(event_type, "value") else event_type),
-            actor_type=str(actor_type.value if hasattr(actor_type, "value") else actor_type),
-            actor_id=actor_id,
-            reason=reason,
-            metadata_json=metadata_json or {},
-            timestamp=datetime.utcnow()
-        )
-        db.add(audit_entry)
+    ) -> Optional[AuditLog]:
         try:
-            db.flush()
-        except Exception as e:
-            logger.warning(f"Audit log sync flush fallback notice ({event_type}): {e}")
-            db.rollback()
+            ev_str = str(event_type.value if hasattr(event_type, "value") else event_type)[:64]
+            ac_str = str(actor_type.value if hasattr(actor_type, "value") else actor_type)[:64]
+            audit_entry = AuditLog(
+                id=f"AUD-{uuid.uuid4().hex[:8]}",
+                case_id=case_id,
+                event_type=ev_str,
+                actor_type=ac_str,
+                actor_id=str(actor_id)[:128],
+                reason=str(reason)[:500],
+                metadata_json=metadata_json or {},
+                timestamp=datetime.utcnow()
+            )
+            db.add(audit_entry)
             try:
-                audit_entry.event_type = "ACTION_EXECUTED"
-                db.add(audit_entry)
-                db.flush()
+                with db.begin_nested():
+                    db.flush()
             except Exception:
-                db.rollback()
-        return audit_entry
+                pass
+            return audit_entry
+        except Exception as e:
+            logger.warning(f"Audit log sync exception notice ({event_type}): {e}")
+            return None
 
 audit_service = AuditService()
