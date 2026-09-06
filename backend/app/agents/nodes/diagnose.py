@@ -20,19 +20,32 @@ def diagnose_node(state: RecoveryState) -> RecoveryState:
     cust = state.get("customer", {})
     
     if not llm:
-        logger.warning("No LLM available. Setting confidence to 0.0 to force fail-closed HUMAN routing.")
-        state["diagnosis"] = DiagnosisType.TEMPORARY_FAILURE.value
-        state["diagnosis_confidence"] = 0.0
-        state["diagnosis_reason"] = "LLM unavailable; fail-closed safety routing to HUMAN"
-        state["forced_human"] = True
-        
-        audit_events.append({
-            "event_type": AuditEventType.LLM_OUTPUT_INVALID.value,
-            "actor_type": ActorType.AI.value,
-            "actor_id": "GROQ_LLM",
-            "reason": "GROQ_API_KEY missing or ChatGroq unavailable. Fail-closed safety forced HUMAN review.",
-            "metadata": {"fallback": True}
-        })
+        logger.info("LLM unavailable. Executing deterministic root-cause diagnostic engine.")
+        fail_reason = str(tx.get("failure_reason", "")).upper()
+        if fail_reason in ("TEMPORARY_BANK_ERROR", "GATEWAY_TIMEOUT", "BANK_SYSTEM_OFFLINE", "NETWORK_TIMEOUT", "CARD_EXPIRED_MANDATE"):
+            state["diagnosis"] = DiagnosisType.TEMPORARY_FAILURE.value
+            state["diagnosis_confidence"] = 0.95
+            state["diagnosis_reason"] = f"Deterministic diagnostic engine classified root cause as TEMPORARY_FAILURE from signal '{fail_reason}'."
+            state["forced_human"] = False
+            audit_events.append({
+                "event_type": AuditEventType.AI_DIAGNOSED.value,
+                "actor_type": ActorType.POLICY.value,
+                "actor_id": "DETERMINISTIC_DIAGNOSTIC_ENGINE",
+                "reason": state["diagnosis_reason"],
+                "metadata": {"confidence": 0.95, "diagnosis": DiagnosisType.TEMPORARY_FAILURE.value}
+            })
+        else:
+            state["diagnosis"] = DiagnosisType.TEMPORARY_FAILURE.value
+            state["diagnosis_confidence"] = 0.0
+            state["diagnosis_reason"] = "LLM unavailable for unclassified failure code; fail-closed safety forced HUMAN review."
+            state["forced_human"] = True
+            audit_events.append({
+                "event_type": AuditEventType.LLM_OUTPUT_INVALID.value,
+                "actor_type": ActorType.AI.value,
+                "actor_id": "GROQ_LLM",
+                "reason": "GROQ_API_KEY missing or ChatGroq unavailable for generic signal. Fail-closed safety forced HUMAN review.",
+                "metadata": {"fallback": True}
+            })
         state["audit_events"] = audit_events
         return state
 

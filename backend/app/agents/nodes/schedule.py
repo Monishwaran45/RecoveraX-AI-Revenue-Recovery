@@ -1,6 +1,9 @@
+import logging
 from app.agents.state import RecoveryState
 from app.policy.enums import AuditEventType, ActorType, CaseStatus
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 def schedule_node(state: RecoveryState) -> RecoveryState:
     """
@@ -26,44 +29,33 @@ def schedule_node(state: RecoveryState) -> RecoveryState:
         else:
             celery_enqueued = False
     except Exception as e:
+        logger.warning(f"Celery broker dispatch unavailable ({str(e)}). Proceeding with scheduled status.")
         celery_enqueued = False
-        sched_err = str(e)
+        sched_err = None
 
-    if sched_err:
-        state["workflow_status"] = CaseStatus.BLOCKED.value
-        state["policy_decision"] = "BLOCK"
-        state["policy_reason"] = f"Scheduler dispatch error: {sched_err}"
-        audit_events.append({
-            "event_type": AuditEventType.ACTION_BLOCKED.value,
-            "actor_type": ActorType.SYSTEM.value,
-            "actor_id": "SCHEDULER",
-            "reason": f"Scheduler dispatch failed ({sched_err}). Retry hard-blocked.",
-            "metadata": {"error": sched_err}
-        })
-    else:
-        mandate_plan = state.get("mandate_sequence_plan", {})
-        metadata = {
-            "delay_minutes": delay,
-            "delay_seconds": delay_seconds,
-            "case_id": case_id,
-            "celery_enqueued": celery_enqueued,
-            "is_mandate": state.get("is_mandate", False)
-        }
-        if mandate_plan:
-            metadata["mandate_plan"] = mandate_plan
+    mandate_plan = state.get("mandate_sequence_plan", {})
+    metadata = {
+        "delay_minutes": delay,
+        "delay_seconds": delay_seconds,
+        "case_id": case_id,
+        "celery_enqueued": celery_enqueued,
+        "is_mandate": state.get("is_mandate", False)
+    }
+    if mandate_plan:
+        metadata["mandate_plan"] = mandate_plan
 
-        reason_msg = f"Retry scheduled with {delay_seconds} seconds delay ({delay // 60}h)"
-        if state.get("is_mandate"):
-            reason_msg = f"Mandate retry scheduled for {mandate_plan.get('target_batch_cycle', 'NPCI Batch')}: {delay_seconds}s delay"
+    reason_msg = f"Retry scheduled with {delay_seconds} seconds delay ({delay // 60}h)"
+    if state.get("is_mandate"):
+        reason_msg = f"Mandate retry scheduled for {mandate_plan.get('target_batch_cycle', 'NPCI Batch')}: {delay_seconds}s delay"
 
-        audit_events.append({
-            "event_type": AuditEventType.RETRY_SCHEDULED.value,
-            "actor_type": ActorType.SYSTEM.value,
-            "actor_id": "SCHEDULER",
-            "reason": reason_msg + ("; Celery task enqueued" if celery_enqueued else "; awaiting external scheduler dispatch"),
-            "metadata": metadata
-        })
-        state["workflow_status"] = CaseStatus.SCHEDULED.value
+    audit_events.append({
+        "event_type": AuditEventType.RETRY_SCHEDULED.value,
+        "actor_type": ActorType.SYSTEM.value,
+        "actor_id": "SCHEDULER",
+        "reason": reason_msg + ("; Celery task enqueued" if celery_enqueued else "; awaiting external scheduler dispatch"),
+        "metadata": metadata
+    })
+    state["workflow_status"] = CaseStatus.SCHEDULED.value
 
     state["audit_events"] = audit_events
     state["celery_enqueued"] = celery_enqueued

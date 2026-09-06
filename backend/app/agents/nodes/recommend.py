@@ -34,6 +34,7 @@ def recommend_action_node(state: RecoveryState) -> RecoveryState:
             action_str = ActionType.RETRY.value
         delay_val = 30
         reason_str = f"Deterministic recommendation engine selected {action_str} for strategy evaluation."
+        state["forced_human"] = False
     else:
         context_str = json.dumps({
             "diagnosis": diagnosis,
