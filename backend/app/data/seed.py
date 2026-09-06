@@ -78,12 +78,9 @@ def ensure_demo_cases_updated(db: Session):
             case.risk_level = risk
             case.recovery_score = score
             case.recommended_action = action
-            if not getattr(case, 'verification_result', None):
-                case.verification_result = v_res
-            if getattr(case, 'amount_recovered', None) is None:
-                case.amount_recovered = amt_rec
-            if not getattr(case, 'approval_status', None):
-                case.approval_status = app_stat
+            case.verification_result = v_res
+            case.amount_recovered = amt_rec
+            case.approval_status = app_stat
     db.commit()
 
 def seed_database_if_empty():

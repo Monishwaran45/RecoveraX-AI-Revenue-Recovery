@@ -73,14 +73,20 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
 
   let policyType: PolicyDecisionType = "HUMAN";
   const strUpper = String(rawPolicy || "").toUpperCase();
-  if (strUpper.includes("BLOCK") || item.status === "BLOCKED") {
-    policyType = "BLOCK";
-  } else if (strUpper.includes("HUMAN") || item.status === "AWAITING_APPROVAL") {
-    policyType = "HUMAN";
-  } else if (strUpper.includes("AUTO") || item.status === "SCHEDULED") {
+  if (strUpper.includes("AUTO")) {
     policyType = "AUTO";
-  } else if (strUpper.includes("STOP") || item.status === "STOPPED") {
+  } else if (strUpper.includes("BLOCK")) {
+    policyType = "BLOCK";
+  } else if (strUpper.includes("STOP")) {
     policyType = "STOP";
+  } else if (strUpper.includes("HUMAN")) {
+    policyType = "HUMAN";
+  } else if (item.status === "SCHEDULED") {
+    policyType = "AUTO";
+  } else if (item.status === "BLOCKED") {
+    policyType = "BLOCK";
+  } else if (item.status === "AWAITING_APPROVAL") {
+    policyType = "HUMAN";
   } else {
     policyType = "HUMAN";
   }
@@ -91,13 +97,13 @@ function mapBackendCaseToFrontend(item: any): RecoveryCase {
 
   let statusVal: CaseStatus = "OPEN";
   if (item.status === "RECOVERED" || verificationResult === "VERIFIED_SUCCESS" || amountRecovered > 0) statusVal = "RECOVERED";
-  else if (item.status === "BLOCKED") statusVal = "BLOCKED";
-  else if (item.status === "SCHEDULED") statusVal = "SCHEDULED";
-  else if (item.status === "STOPPED") statusVal = "STOPPED";
+  else if (policyType === "BLOCK" || item.status === "BLOCKED") statusVal = "BLOCKED";
+  else if (policyType === "AUTO" || item.status === "SCHEDULED") statusVal = "SCHEDULED";
+  else if (policyType === "STOP" || item.status === "STOPPED") statusVal = "STOPPED";
   else if (item.status === "REJECTED" || approvalStatus === "REJECTED") statusVal = "REJECTED";
   else if (item.status === "MODIFIED") statusVal = "MODIFIED";
   else if (item.status === "FAILED") statusVal = "FAILED";
-  else if (item.status === "AWAITING_APPROVAL" || approvalStatus === "PENDING") statusVal = "HUMAN_APPROVAL";
+  else if (policyType === "HUMAN" || item.status === "AWAITING_APPROVAL" || approvalStatus === "PENDING") statusVal = "HUMAN_APPROVAL";
 
   const rawTitleStr = item.title || item.problem_type || rec.diagnosis;
   const problemTitle = formatDynamicTitle(rawTitleStr);
