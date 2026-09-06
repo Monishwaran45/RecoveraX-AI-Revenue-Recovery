@@ -233,9 +233,9 @@ class CaseService:
 
         # Update case model fields from final state
         case.recovery_score = final_state.get("recovery_score", case.recovery_score)
-        case.risk_level = RiskLevel(_val(final_state.get("risk_level", _val(case.risk_level))))
-        case.recommended_action = ActionType(_val(final_state.get("recommended_action", _val(case.recommended_action))))
-        case.policy_decision = PolicyDecision(_val(final_state.get("policy_decision", _val(case.policy_decision))))
+        case.risk_level = _val(final_state.get("risk_level", _val(case.risk_level)))
+        case.recommended_action = _val(final_state.get("recommended_action", _val(case.recommended_action)))
+        case.policy_decision = _val(final_state.get("policy_decision", _val(case.policy_decision)))
         
         status_str = final_state.get("workflow_status")
         if status_str and hasattr(CaseStatus, status_str):
