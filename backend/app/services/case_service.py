@@ -35,15 +35,20 @@ class CaseService:
         )
 
         if status and status != "All":
-            try:
-                st_enum = CaseStatus(status)
-            except ValueError:
-                if status.upper() in ("HUMAN APPROVAL", "HUMAN_APPROVAL"):
-                    st_enum = CaseStatus.AWAITING_APPROVAL
-                else:
-                    st_enum = None
+            st_clean = status.upper().strip()
+            if st_clean in ("HUMAN APPROVAL", "HUMAN_APPROVAL", "AWAITING_APPROVAL"):
+                target_st = "AWAITING_APPROVAL"
+            else:
+                try:
+                    target_st = CaseStatus(status).value
+                except ValueError:
+                    target_st = status
+            
+            st_enum = CaseStatus(target_st) if hasattr(CaseStatus, target_st) else None
             if st_enum:
-                query = query.where(RecoveryCase.status == st_enum)
+                query = query.where(or_(RecoveryCase.status == st_enum, RecoveryCase.status == target_st))
+            else:
+                query = query.where(RecoveryCase.status == target_st)
 
         if risk_level and risk_level != "All":
             try:

@@ -12,6 +12,11 @@ from app.simulator.payment import payment_simulator
 from app.services.audit_service import audit_service
 from app.services.case_service import case_service
 
+def _val(x, default=""):
+    if x is None:
+        return default
+    return getattr(x, "value", str(x))
+
 class ActionService:
     @staticmethod
     async def recheck_case(db: AsyncSession, case_id: str) -> Optional[RecoveryCase]:
@@ -37,8 +42,8 @@ class ActionService:
             await db.commit()
             return await case_service.get_case_by_id(db, case.id)
 
-        status_str = tx.status.value
-        state_str = tx.payment_state.value
+        status_str = _val(tx.status, "FAILED")
+        state_str = _val(tx.payment_state, "CLEAR")
         possible_debit = tx.possible_customer_debit
 
         if status_str == "SUCCESS":
@@ -124,13 +129,15 @@ class ActionService:
                 await db.commit()
             return await case_service.get_case_by_id(db, case.id)
 
+        tx_stat_val = _val(tx.status, "FAILED")
+        tx_state_val = _val(tx.payment_state, "CLEAR")
         policy_eval = policy_engine.evaluate(
-            transaction_status=TransactionStatus(tx.status.value),
-            payment_state=PaymentState(tx.payment_state.value),
+            transaction_status=TransactionStatus(tx_stat_val) if hasattr(TransactionStatus, tx_stat_val) else TransactionStatus.FAILED,
+            payment_state=PaymentState(tx_state_val) if hasattr(PaymentState, tx_state_val) else PaymentState.CLEAR,
             possible_customer_debit=tx.possible_customer_debit,
             fraud_signal=tx.fraud_signal,
-            retry_count=case.retry_count,
-            max_retries=case.max_retries,
+            retry_count=case.retry_count or 0,
+            max_retries=case.max_retries or 2,
             action=case.recommended_action,
             amount=case.amount_at_risk,
             recovery_score=case.recovery_score,
@@ -227,12 +234,13 @@ class ActionService:
                 await db.commit()
                 return await case_service.get_case_by_id(db, case.id)
 
+            tx_pstate_val = _val(tx.payment_state, "CLEAR")
             status, p_state, message = payment_simulator.simulate_retry(
                 transaction_id=tx.id,
                 amount=case.amount_at_risk,
-                current_retry_count=case.retry_count,
+                current_retry_count=case.retry_count or 0,
                 policy_decision=case.policy_decision,
-                payment_state=PaymentState(tx.payment_state.value),
+                payment_state=PaymentState(tx_pstate_val) if hasattr(PaymentState, tx_pstate_val) else PaymentState.CLEAR,
                 failure_profile_id=tx.failure_reason or "TEMPORARY_BANK_ERROR"
             )
 

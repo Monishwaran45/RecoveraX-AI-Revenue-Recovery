@@ -145,14 +145,17 @@ class ApprovalService:
 
         mod_action_str = modified_action.value if hasattr(modified_action, "value") else str(modified_action)
 
+        tx_stat_val = getattr(tx.status, "value", str(tx.status)) if (tx and tx.status) else "FAILED"
+        tx_state_val = getattr(tx.payment_state, "value", str(tx.payment_state)) if (tx and tx.payment_state) else "CLEAR"
+
         # IMPORTANT REQUIREMENT: Human-modified actions MUST pass through policy_check again
         policy_eval = policy_engine.evaluate(
-            transaction_status=TransactionStatus(tx.status.value if tx else "FAILED"),
-            payment_state=PaymentState(tx.payment_state.value if tx else "CLEAR"),
+            transaction_status=TransactionStatus(tx_stat_val) if hasattr(TransactionStatus, tx_stat_val) else TransactionStatus.FAILED,
+            payment_state=PaymentState(tx_state_val) if hasattr(PaymentState, tx_state_val) else PaymentState.CLEAR,
             possible_customer_debit=tx.possible_customer_debit if tx else False,
             fraud_signal=tx.fraud_signal if tx else False,
-            retry_count=case.retry_count,
-            max_retries=case.max_retries,
+            retry_count=case.retry_count or 0,
+            max_retries=case.max_retries or 2,
             action=modified_action,
             amount=case.amount_at_risk,
             recovery_score=case.recovery_score,
