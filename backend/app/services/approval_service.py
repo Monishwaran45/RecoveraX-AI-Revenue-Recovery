@@ -171,7 +171,20 @@ class ApprovalService:
 
         case.recommended_action = modified_action
         
-        if policy_eval.decision == PolicyDecision.BLOCK:
+        if mod_action_str.upper() == "ESCALATE":
+            case.status = CaseStatus.STOPPED
+            case.approval_status = "ESCALATED"
+            case.policy_decision = PolicyDecision.STOP
+            await audit_service.log_event(
+                db=db,
+                case_id=case.id,
+                event_type=AuditEventType.HUMAN_MODIFIED,
+                actor_type=ActorType.HUMAN,
+                actor_id="HUMAN_OPERATOR",
+                reason=reason or "Human operator escalated case to Risk & Legal Operations",
+                metadata_json={"modified_action": "ESCALATE", "status": "ESCALATED"}
+            )
+        elif policy_eval.decision == PolicyDecision.BLOCK:
             case.status = CaseStatus.BLOCKED
             case.policy_decision = PolicyDecision.BLOCK
             await audit_service.log_event(
@@ -185,6 +198,7 @@ class ApprovalService:
             )
         else:
             case.status = CaseStatus.SCHEDULED
+            case.approval_status = "APPROVED"
             case.policy_decision = PolicyDecision.HUMAN
             await audit_service.log_event(
                 db=db,

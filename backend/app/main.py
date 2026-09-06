@@ -59,6 +59,8 @@ cors_origins.extend([
     "http://localhost:3000",
     "http://localhost:3001",
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
 ])
 cors_origins = list(set(cors_origins))
 
@@ -77,19 +79,36 @@ app.add_middleware(
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    origin = request.headers.get("origin") or "*"
+    origin = request.headers.get("origin")
+    req_headers = request.headers.get("access-control-request-headers", "*")
+
     if request.method == "OPTIONS":
         response = Response(status_code=204)
-        response.headers["Access-Control-Allow-Origin"] = origin
+        if origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        else:
+            response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Headers"] = req_headers
         return response
 
-    response = await call_next(request)
-    if "Access-Control-Allow-Origin" not in response.headers:
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        logger.error(f"Unhandled exception during request processing: {str(e)}", exc_info=True)
+        from fastapi.responses import JSONResponse
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": f"Internal Server Error: {str(e)}"}
+        )
+
+    if origin:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
+    else:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"

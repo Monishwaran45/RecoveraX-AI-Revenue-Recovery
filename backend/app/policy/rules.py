@@ -15,6 +15,8 @@ class PolicyEvaluation:
     reason: str
     rules_evaluated: List[dict]
 
+MIN_DIAGNOSIS_CONFIDENCE = 0.70
+
 def evaluate_policy_rules(
     transaction_status: TransactionStatus,
     payment_state: PaymentState,
@@ -27,6 +29,7 @@ def evaluate_policy_rules(
     recovery_score: int,
     risk_level: RiskLevel,
     diagnosis: str,
+    diagnosis_confidence: float = 1.0,
     max_auto_retry_amount: float = 50000.0,
     min_auto_recovery_score: int = 80,
     payment_method: str = "CARD",
@@ -99,12 +102,25 @@ def evaluate_policy_rules(
         rules_evaluated.append({"rule": r.rule_name, "decision": r.decision.value, "reason": r.reason})
         return PolicyEvaluation(decision=r.decision, reason=r.reason, rules_evaluated=rules_evaluated)
 
-    # Rule 7: Action non-RETRY (e.g. REMIND, ESCALATE)
-    if action != ActionType.RETRY:
-        if action == ActionType.STOP:
+    # Rule 6b: Low-confidence / Unknown diagnosis uncertainty gate
+    valid_diagnoses = [d.value for d in DiagnosisType]
+    if diagnosis_confidence < MIN_DIAGNOSIS_CONFIDENCE or diagnosis == DiagnosisType.UNKNOWN.value or diagnosis not in valid_diagnoses:
+        r = PolicyRuleResult(
+            decision=PolicyDecision.HUMAN,
+            reason=f"Low diagnosis confidence ({diagnosis_confidence:.2f} < {MIN_DIAGNOSIS_CONFIDENCE}) or unclassified diagnosis ('{diagnosis}'). Routing to HUMAN review for safety.",
+            rule_name="UNCERTAINTY_SAFETY_GATE",
+            passed=True
+        )
+        rules_evaluated.append({"rule": r.rule_name, "decision": r.decision.value, "reason": r.reason})
+        return PolicyEvaluation(decision=r.decision, reason=r.reason, rules_evaluated=rules_evaluated)
+
+    # Rule 7: Action non-RETRY/DEFER (e.g. REMIND, ESCALATE, STOP)
+    action_val = action.value if hasattr(action, 'value') else str(action)
+    if action_val not in (ActionType.RETRY.value, ActionType.DEFER.value):
+        if action_val == ActionType.STOP.value:
             r = PolicyRuleResult(decision=PolicyDecision.STOP, reason="Action recommended STOP", rule_name="ACTION_STOP", passed=True)
         else:
-            r = PolicyRuleResult(decision=PolicyDecision.HUMAN, reason=f"Action {action.value} routes to human team", rule_name="NON_RETRY_ACTION", passed=True)
+            r = PolicyRuleResult(decision=PolicyDecision.HUMAN, reason=f"Action {action_val} routes to human team", rule_name="NON_RETRY_ACTION", passed=True)
         rules_evaluated.append({"rule": r.rule_name, "decision": r.decision.value, "reason": r.reason})
         return PolicyEvaluation(decision=r.decision, reason=r.reason, rules_evaluated=rules_evaluated)
 

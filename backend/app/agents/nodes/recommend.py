@@ -72,13 +72,15 @@ def recommend_action_node(state: RecoveryState) -> RecoveryState:
             })
 
     # Apply Mandate Retry Sequencer if payment is NACH / E-Mandate / UPI Autopay
-    if MandateSequencer.is_mandate_payment(payment_method) and action_str in (ActionType.RETRY.value, ActionType.REMIND.value):
+    if MandateSequencer.is_mandate_payment(payment_method) and action_str in (ActionType.RETRY.value, ActionType.REMIND.value, ActionType.DEFER.value):
         plan = MandateSequencer.calculate_presentation_window(
             payment_method=payment_method,
             diagnosis=diagnosis,
             retry_count=retry_count
         )
         delay_val = plan.recommended_delay_minutes
+        if delay_val >= 60:
+            action_str = ActionType.DEFER.value
         reason_str = f"[Mandate Retry Sequencer] {plan.mandate_retry_reason}"
         state["is_mandate"] = True
         state["mandate_sequence_plan"] = {

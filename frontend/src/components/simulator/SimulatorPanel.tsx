@@ -9,7 +9,7 @@ import SafetyAlert from "./SafetyAlert";
 import AgentEventLog, { LogEntry } from "./AgentEventLog";
 import RecoveryResultCard from "./RecoveryResultCard";
 import { getCase, getCases, analyzeCase, recheckCase, executeCaseAction, resetCase } from "@/lib/api/cases";
-import { approveCase } from "@/lib/api/approvals";
+import { approveCase, modifyCase } from "@/lib/api/approvals";
 import { RecoveryCase, PolicyDecisionType } from "@/lib/types";
 import { store } from "@/lib/store";
 import { Play, RotateCcw } from "lucide-react";
@@ -253,6 +253,40 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
     setIsCompleted(true);
   };
 
+  const handleHumanEscalate = async () => {
+    if (!activeScenario || isRunning) return;
+    setIsRunning(true);
+
+    addLog("HUMAN", `Operator escalated ${activeScenario.caseId} (${activeScenario.title}) to Risk & Legal Operations.`);
+    try {
+      await modifyCase(activeScenario.caseId, { action: "ESCALATE", delayMinutes: 0, notes: "Escalated to Risk & Legal Operations from Simulator" });
+    } catch (err: any) {
+      console.warn("Backend escalate API notice, updating local state:", err);
+      store.modifyCase(activeScenario.caseId, { delayMinutes: 0, notes: "Escalated to Risk Ops" });
+    }
+
+    try {
+      const updated = await getCase(activeScenario.caseId);
+      if (updated) {
+        setCurrentCase({
+          ...updated,
+          approvalStatus: "ESCALATED",
+          status: updated.status || "STOPPED",
+        });
+      } else if (currentCase) {
+        setCurrentCase({ ...currentCase, status: "STOPPED", approvalStatus: "ESCALATED" });
+      }
+    } catch (e) {
+      if (currentCase) {
+        setCurrentCase({ ...currentCase, status: "STOPPED", approvalStatus: "ESCALATED" });
+      }
+    }
+
+    addLog("ACTION", `Case ${activeScenario.caseId} successfully transferred to Risk & Legal Ops Queue.`);
+    setIsRunning(false);
+    setIsCompleted(true);
+  };
+
   const handleHumanApproveAndExecute = async () => {
     if (!activeScenario || isRunning) return;
     setIsRunning(true);
@@ -425,6 +459,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
         <RecoveryResultCard
           caseData={currentCase}
           onApproveAndExecute={handleHumanApproveAndExecute}
+          onEscalate={handleHumanEscalate}
           onRunAgain={() => {
             if (dynamicScenarios.length > 0) {
               const idx = dynamicScenarios.findIndex(s => s.id === activeScenario.id || s.caseId === activeScenario.caseId);

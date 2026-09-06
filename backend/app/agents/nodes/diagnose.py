@@ -58,14 +58,30 @@ def diagnose_node(state: RecoveryState) -> RecoveryState:
 
         data = json.loads(content)
         
-        raw_diag = data.get("diagnosis", "TEMPORARY_FAILURE").upper()
-        # Validate against DiagnosisType enum
-        if hasattr(DiagnosisType, raw_diag):
-            diagnosis_str = raw_diag
-        else:
-            diagnosis_str = DiagnosisType.TEMPORARY_FAILURE.value
+        if not isinstance(data, dict):
+            raise ValueError("LLM response JSON is not an object/dictionary")
 
-        confidence_val = float(data.get("confidence", 0.8))
+        raw_diag = str(data.get("diagnosis", "")).upper().strip()
+        valid_enum_names = [d.name for d in DiagnosisType] + [d.value for d in DiagnosisType]
+        
+        if raw_diag in valid_enum_names:
+            diagnosis_str = raw_diag
+            confidence_val = float(data.get("confidence", 0.8))
+        else:
+            # Hallucinated or unrecognized diagnosis -> force UNKNOWN with 0.0 confidence
+            logger.warning(f"Unrecognized/hallucinated diagnosis from LLM: '{raw_diag}'. Falling back to UNKNOWN with 0.0 confidence.")
+            diagnosis_str = DiagnosisType.UNKNOWN.value
+            confidence_val = 0.0
+            state["forced_human"] = True
+            state["llm_fallback"] = True
+            audit_events.append({
+                "event_type": AuditEventType.LLM_OUTPUT_INVALID.value,
+                "actor_type": ActorType.AI.value,
+                "actor_id": "GROQ_LLM",
+                "reason": f"Unrecognized/hallucinated LLM diagnosis ('{raw_diag}'). Setting confidence=0.0 and forcing HUMAN review.",
+                "metadata": {"raw_diagnosis": raw_diag}
+            })
+
         reason_str = str(data.get("reason", "AI Diagnosis Completed"))
 
         state["diagnosis"] = diagnosis_str

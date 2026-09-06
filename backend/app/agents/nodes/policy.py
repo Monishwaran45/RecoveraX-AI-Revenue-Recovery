@@ -44,6 +44,7 @@ def policy_check_node(state: RecoveryState) -> RecoveryState:
         recovery_score=score,
         risk_level=risk_level,
         diagnosis=state.get("diagnosis", "TEMPORARY_FAILURE"),
+        diagnosis_confidence=state.get("diagnosis_confidence", 1.0),
         max_auto_retry_amount=settings.MAX_AUTO_RETRY_AMOUNT,
         min_auto_recovery_score=settings.MIN_AUTO_RECOVERY_SCORE,
         payment_method=tx.get("payment_method", "CARD"),

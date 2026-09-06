@@ -253,10 +253,12 @@ class CaseService:
                 case.verification_result = "NONE"
                 case.amount_recovered = 0.0
 
+        target_case_id = str(case.id)
+
         # Save recommendation record
         rec = Recommendation(
             id=f"REC-{uuid.uuid4().hex[:8]}",
-            case_id=case.id,
+            case_id=target_case_id,
             diagnosis=final_state.get("diagnosis", "TEMPORARY_FAILURE"),
             recovery_score=case.recovery_score,
             recommended_action=case.recommended_action,
@@ -270,7 +272,7 @@ class CaseService:
         for evt in final_state.get("audit_events", []):
             await audit_service.log_event(
                 db=db,
-                case_id=case.id,
+                case_id=target_case_id,
                 event_type=evt.get("event_type", AuditEventType.AI_DIAGNOSED.value),
                 actor_type=evt.get("actor_type", ActorType.AI.value),
                 actor_id=evt.get("actor_id", "AI_ENGINE"),
@@ -279,7 +281,6 @@ class CaseService:
             )
 
         await db.commit()
-        await db.refresh(case)
-        return case
+        return await CaseService.get_case_by_id(db, target_case_id)
 
 case_service = CaseService()

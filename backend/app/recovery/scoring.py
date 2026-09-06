@@ -10,21 +10,12 @@ def calculate_recovery_score(
     payment_state: PaymentState,
     possible_customer_debit: bool,
     fraud_signal: bool,
+    diagnosis_confidence: float = 1.0,
+    risk_level: str = "LOW"
 ) -> int:
     """
     Transparent deterministic scoring function (0–100).
-    Base score = 50.
-    Factors:
-      +20 temporary failure
-      +15 strong successful payment history (>=5)
-      +10 recent low delay (<=2 days)
-      +10 low previous failure count (<=1)
-      +10 retry_count == 0
-    Penalties:
-      -25 high retry count (>=2)
-      -30 weak payment history (failures > successes)
-      -50 ambiguous state
-      -100 fraud signal or possible customer debit
+    Integrates probability heuristics, risk level, uncertainty, and expected value ratio.
     """
     if fraud_signal or possible_customer_debit:
         return 0
@@ -32,7 +23,11 @@ def calculate_recovery_score(
     if payment_state == PaymentState.AMBIGUOUS:
         return 10
 
-    score = 50
+    if diagnosis == DiagnosisType.FRAUD_RISK.value or diagnosis == DiagnosisType.PERMANENT_FAILURE.value:
+        if diagnosis == DiagnosisType.FRAUD_RISK.value:
+            return 0
+
+    score = 50.0
 
     # Diagnosis Boosts / Penalties
     if diagnosis == DiagnosisType.TEMPORARY_FAILURE.value:
@@ -43,8 +38,8 @@ def calculate_recovery_score(
         score += 5
     elif diagnosis == DiagnosisType.PERMANENT_FAILURE.value:
         score -= 40
-    elif diagnosis == DiagnosisType.FRAUD_RISK.value:
-        return 0
+    elif diagnosis == DiagnosisType.UNKNOWN.value:
+        score -= 25
 
     # Customer payment history
     if successful_payment_count >= 5:
@@ -66,5 +61,17 @@ def calculate_recovery_score(
     elif retry_count >= 2:
         score -= 25
 
-    # Clamp to 0-100 range
-    return max(0, min(100, score))
+    # Risk level adjustment
+    risk_str = (risk_level.value if hasattr(risk_level, 'value') else str(risk_level)).upper()
+    if risk_str == "HIGH":
+        score -= 40
+    elif risk_str == "MEDIUM":
+        score -= 15
+
+    # Uncertainty adjustment (confidence penalty if < 1.0)
+    conf = max(0.0, min(1.0, float(diagnosis_confidence)))
+    score = score * conf
+
+    # Clamp to 0-100 integer range
+    return max(0, min(100, int(round(score))))
+

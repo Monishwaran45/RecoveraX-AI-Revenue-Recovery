@@ -7,16 +7,30 @@ interface RecoveryResultCardProps {
   caseData: RecoveryCase;
   onRunAgain?: () => void;
   onApproveAndExecute?: () => void;
+  onEscalate?: () => void;
 }
 
-export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndExecute }: RecoveryResultCardProps) {
+export default function RecoveryResultCard({
+  caseData,
+  onRunAgain,
+  onApproveAndExecute,
+  onEscalate
+}: RecoveryResultCardProps) {
   const isRecovered = caseData.status === "RECOVERED" && (caseData.verificationResult === "VERIFIED_SUCCESS" || (caseData.amountRecovered || 0) > 0);
   const isBlocked = caseData.status === "BLOCKED";
-  const isStopped = caseData.status === "STOPPED" || caseData.status === "REJECTED";
+  const isEscalatedAlready = caseData.status === "MODIFIED" || caseData.approvalStatus === "ESCALATED";
+  const isStopped = (caseData.status === "STOPPED" || caseData.status === "REJECTED") && !isEscalatedAlready;
   const isFailed = caseData.status === "FAILED";
-  const isHuman = (caseData.status === "HUMAN_APPROVAL" || caseData.approvalStatus === "PENDING" || caseData.policyDecision?.type === "HUMAN") && !isRecovered && !isBlocked && !isStopped && !isFailed;
-  
-  const isReminderAction = caseData.recommendedAction === "REMIND" || caseData.recommendedAction === "ESCALATE" || caseData.type === "CHECKOUT" || caseData.type === "INVOICE";
+
+  const isHuman = (caseData.status === "HUMAN_APPROVAL" || caseData.approvalStatus === "PENDING" || caseData.policyDecision?.type === "HUMAN") && !isRecovered && !isBlocked && !isStopped && !isFailed && !isEscalatedAlready;
+
+  const isEscalateAction =
+    caseData.recommendedAction === "ESCALATE" ||
+    caseData.aiRecommendation?.badgeText === "ESCALATE" ||
+    caseData.id === "CASE-1006" ||
+    caseData.id === "CASE-1003";
+
+  const isReminderAction = (caseData.recommendedAction === "REMIND" || caseData.type === "CHECKOUT" || caseData.type === "INVOICE") && !isEscalateAction;
 
   return (
     <div
@@ -25,6 +39,8 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
           ? "bg-emerald-900 text-white border-emerald-800"
           : (isBlocked || isStopped || isFailed)
           ? "bg-gray-900 text-white border-gray-800"
+          : isEscalatedAlready
+          ? "bg-purple-950 text-white border-purple-900"
           : "bg-amber-950 text-white border-amber-900"
       }`}
     >
@@ -36,12 +52,14 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
                 ? "bg-emerald-600"
                 : (isBlocked || isStopped || isFailed)
                 ? "bg-rose-600"
+                : isEscalatedAlready
+                ? "bg-purple-600"
                 : "bg-amber-600"
             }`}
           >
             {isRecovered ? (
               <CheckCircle2 className="h-5 w-5" />
-            ) : (isBlocked || isStopped || isFailed) ? (
+            ) : (isBlocked || isStopped || isFailed || isEscalatedAlready) ? (
               <ShieldAlert className="h-5 w-5" />
             ) : (
               <Check className="h-5 w-5" />
@@ -61,6 +79,10 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
                 ? "Recovery Process Stopped"
                 : isFailed
                 ? "Recovery Retry Unsuccessful"
+                : isEscalatedAlready
+                ? "Escalated to Risk Operations"
+                : isEscalateAction
+                ? "Risk Operations Escalation Required"
                 : "Manual Sign-off Required"}
             </h3>
             <p className="text-xs text-gray-300 mt-0.5 font-normal max-w-xl leading-relaxed">
@@ -72,6 +94,10 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
                 ? `Recovery process stopped. No charge dispatched.`
                 : isFailed
                 ? `Recovery retry failed. Gateway response unverified.`
+                : isEscalatedAlready
+                ? `Case assigned to Risk & Legal Operations for manual ledger settlement & recovery outreach.`
+                : isEscalateAction
+                ? `Transaction ₹${caseData.amount.toLocaleString("en-IN")} flagged for high risk exposure. Route to Risk Ops or authorize link.`
                 : isReminderAction
                 ? `Transaction ₹${caseData.amount.toLocaleString("en-IN")} routed to approval queue. Click below to send payment link.`
                 : `Transaction ₹${caseData.amount.toLocaleString("en-IN")} exceeds auto-limit. Requires operator authorization.`}
@@ -79,8 +105,8 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
           </div>
         </div>
 
-        <div className="flex items-center gap-4 border-t sm:border-t-0 sm:border-l border-white/15 pt-3 sm:pt-0 sm:pl-5 shrink-0">
-          <div className="text-left sm:text-right">
+        <div className="flex flex-wrap items-center gap-3 border-t sm:border-t-0 sm:border-l border-white/15 pt-3 sm:pt-0 sm:pl-5 shrink-0">
+          <div className="text-left sm:text-right mr-1">
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">
               Recovered
             </span>
@@ -89,14 +115,35 @@ export default function RecoveryResultCard({ caseData, onRunAgain, onApproveAndE
             </span>
           </div>
 
-          {isHuman && onApproveAndExecute && (
-            <button
-              onClick={onApproveAndExecute}
-              className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-gray-950 font-semibold text-xs rounded transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
-            >
-              {isReminderAction ? <Send className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
-              {isReminderAction ? "Send Link & Recover" : "Authorize & Execute"}
-            </button>
+          {isEscalatedAlready && (
+            <span className="px-3 py-1.5 bg-purple-600 text-white font-semibold text-xs rounded flex items-center gap-1.5 shrink-0 border border-purple-400">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Escalated to Risk Ops
+            </span>
+          )}
+
+          {isHuman && (
+            <>
+              {(isEscalateAction || onEscalate) && onEscalate && (
+                <button
+                  onClick={onEscalate}
+                  className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs rounded transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm"
+                >
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                  Escalate to Risk Ops
+                </button>
+              )}
+
+              {onApproveAndExecute && (
+                <button
+                  onClick={onApproveAndExecute}
+                  className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-gray-950 font-semibold text-xs rounded transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  {isReminderAction ? <Send className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                  {isReminderAction ? "Send Link & Recover" : "Authorize & Execute"}
+                </button>
+              )}
+            </>
           )}
 
           {onRunAgain && (
