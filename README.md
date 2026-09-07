@@ -10,7 +10,7 @@
 
 ---
 
-### 🏆 Executive Empirical Benchmark & Performance Dashboard
+###  Executive Empirical Benchmark & Performance Dashboard
 
 | **Evaluation Metric** | **RecoveraX AI Engine** | **Blind Retry Baseline** | **Rule-Only Baseline** | **No Action** | **Statistical Safety & Impact** |
 | :--- | :---: | :---: | :---: | :---: | :---: |
@@ -24,20 +24,20 @@
 
 ---
 
-### 📊 1. Multi-Seed & Batch Monte Carlo Simulation (50 Seeds · 50,000 Transactions)
+### 1. Multi-Seed & Batch Monte Carlo Simulation (50 Seeds · 50,000 Transactions)
 
 RecoveraX is evaluated across **50 independent random seeds** ($N = 50$ batches, 1,000 transactions/batch, 50,000 failure events total) to report empirical **Mean, Variance, Standard Deviation, and 95% Confidence Intervals** ($Mean \pm 1.96 \times \frac{SD}{\sqrt{N}}$):
 
 | **Recovery Strategy** | **Sample Batches** | **Gross ₹ Recovered (Mean ± 95% CI)** | **Gross SD / Variance** | **Net Realized ₹ Value (Mean ± 95% CI)** | **Net SD / Variance** | **Unsafe Actions (Double Debits)** |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🛡️ **RecoveraX Engine** | **50** | **₹16,92,061.54 ± ₹64,777.88** | SD: ₹2,33,698 · Var: $5.46 \times 10^{10}$ | **₹16,56,693.49 ± ₹63,438.79** | SD: ₹2,28,867 · Var: $5.24 \times 10^{10}$ | **0 (0.00% Across 50k Tx)** |
-| ❌ **Blind Retry** | 50 | ₹60,83,099.65 ± ₹1,30,704.16 | SD: ₹4,71,539 · Var: $2.22 \times 10^{11}$ | **-₹45,09,119.79 ± ₹2,16,736.76** | SD: ₹7,81,918 · Var: $6.11 \times 10^{11}$ | **13,663 Violations** |
-| ⚙️ **Rule-Only Baseline** | 50 | ₹4,92,643.47 ± ₹20,669.58 | SD: ₹74,569 · Var: $5.56 \times 10^{9}$ | **₹4,82,074.80 ± ₹20,231.66** | SD: ₹72,989 · Var: $5.33 \times 10^{9}$ | 0 (0.00%) |
-| ⏸️ **No Action** | 50 | ₹0.00 | SD: ₹0.00 · Var: 0.0 | ₹0.00 | SD: ₹0.00 · Var: 0.0 | 0 (0.00%) |
+| **RecoveraX Engine** | **50** | **₹16,92,061.54 ± ₹64,777.88** | SD: ₹2,33,698 · Var: $5.46 \times 10^{10}$ | **₹16,56,693.49 ± ₹63,438.79** | SD: ₹2,28,867 · Var: $5.24 \times 10^{10}$ | **0 (0.00% Across 50k Tx)** |
+|  **Blind Retry** | 50 | ₹60,83,099.65 ± ₹1,30,704.16 | SD: ₹4,71,539 · Var: $2.22 \times 10^{11}$ | **-₹45,09,119.79 ± ₹2,16,736.76** | SD: ₹7,81,918 · Var: $6.11 \times 10^{11}$ | **13,663 Violations** |
+| **Rule-Only Baseline** | 50 | ₹4,92,643.47 ± ₹20,669.58 | SD: ₹74,569 · Var: $5.56 \times 10^{9}$ | **₹4,82,074.80 ± ₹20,231.66** | SD: ₹72,989 · Var: $5.33 \times 10^{9}$ | 0 (0.00%) |
+|  **No Action** | 50 | ₹0.00 | SD: ₹0.00 · Var: 0.0 | ₹0.00 | SD: ₹0.00 · Var: 0.0 | 0 (0.00%) |
 
 ---
 
-### 💰 2. RecoveraX vs. Blind Retry: Real Financial Net Value Comparison
+###  2. RecoveraX vs. Blind Retry: Real Financial Net Value Comparison
 
 Blind retry creates an illusion of high gross numbers by retrying every failed payment regardless of state, incurring severe penalties. RecoveraX accounts for real financial costs:
 
@@ -45,21 +45,21 @@ Blind retry creates an illusion of high gross numbers by retrying every failed p
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                              1,000-TRANSACTION BATCH COMPARISON                         │
 ├──────────────────────────────────────────┬─────────────────────────────────────────────┤
-│ ❌ BLIND RETRY BASELINE                   │ 🛡️ RECOVERAX ENGINE                         │
+│  BLIND RETRY BASELINE                   │  RECOVERAX ENGINE                         │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ • Gross Claimed:     ₹60,83,099.65       │ • Gross Recovered:    ₹16,92,061.54         │
 │ • Retry API Cost:    -₹45,000.00         │ • Retry Cost (₹15):   -₹15,240.00           │
 │ • Mandate Dishonor:  -₹62,500.00 (₹250)  │ • Operator Triage:    -₹16,087.00 (₹50)     │
 │ • Chargeback Disputes: -₹1,04,00,000.00  │ • Churn & Penalties:  ₹0.00 (Safe)          │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
-│ 💥 NET REALIZED VALUE: -₹45,09,119.79    │ 📈 NET REALIZED VALUE: +₹16,56,693.49        │
-│ 🚨 UNSAFE DOUBLE DEBITS: 273 / batch     │ 🛡️ UNSAFE DOUBLE DEBITS: 0 / batch          │
+│ NET REALIZED VALUE: -₹45,09,119.79    │  NET REALIZED VALUE: +₹16,56,693.49        │
+│ UNSAFE DOUBLE DEBITS: 273 / batch     │  UNSAFE DOUBLE DEBITS: 0 / batch          │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
 ---
 
-### 🔍 3. Unknown & Unseen Cases Safety Evaluation Breakdown
+###  3. Unknown & Unseen Cases Safety Evaluation Breakdown
 
 Evaluates 8 critical unseen failure edge cases (novel error codes, contradictory state payloads, corrupted data, and SIM swap telecom flags):
 
@@ -74,7 +74,7 @@ Evaluates 8 critical unseen failure edge cases (novel error codes, contradictory
 
 ---
 
-### 🔬 4. LLM Ablation Study: Rule-Only vs. LLM + Rules
+### 4. LLM Ablation Study: Rule-Only vs. LLM + Rules
 
 Quantifies the empirical lift achieved by combining **Groq LLM (`qwen/qwen3.8-27b`)** contextual diagnosis with **deterministic Python policy guardrails**:
 
