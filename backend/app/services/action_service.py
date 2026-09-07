@@ -368,7 +368,7 @@ class ActionService:
             "CASE-1002": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH, 78, ActionType.RETRY, "NONE", 0.0, "PENDING", TransactionStatus.FAILED, PaymentState.CLEAR, False, 0, 75000.0),
             "CASE-1003": (PolicyDecision.BLOCK, CaseStatus.BLOCKED, RiskLevel.HIGH, 10, ActionType.STOP, "BLOCKED", 0.0, "NOT_REQUIRED", TransactionStatus.AMBIGUOUS, PaymentState.AMBIGUOUS, True, 0, 25000.0),
             "CASE-1004": (PolicyDecision.AUTO, CaseStatus.SCHEDULED, RiskLevel.LOW, 85, ActionType.RETRY, "NONE", 0.0, "NOT_REQUIRED", TransactionStatus.FAILED, PaymentState.CLEAR, False, 0, 2499.0),
-            "CASE-1005": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.LOW, 75, ActionType.REMIND, "NONE", 0.0, "PENDING", TransactionStatus.FAILED, PaymentState.CLEAR, False, 0, 8500.0),
+            "CASE-1005": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.MEDIUM, 75, ActionType.REMIND, "NONE", 0.0, "PENDING", TransactionStatus.FAILED, PaymentState.CLEAR, False, 0, 8500.0),
             "CASE-1006": (PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, RiskLevel.HIGH, 65, ActionType.ESCALATE, "NONE", 0.0, "PENDING", TransactionStatus.FAILED, PaymentState.CLEAR, False, 0, 120000.0),
         }
 

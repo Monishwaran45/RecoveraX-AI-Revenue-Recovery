@@ -240,14 +240,14 @@ class CaseService:
         case.policy_decision = _val(final_state.get("policy_decision", _val(case.policy_decision)))
         
         status_str = final_state.get("workflow_status")
-        if status_str and hasattr(CaseStatus, status_str):
-            case.status = CaseStatus(status_str).value
-        elif case.policy_decision == PolicyDecision.HUMAN:
-            case.status = CaseStatus.AWAITING_APPROVAL.value
-        elif case.policy_decision == PolicyDecision.AUTO:
-            case.status = CaseStatus.SCHEDULED.value
-        elif case.policy_decision == PolicyDecision.BLOCK:
+        if case.policy_decision in (PolicyDecision.BLOCK, "BLOCK"):
             case.status = CaseStatus.BLOCKED.value
+        elif case.policy_decision in (PolicyDecision.HUMAN, "HUMAN"):
+            case.status = CaseStatus.AWAITING_APPROVAL.value
+        elif case.policy_decision in (PolicyDecision.AUTO, "AUTO"):
+            case.status = CaseStatus.SCHEDULED.value
+        elif status_str and hasattr(CaseStatus, status_str):
+            case.status = CaseStatus(status_str).value
 
         # Authoritative state machine synchronization
         if case.policy_decision == PolicyDecision.HUMAN:

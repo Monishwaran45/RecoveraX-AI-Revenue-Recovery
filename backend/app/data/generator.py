@@ -123,6 +123,8 @@ def generate_synthetic_dataset(seed: int = 42):
             recommended_action=action,
             policy_decision=policy,
             status=status,
+            verification_result="VERIFIED_SUCCESS" if status == CaseStatus.RECOVERED else "NONE",
+            amount_recovered=amount if status == CaseStatus.RECOVERED else 0.0,
             retry_count=retry_cnt,
             max_retries=2,
             created_at=datetime.utcnow() - timedelta(hours=random.randint(1, 48))
@@ -170,8 +172,9 @@ def generate_synthetic_dataset(seed: int = 42):
     create_case("CASE-1002", 75000.0, ProblemType.FAILED_PAYMENT, "HIGH_VALUE_RETRY_LIMIT", PaymentState.CLEAR, False, False, 78, RiskLevel.HIGH, ActionType.RETRY, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, cust_name="Sharma Logistics", cust_email="sharma@sharmalogistics.in")
     create_case("CASE-1003", 25000.0, ProblemType.FAILED_PAYMENT, "POSSIBLE_CUSTOMER_DEBIT", PaymentState.AMBIGUOUS, True, False, 10, RiskLevel.HIGH, ActionType.STOP, PolicyDecision.BLOCK, CaseStatus.BLOCKED, cust_name="Aarav Tech Solutions", cust_email="aarav@aaravtech.in")
     create_case("CASE-1004", 2499.0, ProblemType.SUBSCRIPTION_FAILURE, "CARD_EXPIRED_MANDATE", PaymentState.CLEAR, False, False, 82, RiskLevel.LOW, ActionType.RETRY, PolicyDecision.AUTO, CaseStatus.SCHEDULED, retry_cnt=1, cust_name="Priya SaaS Services", cust_email="priya@priyasaas.io")
-    create_case("CASE-1005", 8500.0, ProblemType.CHECKOUT_ABANDONMENT, "SESSION_TIMEOUT_REMINDER", PaymentState.CLEAR, False, False, 75, RiskLevel.LOW, ActionType.REMIND, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, cust_name="Vikram Retailers", cust_email="vikram@vikramretail.in")
+    create_case("CASE-1005", 8500.0, ProblemType.CHECKOUT_ABANDONMENT, "SESSION_TIMEOUT_REMINDER", PaymentState.CLEAR, False, False, 75, RiskLevel.MEDIUM, ActionType.REMIND, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, cust_name="Vikram Retailers", cust_email="vikram@vikramretail.in")
     create_case("CASE-1006", 120000.0, ProblemType.OVERDUE_INVOICE, "OVERDUE_INVOICE_15_DAYS", PaymentState.CLEAR, False, False, 65, RiskLevel.HIGH, ActionType.ESCALATE, PolicyDecision.HUMAN, CaseStatus.AWAITING_APPROVAL, cust_name="Global Trade Corp", cust_email="finance@globaltrade.org")
+    create_case("CASE-1007", 18500.0, ProblemType.FAILED_PAYMENT, "TEMPORARY_NETWORK_GLITCH", PaymentState.CLEAR, False, False, 94, RiskLevel.LOW, ActionType.RETRY, PolicyDecision.AUTO, CaseStatus.RECOVERED, cust_name="Swati Enterprises", cust_email="swati@swatienterprises.in")
 
     # Remaining target = ₹48,21,000 for 995 cases (~₹4,845 per case average)
     # 3. Generate 395 Failed Payments (Total ~₹19.5L)

@@ -59,6 +59,20 @@ export const DEFAULT_SCENARIOS: Scenario[] = [
     icon: CreditCard,
   },
   {
+    id: "sc-CASE-1005",
+    caseId: "CASE-1005",
+    title: "Checkout Abandonment",
+    amount: "₹8,500.00",
+    amountVal: 8500,
+    type: "Vikram Retailers (MEDIUM Risk)",
+    badge: "HUMAN",
+    badgeBg: "bg-amber-50 text-amber-800 border-amber-200",
+    badgeText: "REVIEW",
+    description: "Customer session timeout. Operator sign-off for smart cart re-engagement reminder.",
+    reason: "Medium risk checkout review",
+    icon: ShoppingCart,
+  },
+  {
     id: "sc-CASE-1006",
     caseId: "CASE-1006",
     title: "Overdue B2B Invoice",
@@ -114,7 +128,9 @@ export function mapCaseToScenario(c: any, index: number): Scenario {
     CHECKOUT: ShoppingCart,
     INVOICE: FileText,
   };
-  const icon = isMandate ? RefreshCw : (iconMap[c.type] || (c.status === "BLOCKED" ? ShieldAlert : CreditCard));
+  const icon = isMandate
+    ? RefreshCw
+    : (iconMap[c.type] || (c.status === "BLOCKED" ? ShieldAlert : (c.problemType === "CHECKOUT_ABANDONMENT" || c.type === "CHECKOUT" ? ShoppingCart : CreditCard)));
 
   const policyVal = String(c.policyDecision?.type || c.policyDecision?.value || c.policyDecision || "").toUpperCase();
   const actionVal = String(c.recommendedAction || c.aiRecommendation?.badgeText || c.aiRecommendation?.recommendation || "").toUpperCase();
@@ -124,7 +140,7 @@ export function mapCaseToScenario(c: any, index: number): Scenario {
     badge = "ESCALATE";
   } else if (policyVal.includes("BLOCK") || c.status === "BLOCKED" || c.status === "STOPPED" || c.id === "CASE-1003") {
     badge = "BLOCK";
-  } else if (policyVal.includes("HUMAN") || c.status === "HUMAN_APPROVAL" || c.status === "AWAITING_APPROVAL" || c.id === "CASE-1002") {
+  } else if (policyVal.includes("HUMAN") || c.status === "HUMAN_APPROVAL" || c.status === "AWAITING_APPROVAL" || c.id === "CASE-1002" || c.id === "CASE-1005") {
     badge = "HUMAN";
   } else if (policyVal.includes("AUTO") || c.status === "SCHEDULED" || c.status === "RECOVERED" || c.id === "CASE-1001" || c.id === "CASE-1004") {
     badge = "AUTO";
@@ -203,7 +219,7 @@ export default function ScenarioSelector({
           <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
             <span>Test Payment Scenarios</span>
             <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-gray-100 text-gray-700 border border-gray-200 font-bold">
-              {filtered.length} Scenarios
+              {filtered.length} of {countAll} Scenarios
             </span>
           </h3>
         </div>
@@ -288,8 +304,8 @@ export default function ScenarioSelector({
         )}
       </div>
 
-      {/* 5-Card Responsive Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      {/* 6-Card Responsive Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
         {filtered.map((sc) => {
           const Icon = sc.icon || CreditCard;
           const isSelected = sc.id === activeScenarioId || sc.caseId === activeScenarioId;
@@ -299,7 +315,7 @@ export default function ScenarioSelector({
               key={sc.id}
               onClick={() => !disabled && onSelectScenario(sc)}
               disabled={disabled}
-              className={`p-3.5 rounded-lg border text-left transition-all flex flex-col justify-between ${
+              className={`p-3 rounded-lg border text-left transition-all flex flex-col justify-between ${
                 isSelected
                   ? "bg-white border-gray-950 ring-2 ring-gray-950 shadow-md transform -translate-y-0.5"
                   : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/80 shadow-xs"
@@ -307,16 +323,16 @@ export default function ScenarioSelector({
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-1.5 rounded bg-gray-50 text-gray-700 border border-gray-200">
-                    <Icon className="h-3.5 w-3.5" />
+                  <div className="p-1 rounded bg-gray-50 text-gray-700 border border-gray-200">
+                    <Icon className="h-3 w-3" />
                   </div>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border font-mono ${sc.badgeBg}`}>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border font-mono ${sc.badgeBg}`}>
                     {sc.badgeText}
                   </span>
                 </div>
 
                 <h4 className="font-semibold text-gray-900 text-xs truncate tracking-tight">{sc.title}</h4>
-                <p className="text-sm font-bold text-gray-900 font-mono tabular-nums tracking-tight mt-0.5">
+                <p className="text-xs font-bold text-gray-900 font-mono tabular-nums tracking-tight mt-0.5">
                   {sc.amount}
                 </p>
                 <p className="text-[10px] text-gray-500 font-normal mt-0.5 truncate">
@@ -324,10 +340,10 @@ export default function ScenarioSelector({
                 </p>
               </div>
 
-              <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[10px] font-mono text-gray-400">
+              <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between text-[10px] font-mono text-gray-400">
                 <span className="font-semibold text-gray-600">{sc.caseId}</span>
                 {isSelected ? (
-                  <span className="text-gray-950 font-sans font-bold bg-gray-100 px-2 py-0.5 rounded text-[9px]">
+                  <span className="text-gray-950 font-sans font-bold bg-gray-100 px-1.5 py-0.2 rounded text-[9px]">
                     Active
                   </span>
                 ) : (

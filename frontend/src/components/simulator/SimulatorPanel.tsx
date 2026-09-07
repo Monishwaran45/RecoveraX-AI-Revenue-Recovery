@@ -67,7 +67,7 @@ export default function SimulatorPanel({ isCompact = false }: { isCompact?: bool
   useEffect(() => {
     const initSimulator = async () => {
       try {
-        const coreIds = ["CASE-1001", "CASE-1002", "CASE-1006", "CASE-1003", "CASE-1004"];
+        const coreIds = ["CASE-1001", "CASE-1002", "CASE-1005", "CASE-1006", "CASE-1003", "CASE-1004"];
         const casePromises = coreIds.map((id) => getCase(id).catch(() => null));
         const fetchedCases = (await Promise.all(casePromises)).filter(Boolean) as RecoveryCase[];
 

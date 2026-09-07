@@ -20,6 +20,10 @@ import {
 } from "lucide-react";
 import MetricCard from "@/components/ui/MetricCard";
 import DecisionDonutChart from "@/components/dashboard/DecisionDonutChart";
+import BenchmarkComparisonChart from "@/components/experiments/BenchmarkComparisonChart";
+import BaselineComparisonChart from "@/components/experiments/BaselineComparisonChart";
+import UnknownCasesSafetyChart from "@/components/experiments/UnknownCasesSafetyChart";
+import AblationChart from "@/components/experiments/AblationChart";
 import {
   getExperiment,
   getComprehensiveBenchmarks,
@@ -224,6 +228,14 @@ export default function ExperimentsPage() {
       {/* Tab 1: Monte Carlo & Confidence Intervals */}
       {activeTab === "monte_carlo" && (
         <div className="space-y-4">
+          {/* Charts & Trends Section */}
+          <BenchmarkComparisonChart
+            recoveraxStats={recoveraxStats}
+            blindRetryStats={blindRetryStats}
+            ruleOnlyStats={ruleOnlyStats}
+            seedCount={seedCount}
+          />
+
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-subtle space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-3.5 gap-2">
               <div>
@@ -385,6 +397,12 @@ export default function ExperimentsPage() {
       {/* Tab 2: RecoveraX vs Blind Retry */}
       {activeTab === "baselines" && (
         <div className="space-y-4">
+          {/* Baseline Divergence & Violation Charts */}
+          <BaselineComparisonChart
+            recoveraxStats={recoveraxStats}
+            blindRetryStats={blindRetryStats}
+          />
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Blind Retry Card */}
             <div className="bg-rose-50/40 border border-rose-200 rounded-xl p-5 shadow-subtle space-y-3 flex flex-col justify-between">
@@ -478,6 +496,9 @@ export default function ExperimentsPage() {
       {/* Tab 3: Unknown Cases Safety Audit */}
       {activeTab === "unknown_cases" && (
         <div className="space-y-4">
+          {/* Unknown Cases Safety Triage Chart */}
+          <UnknownCasesSafetyChart unknownCases={unknownCases} />
+
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-subtle space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-3 gap-2">
               <div>
@@ -579,6 +600,9 @@ export default function ExperimentsPage() {
       {/* Tab 4: LLM Ablation Study */}
       {activeTab === "ablation" && (
         <div className="space-y-4">
+          {/* LLM Ablation Visual Charts */}
+          <AblationChart rulesOnly={ablationRules} llmRules={ablationLLM} />
+
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-subtle space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-3 gap-2">
               <div>
